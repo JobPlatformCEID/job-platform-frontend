@@ -1,8 +1,4 @@
-# Job Platform — Flutter + Django REST API
 
-A mobile job platform app built with Flutter (Android) and Django REST Framework, using PostgreSQL as the database and Docker for the backend.
-
----
 
 ## Project Structure
 
