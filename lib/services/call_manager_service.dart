@@ -176,9 +176,12 @@ class CallManager {
     onStreamsChanged?.call();
   }
 
+  bool isConnectedTo(String username) => _peers.containsKey(username);
+
   void dispose() {
     for (final peer in _peers.values) peer.close();
     for (final renderer in remoteRenderers.values) renderer.dispose();
     localStream?.dispose();
   }
+
 }
