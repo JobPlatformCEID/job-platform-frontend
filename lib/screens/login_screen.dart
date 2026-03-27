@@ -9,6 +9,8 @@ import 'emp_home.dart';
 import 'cand_setup.dart';
 import 'emp_setup.dart';
 import '../services/api_serv.dart';
+import '../services/config.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen>{
   bool _isLoading = false;
 
 
-  final String apiUrl = 'http://10.0.2.2:8000/api/auth/login/';
+  final String apiUrl = '${AppConfig.baseUrl}/api/auth/login/';
 
   Future<void> login() async{
       print(apiUrl);
