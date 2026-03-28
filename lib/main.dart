@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'services/config.dart';
 import 'screens/auth_check.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await WebRTC.initialize();
+  //await AppConfig.init();
   runApp(const MyApp());
 }
 

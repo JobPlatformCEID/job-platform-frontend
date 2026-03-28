@@ -8,13 +8,13 @@ class AppConfig {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return 'http://10.0.2.2:8000';      // Android emulator
+        return 'very real  ip';
       case TargetPlatform.linux:
       case TargetPlatform.windows:
       case TargetPlatform.macOS:
-        return 'http://localhost:8000';      // Desktop
+        return 'http://localhost:8000';
       case TargetPlatform.iOS:
-        return 'http://localhost:8000';      // iOS simulator
+        return 'http://localhost:8000';
       default:
         return 'http://localhost:8000';
     }
@@ -27,13 +27,13 @@ class AppConfig {
 
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
-        return 'ws://10.0.2.2:8001';        // Android emulator
+        return 'very real  ip';
       case TargetPlatform.linux:
       case TargetPlatform.windows:
       case TargetPlatform.macOS:
-        return 'ws://localhost:8001';        // Desktop
+        return 'ws://localhost:8001';
       case TargetPlatform.iOS:
-        return 'ws://localhost:8001';        // iOS simulator
+        return 'ws://localhost:8001';
       default:
         return 'ws://localhost:8001';
     }

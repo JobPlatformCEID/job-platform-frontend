@@ -31,9 +31,9 @@ dependencies:
   flutter:
     sdk: flutter
 
-  flutter_webrtc: ^0.10.0      # WebRTC for Flutter
-  web_socket_channel: ^2.4.0   # WebSocket to talk to Django
-  permission_handler: ^11.0.0  # Camera & mic permissions
+  flutter_webrtc: ^1.4.1      # WebRTC for Flutter
+  web_socket_channel: ^3.0.3   # WebSocket to talk to Django
+  permission_handler: ^12.0.1  # Camera & mic permissions
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

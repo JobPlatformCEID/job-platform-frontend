@@ -60,9 +60,17 @@ class _LoginScreenState extends State<LoginScreen>{
 
         if(_remember){
           await _storage.write(key: 'auth_token', value: token);
-          await _storage.write(key: 'user_role', value: role); 
+          await _storage.write(key: 'user_role', value: role);
+          await _storage.write(key: 'username', value: _usernameController.text);
           print('token saved and role saved...');
         }
+
+        // Also save username outside the remember block so it's always available
+        await _storage.write(key: 'username', value: _usernameController.text);
+
+        // save the token very important
+        await _storage.write(key: 'auth_token', value: token);
+
         if (mounted) {
           Navigator.pushReplacement(
             context,

@@ -3,17 +3,17 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/signaling_service.dart';
 import '../services/call_manager_service.dart';
+import '../services/config.dart';
+import 'package:flutter/foundation.dart';
 
 class CallScreen extends StatefulWidget {
   final String roomId;
   final String currentUsername;
-  final String serverHost;
 
   const CallScreen({
     super.key,
     required this.roomId,
     required this.currentUsername,
-    required this.serverHost,
   });
 
   @override
@@ -21,80 +21,104 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  late SignalingService _signaling;
-  late CallManager _callManager;
-
-  final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
+  SignalingService? _signaling;
+  CallManager? _callManager;
+  RTCVideoRenderer? _localRenderer; // Make nullable instead of late
   List<String> _users = [];
   bool _isMuted = false;
   bool _isCameraOff = false;
+  bool _isReady = false;
 
   @override
   void initState() {
     super.initState();
-    _initCall();
+    // Defer ALL heavy work until after first frame renders
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initCall();
+    });
   }
 
   Future<void> _initCall() async {
-    // Ask for permissions
-    await [Permission.camera, Permission.microphone].request();
-
+    // Create renderer HERE, not in initState
+    _localRenderer = RTCVideoRenderer();
+    
     // Set up signaling
     _signaling = SignalingService(currentUsername: widget.currentUsername);
-
-    // Set up call manager
     _callManager = CallManager(
-      signaling: _signaling,
+      signaling: _signaling!,
       currentUsername: widget.currentUsername,
     );
-
-    // Rebuild UI when remote streams change
-    _callManager.onStreamsChanged = () => setState(() {});
-
-    // When user list updates, call any new users
-    _signaling.onUserListChanged = (users) {
+    _callManager!.onStreamsChanged = () => setState(() {});
+    _signaling!.onUserListChanged = (users) {
       setState(() => _users = List<String>.from(
         users.map((u) => u['username']),
       ));
-
-      // Call every user in the room who isn't you
       for (final user in users) {
         final username = user['username'] as String;
         if (username != widget.currentUsername &&
-            !_callManager.isConnectedTo(username)) {
-          _callManager.callUser(username);
+            !_callManager!.isConnectedTo(username)) {
+          if (widget.currentUsername.compareTo(username) < 0) {
+            _callManager!.callUser(username);
+          }
         }
       }
     };
 
-    // Start local camera
-    await _localRenderer.initialize();
-    final stream = await _callManager.startLocalStream();
-    _localRenderer.srcObject = stream;
+    // Connect signaling first
+    _signaling!.connect(widget.roomId, AppConfig.wsUrl);
 
-    // Connect to Django signaling server
-    _signaling.connect(widget.roomId, widget.serverHost);
+    // Camera in background
+    _initCameraAsync();
+    
+    setState(() => _isReady = true);
+  }
 
-    setState(() {});
+  void _initCameraAsync() async {
+    // Ask for permissions
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      await [Permission.camera, Permission.microphone].request();
+    }
+
+    try {
+      await _localRenderer!.initialize();
+      final stream = await _callManager!.startLocalStream();
+      if (mounted) {
+        setState(() {
+          _localRenderer!.srcObject = stream;
+        });
+      }
+    } catch (e) {
+      print('Camera init error: $e');
+    }
   }
 
   void _toggleMute() {
     setState(() => _isMuted = !_isMuted);
-    _callManager.localStream?.getAudioTracks().forEach((track) {
+    _callManager?.localStream?.getAudioTracks().forEach((track) {
       track.enabled = !_isMuted;
     });
   }
 
   void _toggleCamera() {
     setState(() => _isCameraOff = !_isCameraOff);
-    _callManager.localStream?.getVideoTracks().forEach((track) {
+    _callManager?.localStream?.getVideoTracks().forEach((track) {
       track.enabled = !_isCameraOff;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final remoteRenderers = _callManager.remoteRenderers;
+    if (!_isReady) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
+    final remoteRenderers = _callManager?.remoteRenderers ?? {};
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -102,7 +126,7 @@ class _CallScreenState extends State<CallScreen> {
         child: Stack(
           children: [
 
-            // ── Remote videos (grid) ───────────────────────────────────────
+            // Remote videos (background)
             remoteRenderers.isEmpty
                 ? const Center(
               child: Text(
@@ -140,21 +164,22 @@ class _CallScreenState extends State<CallScreen> {
               },
             ),
 
-            // ── Your local video (small, top-right corner) ─────────────────
-            Positioned(
-              top: 16, right: 16,
-              width: 100, height: 140,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: RTCVideoView(
-                  _localRenderer,
-                  mirror: true,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+            // Your local video (small, top-right corner)
+            if (_localRenderer != null)
+              Positioned(
+                top: 16, right: 16,
+                width: 100, height: 140,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: RTCVideoView(
+                    _localRenderer!,
+                    mirror: true,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
                 ),
               ),
-            ),
 
-            // ── Control bar (bottom) ───────────────────────────────────────
+            // Control bar (bottom)
             Positioned(
               bottom: 24, left: 0, right: 0,
               child: Row(
@@ -189,15 +214,14 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
-    _localRenderer.dispose();
-    _callManager.dispose();
-    _signaling.dispose();
+    _localRenderer?.dispose();
+    _callManager?.dispose();
+    _signaling?.dispose();
     super.dispose();
   }
 }
 
-// ── Small reusable control button ─────────────────────────────────────────────
-
+// Small reusable control button
 class _ControlButton extends StatelessWidget {
   final IconData icon;
   final String label;

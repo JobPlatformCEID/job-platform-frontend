@@ -1,18 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'login_screen.dart';
+import 'call_screen.dart';
+import '../services/config.dart';
 
 class EmployerHomeScreen extends StatelessWidget {
   const EmployerHomeScreen({super.key});
 
+  final _storage = const FlutterSecureStorage();
+
   Future<void> _logout(BuildContext context) async {
-    const storage = FlutterSecureStorage();
-    await storage.delete(key: 'auth_token');
-    await storage.delete(key: 'user_role');
+    await _storage.delete(key: 'auth_token');
+    await _storage.delete(key: 'user_role');
+    await _storage.delete(key: 'username');
     if (context.mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
+  }
+
+  Future<void> _joinTestCall(BuildContext context) async {
+    final username = await _storage.read(key: 'username') ?? 'employer';
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CallScreen(
+            roomId: '1',           // same room ID so both users meet
+            currentUsername: username,
+          ),
+        ),
       );
     }
   }
@@ -31,11 +50,27 @@ class EmployerHomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Text(
-          'Welcome, Employer!\nYour job postings will appear here.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'Welcome, Employer!\nYour job postings will appear here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () => _joinTestCall(context),
+              icon: const Icon(Icons.video_call),
+              label: const Text('Join Test Call'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+              ),
+            ),
+          ],
         ),
       ),
     );
