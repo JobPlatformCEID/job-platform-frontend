@@ -39,20 +39,36 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _initCall() async {
-    // Create renderer HERE, not in initState
     _localRenderer = RTCVideoRenderer();
-    
-    // Set up signaling
+    await _localRenderer!.initialize();
+
     _signaling = SignalingService(currentUsername: widget.currentUsername);
     _callManager = CallManager(
       signaling: _signaling!,
       currentUsername: widget.currentUsername,
     );
-    _callManager!.onStreamsChanged = () => setState(() {});
+
+    _callManager!.onStreamsChanged = () { if (mounted) setState(() {}); };
+
+    // Request permissions and start camera BEFORE connecting
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      await [Permission.camera, Permission.microphone].request();
+    } 
+
+    try {
+      final stream = await _callManager!.startLocalStream();
+      if (mounted) setState(() => _localRenderer!.srcObject = stream);
+    } catch (e) {
+      debugPrint('Camera init error: $e');
+    }
+
     _signaling!.onUserListChanged = (users) {
+      if (!mounted) return;
       setState(() => _users = List<String>.from(
         users.map((u) => u['username']),
       ));
+
       for (final user in users) {
         final username = user['username'] as String;
         if (username != widget.currentUsername &&
@@ -64,15 +80,11 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
 
-    // Connect signaling first
+    // NOW connect — localStream is guaranteed to be ready
     _signaling!.connect(widget.roomId, AppConfig.wsUrl);
-
-    // Camera in background
-    _initCameraAsync();
-    
-    setState(() => _isReady = true);
+    if (mounted) setState(() => _isReady = true);
   }
-
+  
   void _initCameraAsync() async {
     // Ask for permissions
     if (defaultTargetPlatform == TargetPlatform.android ||
@@ -94,10 +106,10 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _toggleMute() {
-    setState(() => _isMuted = !_isMuted);
-    _callManager?.localStream?.getAudioTracks().forEach((track) {
-      track.enabled = !_isMuted;
-    });
+    final newMuted = !_isMuted;
+    _callManager?.localStream?.getAudioTracks()
+        .forEach((track) => track.enabled = !newMuted);
+    setState(() => _isMuted = newMuted);
   }
 
   void _toggleCamera() {

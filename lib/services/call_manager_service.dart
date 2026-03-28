@@ -84,6 +84,12 @@ class CallManager {
       'audio': true,
       'video': {'facingMode': 'user'},
     });
+    // Patch any peers that were created before stream was available
+    for (final entry in _peers.entries) {
+      localStream!.getTracks().forEach((track) {
+        entry.value.addTrack(track, localStream!);
+      });
+    }
     return localStream!;
   }
 
@@ -125,6 +131,9 @@ class CallManager {
   // Core: Create and configure one RTCPeerConnection
 
   Future<RTCPeerConnection> _createPeer(String remoteUsername) async {
+    //check if peer already exists
+    if (_peers.containsKey(remoteUsername)) return _peers[remoteUsername]!;
+
     final peer = await createPeerConnection(_iceConfig);
 
     // Add your local camera/mic tracks into this connection
@@ -184,9 +193,14 @@ class CallManager {
   bool isConnectedTo(String username) => _peers.containsKey(username);
 
   void dispose() {
+    onStreamsChanged = null;
     for (final peer in _peers.values) peer.close();
+    _peers.clear();
     for (final renderer in remoteRenderers.values) renderer.dispose();
+    remoteRenderers.clear();
+    localStream?.getTracks().forEach((t) => t.stop());
     localStream?.dispose();
+    localStream = null;
   }
 
 }
