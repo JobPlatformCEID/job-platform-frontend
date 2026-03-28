@@ -5,6 +5,7 @@ import 'user/user.dart';
 import 'screens/server_settings_screen.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() async {
   // Required before any async work in main
@@ -41,11 +42,10 @@ class MyApp extends StatelessWidget {
   }
 
   Widget _pickStartScreen() {
-    if (!server.isServerConfigured()) {
-      return ServerSettingsScreen(server: server);
+    if (hasSession) {
+      return HomeScreen(server: server, user: user);
     }
-
-    // We'll add LoginScreen and HomeScreen later
+ 
     return WelcomeScreen(server: server, user: user);
   }
 }

@@ -47,24 +47,48 @@ class Server {
   }
 
   // Helper method that builds the headers for every request
-  Map<String, String> _buildHeaders() {
+  Map<String, String> _buildHeaders({String? token}) {
     return {
       'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Token $token',
     };
   }
 
   // Sends a GET request to the given endpoint
-  Future<Map<String, dynamic>> sendGet(String endpoint) async {
+  Future<Map<String, dynamic>> sendGet(String endpoint, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
-    final response = await http.get(url, headers: _buildHeaders());
+    final response = await http.get(url, headers: _buildHeaders(token: token));
     return _parseResponse(response);
   }
 
   // Sends a POST request with a JSON body to the given endpoint
-  Future<Map<String, dynamic>> sendPost(String endpoint, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> sendPost(String endpoint, Map<String, dynamic> body, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
-    final response = await http.post(url, headers: _buildHeaders(), body: jsonEncode(body));
+    final response = await http.post(url, headers: _buildHeaders(token: token), body: jsonEncode(body));
     return _parseResponse(response);
+  }
+
+  // Sends a PUT request with a JSON body to the given endpoint
+  Future<Map<String, dynamic>> sendPut(String endpoint, Map<String, dynamic> body, {String? token}) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    final response = await http.put(url, headers: _buildHeaders(token: token), body: jsonEncode(body));
+    return _parseResponse(response);
+  }
+
+  // Sends a PATCH request with a JSON body to the given endpoint
+  Future<Map<String, dynamic>> sendPatch(String endpoint, Map<String, dynamic> body, {String? token}) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    final response = await http.patch(url, headers: _buildHeaders(token: token), body: jsonEncode(body));
+    return _parseResponse(response);
+  }
+
+  // Sends a DELETE request to the given endpoint
+  Future<void> sendDelete(String endpoint, {String? token}) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    final response = await http.delete(url, headers: _buildHeaders(token: token));
+    if (response.statusCode >= 400) {
+      throw ServerException(response.statusCode, response.body);
+    }
   }
 
   // Parses the HTTP response and throws ServerException for invalid HTTP responses

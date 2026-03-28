@@ -69,6 +69,34 @@ class User {
     await login(username, password);
   }
 
+  // Sends the required data to build a candidate's profile
+  Future<void> buildCandidateProfile({
+    required String phone,
+    required String location,
+    required String bio,
+  }) async {
+    await _server.sendPut('/api/candidates/me/', {
+      'phone': phone,
+      'location': location,
+      'bio': bio,
+    }, token: _token);
+  }
+
+  // Sends the required data to build an employer's profile
+  Future<void> buildEmployerProfile({
+    required String companyName,
+    required String description,
+    required String location,
+    required String website,
+  }) async {
+    await _server.sendPut('/api/employers/me/', {
+      'company_name': companyName,
+      'description': description,
+      'location': location,
+      'website': website,
+    }, token: _token);
+  }
+
   // Logout: Clears all stored session data and resets the user state.
   Future<void> logout() async {
     _token = null;

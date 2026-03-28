@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../user/user.dart';
 import '../server/server.dart';
 import 'server_settings_screen.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final Server server;
@@ -46,9 +47,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToHome() {
-    // TODO: Replace with HomeScreen navigation
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Welcome, ${widget.user.getUsername()}!')),
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(server: widget.server, user: widget.user),
+      ),
+      (_) => false,
     );
   }
 

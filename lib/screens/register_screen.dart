@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../server/server.dart';
 import '../user/user.dart';
+import 'build_profile_screen.dart';
+import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final Server server;
@@ -79,8 +81,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (mounted) {
-        // TODO: Navigate to BuildProfileScreen
-        Navigator.of(context).pop();
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => BuildProfileScreen(server: widget.server, user: widget.user),
+          ),
+        );
       }
     } on ServerException catch (e) {
       setState(() => _error = _friendlyError(e));
