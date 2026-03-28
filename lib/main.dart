@@ -1,23 +1,32 @@
 import 'package:flutter/material.dart';
 import 'theme/app_theme.dart';
 import 'server/server.dart';
+import 'user/user.dart';
 import 'screens/server_settings_screen.dart';
+import 'screens/welcome_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() async {
   // Required before any async work in main
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Create the server instance and load any saved URL
+  // Create the server and user instances
   final server = Server();
-  await server.loadServerUrl();
+  final user = User(server: server);
 
-  runApp(MyApp(server: server));
+  // Load saved data from storage
+  await server.loadServerUrl();
+  final bool hasSession = await user.loadSession();
+
+  runApp(MyApp(server: server, user: user, hasSession: hasSession));
 }
 
 class MyApp extends StatelessWidget {
   final Server server;
+  final User user;
+  final bool hasSession;
 
-  const MyApp({super.key, required this.server});
+  const MyApp({super.key, required this.server, required this.user, required this.hasSession});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +36,16 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: ThemeMode.system,
-      home: ServerSettingsScreen(server: server),
+      home: _pickStartScreen(),
     );
+  }
+
+  Widget _pickStartScreen() {
+    if (!server.isServerConfigured()) {
+      return ServerSettingsScreen(server: server);
+    }
+
+    // We'll add LoginScreen and HomeScreen later
+    return WelcomeScreen(server: server, user: user);
   }
 }
