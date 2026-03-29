@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../user.dart';
 import '../server.dart';
+import '../user.dart';
 import 'server_settings_screen.dart';
 import 'home_screen.dart';
 
@@ -36,31 +36,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await widget.user.login(username, password);
-      if (mounted) _navigateToHome();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => HomeScreen(server: widget.server, user: widget.user),
+          ),
+          (_) => false,
+        );
+      }
     } on ServerException catch (e) {
-      setState(() => _error = _friendlyError(e));
+      setState(() => _error = e.statusCode == 401
+          ? 'Wrong username or password.'
+          : 'Server error (${e.statusCode}). Try again later.');
     } catch (e) {
       setState(() => _error = 'Could not connect to the server.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _navigateToHome() {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => HomeScreen(server: widget.server, user: widget.user),
-      ),
-      (_) => false,
-    );
-  }
-
-  String _friendlyError(ServerException exception) {
-    switch (exception.statusCode) {
-      case 401:
-        return 'Wrong username or password.';
-      default:
-        return 'Server error (${exception.statusCode}). Try again later.';
     }
   }
 
@@ -70,13 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ServerSettingsScreen(server: widget.server),
-                ),
-              );
-            },
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ServerSettingsScreen(server: widget.server),
+              ),
+            ),
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Server Settings',
           ),
@@ -89,10 +78,24 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Icon(
+                Icons.work_outline,
+                size: 80,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 24),
               Text(
-                'Log in with username',
+                'Welcome Back',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Login to find your next opportunity',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
               const SizedBox(height: 48),
 
