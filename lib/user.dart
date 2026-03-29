@@ -1,5 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../server/server.dart';
+import 'server.dart';
 
 // User roles that someone in the platform can have: Matches django User model
 enum UserRole { candidate, employer }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../server/server.dart';
-import '../user/user.dart';
+import '../server.dart';
+import '../user.dart';
 import 'build_profile_screen.dart';
 import 'home_screen.dart';
 

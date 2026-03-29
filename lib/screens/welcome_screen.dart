@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../server/server.dart';
-import '../user/user.dart';
+import '../server.dart';
+import '../user.dart';
 import 'server_settings_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';

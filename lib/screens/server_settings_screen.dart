@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../server/server.dart';
+import '../server.dart';
 
 enum StatusType { success, error, info }
 
