@@ -165,4 +165,22 @@ class User {
         return 'employer';
     }
   }
+
+  // Helper methods used for the profile
+
+  //gets the real name of the user
+  Future<Map<String, dynamic>> fetchName() async {
+    return await _server.sendGet('/api/me/name/', token: _token);
+  }
+
+  // gets the extra fields we've set for every user email phone number etch
+  Future<Map<String, dynamic>> fetchProfile() async {
+    if (_role == UserRole.candidate) {
+      return await _server.sendGet('/api/candidates/me/', token: _token);
+    } 
+    else {
+      return await _server.sendGet('/api/employers/me/', token: _token);
+    }
+  }
+  
 }
