@@ -3,6 +3,7 @@ import '../server.dart';
 import '../auth.dart';
 import 'server_settings_screen.dart';
 import 'welcome_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Server server;
@@ -62,6 +63,17 @@ class HomeScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
+              ),
+              const SizedBox(height: 48),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ProfileScreen(auth: auth),
+                    ),
+                  );
+                },
+                child: const Text('My Profile'),
               ),
               const SizedBox(height: 48),
               OutlinedButton(
