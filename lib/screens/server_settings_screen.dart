@@ -113,7 +113,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
       appBar: AppBar(
         title: const Text('Server Settings'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
