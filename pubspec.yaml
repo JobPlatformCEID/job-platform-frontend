@@ -38,6 +38,7 @@ dependencies:
   # Custom app additions
   http: ^1.2.0
   flutter_secure_storage: ^10.0.0
+  logging: ^1.3.0
 
 dev_dependencies:
   flutter_test:

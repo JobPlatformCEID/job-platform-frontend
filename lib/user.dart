@@ -1,10 +1,12 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:logging/logging.dart';
 import 'server.dart';
 
 // User roles that someone in the platform can have: Matches django User model
 enum UserRole { candidate, employer }
 
 class User {
+  final _log = Logger('User');
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
   static const _usernameKey = 'auth_username';
@@ -34,7 +36,7 @@ class User {
     return _token != null;
   }
 
-  /// Login: Sends credentials to the server and stores the token
+  // Login: Sends credentials to the server and stores the token
   Future<void> login(String username, String password) async {
     final response = await _server.sendPost('/api/auth/login/', {
       'username': username,
@@ -45,6 +47,7 @@ class User {
     _username = username;
     _role = _parseRole(response['role'] as String);
 
+    _log.info('Logged in as $username (${_roleToString(_role!)})');
     await _saveSession();
   }
 
@@ -99,6 +102,8 @@ class User {
 
   // Logout: Clears all stored session data and resets the user state.
   Future<void> logout() async {
+    _log.info('Logging out $_username');
+
     _token = null;
     _username = null;
     _role = null;
@@ -116,9 +121,12 @@ class User {
       _token = savedToken;
       _username = savedUsername;
       _role = _parseRole(savedRole);
+
+      _log.info('Session restored for $_username (${_roleToString(_role!)})');
       return true;
     }
 
+    _log.info('No saved session found');
     return false;
   }
 
@@ -148,7 +156,7 @@ class User {
     }
   }
 
-  /// Helper method that converts a [UserRole] enum value into a string
+  // Helper method that converts a [UserRole] enum value into a string
   static String _roleToString(UserRole role) {
     switch (role) {
       case UserRole.candidate:

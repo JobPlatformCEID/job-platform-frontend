@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'package:logging/logging.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class Server {
+  final _log = Logger('Server');
   static const _storage = FlutterSecureStorage();
   static const _urlKey = 'server_url';
 
@@ -47,6 +49,7 @@ class Server {
           .timeout(const Duration(seconds: 5));
       return response.statusCode == 405;
     } catch (e) {
+      _log.warning(e);
       return false;
     }
   }
@@ -62,6 +65,7 @@ class Server {
   // Sends a GET request to the given endpoint
   Future<Map<String, dynamic>> sendGet(String endpoint, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('GET $endpoint');
     final response = await http.get(url, headers: _buildHeaders(token: token));
     return _parseResponse(response);
   }
@@ -69,6 +73,7 @@ class Server {
   // Sends a POST request with a JSON body to the given endpoint
   Future<Map<String, dynamic>> sendPost(String endpoint, Map<String, dynamic> body, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('POST $endpoint');
     final response = await http.post(url, headers: _buildHeaders(token: token), body: jsonEncode(body));
     return _parseResponse(response);
   }
@@ -76,6 +81,7 @@ class Server {
   // Sends a PUT request with a JSON body to the given endpoint
   Future<Map<String, dynamic>> sendPut(String endpoint, Map<String, dynamic> body, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('PUT $endpoint');
     final response = await http.put(url, headers: _buildHeaders(token: token), body: jsonEncode(body));
     return _parseResponse(response);
   }
@@ -83,6 +89,7 @@ class Server {
   // Sends a PATCH request with a JSON body to the given endpoint
   Future<Map<String, dynamic>> sendPatch(String endpoint, Map<String, dynamic> body, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('PATCH $endpoint');
     final response = await http.patch(url, headers: _buildHeaders(token: token), body: jsonEncode(body));
     return _parseResponse(response);
   }
@@ -90,6 +97,7 @@ class Server {
   // Sends a DELETE request to the given endpoint
   Future<void> sendDelete(String endpoint, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('DELETE $endpoint');
     final response = await http.delete(url, headers: _buildHeaders(token: token));
     if (response.statusCode >= 400) {
       throw ServerException(response.statusCode, response.body);
@@ -99,6 +107,7 @@ class Server {
   // Parses the HTTP response and throws ServerException for invalid HTTP responses
   Map<String, dynamic> _parseResponse(http.Response response) {
     if (response.statusCode >= 400) {
+      _log.warning('HTTP ${response.statusCode} on ${response.request?.url}');
       throw ServerException(response.statusCode, response.body);
     }
     return jsonDecode(response.body);

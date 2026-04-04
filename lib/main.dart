@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:logging/logging.dart';
 import 'theme/app_theme.dart';
 import 'server.dart';
 import 'user.dart';
@@ -10,6 +12,13 @@ import 'screens/home_screen.dart';
 void main() async {
   // Required before any async work in main
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set up logger
+  Logger.root.level = kDebugMode ? Level.ALL : Level.WARNING;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('[${record.loggerName}] ${record.level.name}: ${record.message}'
+        '${record.error != null ? '\nError: ${record.error}' : ''}');
+  });
 
   // Create the server and user instances
   final server = Server();
