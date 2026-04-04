@@ -3,6 +3,7 @@ import '../server.dart';
 import '../user.dart';
 import 'server_settings_screen.dart';
 import 'welcome_screen.dart';
+import 'view_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Server server;
@@ -20,11 +21,14 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
+//Note: rendering is done left to right
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         actions: [
+          // the settings button
           IconButton(
             onPressed: () {
               Navigator.of(context).push(
@@ -36,6 +40,31 @@ class HomeScreen extends StatelessWidget {
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Server Settings',
           ),
+
+          // the users profile
+          Padding(
+            padding: const EdgeInsets.all(8) ,
+            child : GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ViewProfileScreen(server: server , user: user),
+                  ),
+                );
+              },
+
+              child : CircleAvatar(
+                radius: 18,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: Text(
+                  //display the first letter of the users name this is temporary in the future this will be changed to users profile pic 
+                  ( user.getUsername() ?? '?')[0].toUpperCase(),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ),
+            ),
+          ),
+
         ],
       ),
       body: Center(
