@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
+import '../auth.dart';
 import '../user.dart';
 import 'home_screen.dart';
 
 class BuildProfileScreen extends StatefulWidget {
   final Server server;
-  final User user;
+  final Auth auth;
 
-  const BuildProfileScreen({super.key, required this.server, required this.user});
+  const BuildProfileScreen({super.key, required this.server, required this.auth});
 
   @override
   State<BuildProfileScreen> createState() => _BuildProfileScreenState();
@@ -28,7 +29,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
   final _employerLocationController = TextEditingController();
   final _companyWebsiteController = TextEditingController();
 
-  bool get _isCandidate => widget.user.getRole() == UserRole.candidate;
+  bool get _isCandidate => widget.auth.user is Candidate;
 
   Future<void> _handleSubmit() async {
     setState(() {
@@ -38,19 +39,18 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
 
     try {
       if (_isCandidate) {
-        await widget.user.buildCandidateProfile(
-          phone: _phoneController.text.trim(),
-          location: _locationController.text.trim(),
-          bio: _bioController.text.trim(),
-        );
+        final candidate = widget.auth.user as Candidate;
+        candidate.phone = _phoneController.text.trim();
+        candidate.location = _locationController.text.trim();
+        candidate.bio = _bioController.text.trim();
       } else {
-        await widget.user.buildEmployerProfile(
-          companyName: _companyNameController.text.trim(),
-          description: _companyDescriptionController.text.trim(),
-          location: _employerLocationController.text.trim(),
-          website: _companyWebsiteController.text.trim(),
-        );
+        final employer = widget.auth.user as Employer;
+        employer.companyName = _companyNameController.text.trim();
+        employer.description = _companyDescriptionController.text.trim();
+        employer.location = _employerLocationController.text.trim();
+        employer.website = _companyWebsiteController.text.trim();
       }
+      await widget.auth.user!.updateProfile();
       if (mounted) _navigateToHome();
     } on ServerException catch (e) {
       setState(() => _error = _friendlyError(e));
@@ -64,7 +64,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
   void _navigateToHome() {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => HomeScreen(server: widget.server, user: widget.user),
+        builder: (_) => HomeScreen(server: widget.server, auth: widget.auth),
       ),
       (_) => false,
     );

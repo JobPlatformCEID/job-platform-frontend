@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
-import '../user.dart';
+import '../auth.dart';
 import 'build_profile_screen.dart';
 import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final Server server;
-  final User user;
+  final Auth auth;
 
-  const RegisterScreen({super.key, required this.server, required this.user});
+  const RegisterScreen({super.key, required this.server, required this.auth});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -71,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      await widget.user.register(
+      await widget.auth.register(
         _usernameController.text.trim(),
         _passwordController.text,
         _selectedRole,
@@ -83,7 +83,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => BuildProfileScreen(server: widget.server, user: widget.user),
+            builder: (_) => BuildProfileScreen(server: widget.server, auth: widget.auth),
           ),
         );
       }

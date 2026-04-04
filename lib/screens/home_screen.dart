@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
-import '../user.dart';
+import '../auth.dart';
 import 'server_settings_screen.dart';
 import 'welcome_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Server server;
-  final User user;
+  final Auth auth;
 
-  const HomeScreen({super.key, required this.server, required this.user});
+  const HomeScreen({super.key, required this.server, required this.auth});
 
   Future<void> _handleLogout(BuildContext context) async {
-    await user.logout();
+    await auth.logout();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => WelcomeScreen(server: server, user: user)),
+        MaterialPageRoute(builder: (_) => WelcomeScreen(server: server, auth: auth)),
         (_) => false,
       );
     }
@@ -51,7 +51,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Welcome back, ${user.getUsername()}!',
+                'Welcome back, ${auth.user!.username}!',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
