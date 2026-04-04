@@ -62,7 +62,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
       _connectionWasSuccessful = false;
     });
 
-    await widget.server.setServerUrl(_serverUrlController.text.trim());
+    widget.server.setServerUrl(_serverUrlController.text.trim());
     final bool serverIsReachable = await widget.server.testServerConnection();
 
     setState(() {
@@ -81,7 +81,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
   Future<void> _saveServerUrl() async {
     setState(() => _isSavingUrl = true);
 
-    await widget.server.setServerUrl(_serverUrlController.text.trim());
+    await widget.server.saveServerUrl(_serverUrlController.text.trim());
 
     setState(() => _isSavingUrl = false);
 

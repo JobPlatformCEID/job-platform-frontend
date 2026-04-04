@@ -18,13 +18,18 @@ class Server {
     return _serverUrl;
   }
 
-  // Saves a new server URL and removes trailing slashes for consistency
-  Future<void> setServerUrl(String url) async {
+  // Setter for server URL (also removes trailing slashes)
+  void setServerUrl(String url) {
     String cleanUrl = url.trim();
     if (cleanUrl.endsWith('/')) {
       cleanUrl = cleanUrl.substring(0, cleanUrl.length - 1);
     }
     _serverUrl = cleanUrl;
+  }
+
+  // Saves a new server URL to storage
+  Future<void> saveServerUrl(String url) async {
+    setServerUrl(url);
     await _storage.write(key: _urlKey, value: _serverUrl);
   }
 
