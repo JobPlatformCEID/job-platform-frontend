@@ -706,11 +706,42 @@ class _EditPostSheetState extends State<_EditPostSheet> {
   late final TextEditingController _contentController;
   bool _isLoading = false;
   String? _error;
+  List<PostImage> _existingImages = [];
+  final List<XFile> _newImages = [];
+  bool _isLoadingImages = true;
 
   @override
   void initState() {
     super.initState();
     _contentController = TextEditingController(text: widget.post.content);
+    _loadImages();
+  }
+
+  Future<void> _loadImages() async {
+    try {
+      final images = await PostImage.fetchPostImages(widget.server, widget.token, widget.post.id);
+      if (mounted) setState(() {
+        _existingImages = images;
+        _isLoadingImages = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingImages = false);
+    }
+  }
+
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final images = await picker.pickMultiImage();
+    if (images.isNotEmpty) setState(() => _newImages.addAll(images));
+  }
+
+  Future<void> _deleteExistingImage(PostImage image) async {
+    try {
+      await image.deleteImage(widget.server, widget.token);
+      if (mounted) setState(() => _existingImages.removeWhere((i) => i.id == image.id));
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not delete image.');
+    }
   }
 
   Future<void> _handleSubmit() async {
@@ -725,6 +756,19 @@ class _EditPostSheetState extends State<_EditPostSheet> {
         widget.token,
         content: _contentController.text.trim(),
       );
+
+      // Upload new images
+      for (final image in _newImages) {
+        final bytes = await image.readAsBytes();
+        await PostImage.uploadImage(
+          widget.server,
+          widget.token, 
+          widget.post.id,
+          bytes,
+          image.name,
+        );
+      }
+
       if (mounted) widget.onUpdated(updated);
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not update post.');
@@ -755,6 +799,120 @@ class _EditPostSheetState extends State<_EditPostSheet> {
               prefixIcon: Icon(Icons.edit_outlined),
             ),
           ),
+          const SizedBox(height: 16),
+          if (_isLoadingImages)
+            const Center(child: CircularProgressIndicator())
+          else ...[
+            // Existing images
+            if (_existingImages.isNotEmpty) ...[
+              Text('Current photos', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _existingImages.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final image = _existingImages[index];
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            image.imageUrl,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 80,
+                              height: 80,
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              child: const Icon(Icons.broken_image_outlined),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () => _deleteExistingImage(image),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onError),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // New images preview
+            if (_newImages.isNotEmpty) ...[
+              Text('New photos', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _newImages.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final image = _newImages[index];
+                    return Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: FutureBuilder<Uint8List>(
+                            future: image.readAsBytes(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) return const SizedBox(width: 80);
+                              return Image.memory(snapshot.data!, width: 80, height: 80, fit: BoxFit.cover);
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _newImages.removeAt(index)),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.error,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onError),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Upload button
+            Row(
+              children: [
+                const Text('Add photos:'),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: _pickImages,
+                  icon: const Icon(Icons.upload_outlined),
+                  label: const Text('Upload'),
+                ),
+              ],
+            ),
+          ],
           if (_error != null) ...[
             const SizedBox(height: 16),
             Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w500)),
