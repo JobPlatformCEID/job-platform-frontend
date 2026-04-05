@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import '../auth.dart';
+import 'call_waiting_room.dart';
 
 class VideoCallsManagmentScreen extends StatelessWidget {
-  const VideoCallsManagmentScreen({super.key});
+  final Auth auth;
+  
+  const VideoCallsManagmentScreen({super.key, required this.auth});
 
   @override
   Widget build(BuildContext context) {
@@ -9,10 +13,16 @@ class VideoCallsManagmentScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Call Rooms'),
       ),
-      body: const Center(
-        child: Text(
-          'Coming Soon',
-          style: TextStyle(fontSize: 24),
+      body: Center(
+        child: ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CallWaitingRoom(auth: auth),
+              ),
+            );
+          },
+          child: const Text('Join Test Room'),
         ),
       ),
     );

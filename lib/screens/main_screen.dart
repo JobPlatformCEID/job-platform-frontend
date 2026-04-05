@@ -173,7 +173,7 @@ class _MainScreenState extends State<MainScreen> {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const VideoCallsManagmentScreen(),
+                    builder: (_) => VideoCallsManagmentScreen(auth: widget.auth),
                   ),
                 );
               },
