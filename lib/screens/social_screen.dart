@@ -91,6 +91,22 @@ class _SocialScreenState extends State<SocialScreen> {
         post: post,
         server: widget.server,
         token: widget.auth.user!.token,
+        onCommentAdded: () { 
+          final index = _posts.indexWhere((p) => p.id == post.id);
+          if (index != -1 && mounted) setState(() {
+            final p = _posts[index];
+            _posts[index] = Post(
+              id: p.id,
+              user: p.user,
+              content: p.content,
+              likesCount: p.likesCount,
+              commentsCount: p.commentsCount + 1,
+              images: p.images,
+              createdAt: p.createdAt,
+              updatedAt: p.updatedAt,
+            );
+          });
+        },
       ),
     );
   }
@@ -944,11 +960,13 @@ class _CommentsSheet extends StatefulWidget {
   final Post post;
   final Server server;
   final String token;
+  final VoidCallback? onCommentAdded;
 
   const _CommentsSheet({
     required this.post,
     required this.server,
     required this.token,
+    this.onCommentAdded,
   });
 
   @override
@@ -1001,6 +1019,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
         _comments.add(comment);
         _commentController.clear();
       });
+      widget.onCommentAdded?.call(); 
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not post comment.');
     } finally {
