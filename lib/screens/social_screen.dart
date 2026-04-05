@@ -1084,81 +1084,85 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-              child: Text('Comments', style: Theme.of(context).textTheme.headlineSmall),
-            ),
-            const Divider(),
-            if (_error != null)
+    return AnimatedPadding(
+      duration: Duration.zero,
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: Text('Comments', style: Theme.of(context).textTheme.headlineSmall),
               ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _comments.isEmpty
-                      ? const Center(child: Text('No comments yet.'))
-                      : ListView.separated(
-                          controller: scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _comments.length,
-                          separatorBuilder: (_, __) => const Divider(),
-                          itemBuilder: (context, index) {
-                            final comment = _comments[index];
-                            return ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
-                              ),
-                              title: Text('User #${comment.user}', style: Theme.of(context).textTheme.titleSmall),
-                              subtitle: Text(comment.content),
-                              onLongPress: () => _showCommentMenu(comment),
-                            );
-                          },
+              const Divider(),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ),
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _comments.isEmpty
+                        ? const Center(child: Text('No comments yet.'))
+                        : ListView.separated(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _comments.length,
+                            separatorBuilder: (_, __) => const Divider(),
+                            itemBuilder: (context, index) {
+                              final comment = _comments[index];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                ),
+                                title: Text('User #${comment.user}', style: Theme.of(context).textTheme.titleSmall),
+                                subtitle: Text(comment.content),
+                                onLongPress: () => _showCommentMenu(comment),
+                              );
+                            },
+                          ),
+              ),
+              const Divider(),
+              // Comment input
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 16, right: 16, top: 8,
+                  bottom: MediaQuery.of(context).padding.bottom + 16,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _handleSubmit(),
+                        decoration: const InputDecoration(
+                          hintText: 'Add a comment...',
+                          border: OutlineInputBorder(),
                         ),
-            ),
-            const Divider(),
-            // Comment input
-            Padding(
-              padding: EdgeInsets.only(
-                left: 16, right: 16, top: 8,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _handleSubmit(),
-                      decoration: const InputDecoration(
-                        hintText: 'Add a comment...',
-                        border: OutlineInputBorder(),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  _isSubmitting
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                      : IconButton(
-                          icon: const Icon(Icons.send),
-                          onPressed: _handleSubmit,
-                        ),
-                ],
+                    const SizedBox(width: 8),
+                    _isSubmitting
+                        ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton(
+                            icon: const Icon(Icons.send),
+                            onPressed: _handleSubmit,
+                          ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
