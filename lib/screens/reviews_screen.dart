@@ -340,22 +340,20 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                         child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
                                       ),
-                                      title: Row(
+                                      title: Text(
+                                        '${review.score}/10${review.edited ? ' (edited)' : ''}',
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                      subtitle: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           _buildStars(context, review.score),
-                                          const SizedBox(width: 8),
-                                          Text('${review.score}/10', style: Theme.of(context).textTheme.bodySmall),
-                                          if (review.edited) ...[
-                                            const SizedBox(width: 8),
-                                            Text('(edited)', style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                            )),
+                                          if (review.content.isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(review.content),
                                           ],
                                         ],
                                       ),
-                                      subtitle: review.content.isNotEmpty
-                                          ? Text(review.content)
-                                          : null,
                                       onLongPress: widget.auth.user is Candidate
                                           ? () => _showReviewMenu(review)
                                           : null,
