@@ -36,9 +36,14 @@ class Post {
     );
   }
 
-  static Future<List<Post>> fetchPosts(Server server, String token) async {
+  static Future<List<Post>> fetchAllPosts(Server server, String token) async {
     final list = await server.sendGetList('/api/posts/', token: token);
     return list.map((p) => Post.fromJson(p)).toList();
+  }
+
+  static Future<Post> fetchPost(Server server, String token, int postId) async {
+    final data = await server.sendGet('/api/posts/$postId/', token: token);
+    return Post.fromJson(data);
   }
 
   static Future<Post> createPost(Server server, String token, {required String content}) async {

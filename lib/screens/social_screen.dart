@@ -41,7 +41,7 @@ class _SocialScreenState extends State<SocialScreen> {
 
   Future<void> _loadPosts() async {
     try {
-      final posts = await Post.fetchPosts(widget.server, widget.auth.user!.token);
+      final posts = await Post.fetchAllPosts(widget.server, widget.auth.user!.token);
       if (mounted) setState(() {
         _posts = posts;
         _isLoading = false;
@@ -487,10 +487,12 @@ class _PostDetailSheet extends StatefulWidget {
 class _PostDetailSheetState extends State<_PostDetailSheet> {
   List<PostImage> _images = [];
   bool _isLoadingImages = true;
+  late Post _post;
 
   @override
   void initState() {
     super.initState();
+    _post = widget.post;
     _loadImages();
   }
 
@@ -499,7 +501,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
       final images = await PostImage.fetchPostImages(
         widget.server,
         widget.auth.user!.token,
-        widget.post.id,
+        _post.id,
       );
       if (mounted) setState(() {
         _images = images;
@@ -552,11 +554,15 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
       context: context,
       isScrollControlled: true,
       builder: (_) => _EditPostSheet(
-        post: widget.post,
+        post: _post,
         server: widget.server,
         token: widget.auth.user!.token,
         onUpdated: (updated) {
           widget.onUpdated(updated);
+          if (mounted) setState(() {
+            _post = updated;
+            _images = updated.images;
+          });
           Navigator.of(context).pop();
         },
       ),
@@ -595,7 +601,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text('User #${widget.post.user}', style: Theme.of(context).textTheme.titleSmall),
+                    child: Text('User #${_post.user}', style: Theme.of(context).textTheme.titleSmall),
                   ),
                   // TODO: only show for post owner when userId is available (same thing as reviews)
                   IconButton(
@@ -611,7 +617,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                 controller: scrollController,
                 padding: const EdgeInsets.all(24),
                 children: [
-                  Text(widget.post.content, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(_post.content, style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 24),
 
                   // Images
@@ -771,7 +777,14 @@ class _EditPostSheetState extends State<_EditPostSheet> {
         );
       }
 
-      if (mounted) widget.onUpdated(updated);
+      // Re-fetch to get updated images list
+      final fresh = await Post.fetchPost(
+        widget.server,
+        widget.token,
+        updated.id,
+      );
+
+      if (mounted) widget.onUpdated(fresh);
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not update post.');
     } finally {
