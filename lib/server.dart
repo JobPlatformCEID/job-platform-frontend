@@ -137,6 +137,54 @@ class Server {
     }
   }
 
+  // Sends a multipart POST request with a file to the given endpoint
+  Future<Map<String, dynamic>> sendMultipart(
+    String endpoint,
+    String fieldName,
+    List<int> fileBytes,
+    String filename, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('MULTIPART POST $endpoint');
+
+    final request = http.MultipartRequest('POST', url);
+    if (token != null) request.headers['Authorization'] = 'Token $token';
+    request.files.add(http.MultipartFile.fromBytes(
+      fieldName,
+      fileBytes,
+      filename: filename,
+    ));
+
+    final streamed = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(response);
+  }
+
+  // Sends a multipart PATCH request with a file to the given endpoint
+  Future<Map<String, dynamic>> sendMultipartPatch(
+    String endpoint,
+    String fieldName,
+    List<int> fileBytes,
+    String filename, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('MULTIPART PATCH $endpoint');
+
+    final request = http.MultipartRequest('PATCH', url);
+    if (token != null) request.headers['Authorization'] = 'Token $token';
+    request.files.add(http.MultipartFile.fromBytes(
+      fieldName,
+      fileBytes,
+      filename: filename,
+    ));
+
+    final streamed = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(response);
+  }
+
   // Parses the HTTP response and throws ServerException for invalid HTTP responses
   Map<String, dynamic> _parseResponse(http.Response response) {
     if (response.statusCode >= 400) {
