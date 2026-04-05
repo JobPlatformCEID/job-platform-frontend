@@ -20,6 +20,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
   String _searchQuery = '';
   int _selectedIndex = 0;
 
@@ -45,9 +46,11 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Scaffold(
+      onDrawerChanged: (isOpened) => _searchFocusNode.unfocus(),
       appBar: AppBar(
         title: TextField(
           controller: _searchController,
+          focusNode: _searchFocusNode,
           onChanged: (value) => setState(() => _searchQuery = value.trim()),
           decoration: InputDecoration(
             hintText: searchHints[_selectedIndex],
@@ -87,13 +90,17 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       drawer: _buildDrawer(context, user, isCandidate),
-      body: switch (_selectedIndex) {
-        1 => _buildPlaceholder('Messages not implemented yet.'),
-        2 => _buildPlaceholder('Social not implemented yet.'),
-        _ => isCandidate
-            ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
-            : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
-      },
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: switch (_selectedIndex) {
+          1 => _buildPlaceholder('Messages not implemented yet.'),
+          2 => _buildPlaceholder('Social not implemented yet.'),
+          _ => isCandidate
+              ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
+              : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
+        },
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) => setState(() {
@@ -187,6 +194,7 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 }
