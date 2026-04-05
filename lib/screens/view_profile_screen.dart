@@ -29,11 +29,13 @@ class _ProfileSection extends StatelessWidget {
 class ViewProfileScreen extends StatefulWidget {
   final Server server;
   final User user;
+  final String? avatarUrl; // passed in from HomeScreen
 
   const ViewProfileScreen({
     super.key,
     required this.server,
     required this.user,
+    this.avatarUrl,
   });
 
   @override
@@ -83,14 +85,19 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                               backgroundColor: Theme.of(
                                 context,
                               ).colorScheme.primary,
-                              child: Text(
-                                username[0].toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
+                              backgroundImage: widget.avatarUrl != null
+                                  ? NetworkImage(widget.avatarUrl!)
+                                  : null,
+                              child: widget.avatarUrl == null
+                                  ? Text(
+                                      username[0].toUpperCase(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 16),
                             Expanded(

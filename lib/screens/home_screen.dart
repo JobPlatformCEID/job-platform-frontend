@@ -5,23 +5,49 @@ import 'server_settings_screen.dart';
 import 'welcome_screen.dart';
 import 'view_profile_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Server server;
   final User user;
 
   const HomeScreen({super.key, required this.server, required this.user});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String? _avatarUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvatar();
+  }
+
+  Future<void> _loadAvatar() async {
+    try {
+      final data = await widget.user.fetchAvatar();
+      if (mounted) {
+        setState(() {
+          _avatarUrl = data['avatar_url'] as String?;
+        });
+      }
+    } catch (_) {
+      // Falls back to initials on error — _avatarUrl stays null
+    }
+  }
+
   Future<void> _handleLogout(BuildContext context) async {
-    await user.logout();
+    await widget.user.logout();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => WelcomeScreen(server: server, user: user)),
+        MaterialPageRoute(builder: (_) => WelcomeScreen(server: widget.server, user: widget.user)),
         (_) => false,
       );
     }
   }
 
-//Note: rendering is done left to right
+  //Note: rendering is done left to right
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +59,7 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => ServerSettingsScreen(server: server),
+                  builder: (_) => ServerSettingsScreen(server: widget.server),
                 ),
               );
             },
@@ -43,28 +69,32 @@ class HomeScreen extends StatelessWidget {
 
           // the users profile
           Padding(
-            padding: const EdgeInsets.all(8) ,
-            child : GestureDetector(
+            padding: const EdgeInsets.all(8),
+            child: GestureDetector(
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => ViewProfileScreen(server: server , user: user),
+                    builder: (_) => ViewProfileScreen(
+                      server: widget.server,
+                      user: widget.user,
+                      avatarUrl: _avatarUrl,
+                    ),
                   ),
                 );
               },
-
-              child : CircleAvatar(
+              child: CircleAvatar(
                 radius: 18,
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Text(
-                  //display the first letter of the users name this is temporary in the future this will be changed to users profile pic 
-                  ( user.getUsername() ?? '?')[0].toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                ),
+                backgroundImage: _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                child: _avatarUrl == null
+                    ? Text(
+                        (widget.user.getUsername() ?? '?')[0].toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontSize: 14),
+                      )
+                    : null,
               ),
             ),
           ),
-
         ],
       ),
       body: Center(
@@ -80,7 +110,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               Text(
-                'Welcome back, ${user.getUsername()}!',
+                'Welcome back, ${widget.user.getUsername()}!',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
