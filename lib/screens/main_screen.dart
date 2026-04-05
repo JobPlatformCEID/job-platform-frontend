@@ -10,6 +10,7 @@ import 'employer_home_screen.dart';
 import 'reviews_screen.dart';
 import 'social_screen.dart';
 import 'video_calls_managment_screen.dart';
+import 'my_calendar_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -173,6 +174,18 @@ class _MainScreenState extends State<MainScreen> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const VideoCallsManagmentScreen(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('My Calendar'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MyCalendarScreen(),
                   ),
                 );
               },
