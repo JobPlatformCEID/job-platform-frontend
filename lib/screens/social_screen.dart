@@ -348,108 +348,110 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
+      initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        return SingleChildScrollView(
-          controller: scrollController,
-          padding: EdgeInsets.only(
-            left: 24, right: 24, top: 24,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Create new post', style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 24),
+        return SafeArea(
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: EdgeInsets.only(
+              left: 24, right: 24, top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Create new post', style: Theme.of(context).textTheme.headlineSmall),
+                const SizedBox(height: 24),
 
-              TextField(
-                controller: _contentController,
-                maxLines: 6,
-                decoration: const InputDecoration(
-                  labelText: 'Post text',
-                  alignLabelWithHint: true,
-                  prefixIcon: Icon(Icons.edit_outlined),
+                TextField(
+                  controller: _contentController,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Post text',
+                    alignLabelWithHint: true,
+                    prefixIcon: Icon(Icons.edit_outlined),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Selected images preview
-              if (_selectedImages.isNotEmpty) ...[
-                SizedBox(
-                  height: 80,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _selectedImages.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final image = _selectedImages[index];
-                      return Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: FutureBuilder<Uint8List>(
-                              future: image.readAsBytes(),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) return const SizedBox(width: 80);
-                                return Image.memory(
-                                  snapshot.data!,
-                                  width: 80,
-                                  height: 80,
-                                  fit: BoxFit.cover,
-                                );
-                              },
-                            ),
-                          ),
-                          Positioned(
-                            top: 0,
-                            right: 0,
-                            child: GestureDetector(
-                              onTap: () => setState(() => _selectedImages.removeAt(index)),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.error,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onError),
+                // Selected images preview
+                if (_selectedImages.isNotEmpty) ...[
+                  SizedBox(
+                    height: 80,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: _selectedImages.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final image = _selectedImages[index];
+                        return Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: FutureBuilder<Uint8List>(
+                                future: image.readAsBytes(),
+                                builder: (context, snapshot) {
+                                  if (!snapshot.hasData) return const SizedBox(width: 80);
+                                  return Image.memory(
+                                    snapshot.data!,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                  );
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
+                            Positioned(
+                              top: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedImages.removeAt(index)),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(Icons.close, size: 16, color: Theme.of(context).colorScheme.onError),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              Row(
-                children: [
-                  const Text('Photos:'),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: _pickImages,
-                    icon: const Icon(Icons.upload_outlined),
-                    label: const Text('Upload'),
-                  ),
+                  const SizedBox(height: 16),
                 ],
-              ),
 
-              if (_error != null) ...[
-                const SizedBox(height: 16),
-                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w500)),
+                Row(
+                  children: [
+                    const Text('Photos:'),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: _pickImages,
+                      icon: const Icon(Icons.upload_outlined),
+                      label: const Text('Upload'),
+                    ),
+                  ],
+                ),
+
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w500)),
+                ],
+
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _isLoading ? null : _handleSubmit,
+                  child: _isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Post'),
+                ),
               ],
-
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _isLoading ? null : _handleSubmit,
-                child: _isLoading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Post'),
-              ),
-            ],
+            ),
           ),
         );
       },
