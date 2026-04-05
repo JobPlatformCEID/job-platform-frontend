@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
 import 'build_profile_screen.dart';
-import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   final Server server;

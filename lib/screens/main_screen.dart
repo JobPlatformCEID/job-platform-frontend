@@ -8,19 +8,26 @@ import 'profile_screen.dart';
 import 'candidate_home_screen.dart';
 import 'employer_home_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class MainScreen extends StatefulWidget {
   final Server server;
   final Auth auth;
 
-  const HomeScreen({super.key, required this.server, required this.auth});
+  const MainScreen({super.key, required this.server, required this.auth});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _MainScreenState extends State<MainScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  int _selectedIndex = 0;
+
+  static const _searchHints = [
+    'Search job postings',
+    'Search conversations',
+    'Search posts',
+  ];
 
   Future<void> _handleLogout(BuildContext context) async {
     await widget.auth.logout();
@@ -43,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
           controller: _searchController,
           onChanged: (value) => setState(() => _searchQuery = value.trim()),
           decoration: InputDecoration(
-            hintText: isCandidate ? 'Search job postings' : 'Search your job postings',
+            hintText: _searchHints[_selectedIndex],
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
@@ -80,18 +87,31 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       drawer: _buildDrawer(context, user, isCandidate),
-      body: isCandidate
-          ? CandidateHomeScreen(
-              auth: widget.auth,
-              server: widget.server,
-              searchQuery: _searchQuery,
-            )
-          : EmployerHomeScreen(
-              auth: widget.auth,
-              server: widget.server,
-              searchQuery: _searchQuery,
-            ),
+      body: switch (_selectedIndex) {
+        1 => _buildPlaceholder('Messages not implemented yet.'),
+        2 => _buildPlaceholder('Social not implemented yet.'),
+        _ => isCandidate
+            ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
+            : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
+      },
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() {
+          _selectedIndex = index;
+          _searchController.clear();
+          _searchQuery = '';
+        }),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
+          NavigationDestination(icon: Icon(Icons.people_outlined), selectedIcon: Icon(Icons.people), label: 'Social'),
+        ],
+      ),
     );
+  }
+
+  Widget _buildPlaceholder(String message) {
+    return Center(child: Text(message, style: Theme.of(context).textTheme.bodyMedium));
   }
 
   Widget _buildDrawer(BuildContext context, User user, bool isCandidate) {

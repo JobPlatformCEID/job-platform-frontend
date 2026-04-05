@@ -4,10 +4,8 @@ import 'package:logging/logging.dart';
 import 'theme/app_theme.dart';
 import 'server.dart';
 import 'auth.dart';
-import 'screens/server_settings_screen.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() async {
   // Required before any async work in main
@@ -51,7 +49,7 @@ class MyApp extends StatelessWidget {
   }
 
   Widget _pickStartScreen() {
-    if (hasSession) return HomeScreen(server: server, auth: auth);
+    if (hasSession) return MainScreen(server: server, auth: auth);
     return WelcomeScreen(server: server, auth: auth);
   }
 }

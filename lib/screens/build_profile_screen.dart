@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
 import '../user.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 
 class BuildProfileScreen extends StatefulWidget {
   final Server server;
@@ -64,7 +64,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
   void _navigateToHome() {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => HomeScreen(server: widget.server, auth: widget.auth),
+        builder: (_) => MainScreen(server: widget.server, auth: widget.auth),
       ),
       (_) => false,
     );
