@@ -9,6 +9,7 @@ import 'candidate_home_screen.dart';
 import 'employer_home_screen.dart';
 import 'reviews_screen.dart';
 import 'social_screen.dart';
+import 'video_calls_managment_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -160,6 +161,18 @@ class _MainScreenState extends State<MainScreen> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ReviewsScreen(auth: widget.auth, server: widget.server),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.phone_outlined),
+              title: const Text('Call Rooms'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const VideoCallsManagmentScreen(),
                   ),
                 );
               },
