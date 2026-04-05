@@ -7,6 +7,7 @@ import 'welcome_screen.dart';
 import 'profile_screen.dart';
 import 'candidate_home_screen.dart';
 import 'employer_home_screen.dart';
+import 'reviews_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -150,6 +151,18 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ),
             const Divider(),
+            ListTile(
+              leading: const Icon(Icons.rate_review_outlined),
+              title: const Text('Reviews'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ReviewsScreen(auth: widget.auth, server: widget.server),
+                  ),
+                );
+              },
+            ),
 
             // Role-specific items
             if (isCandidate) ...[
