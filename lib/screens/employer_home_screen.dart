@@ -202,7 +202,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
         else
           RefreshIndicator(
             onRefresh: _loadJobs,
-            child: ListView.builder(
+            child: ListView.separated(
+              separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
               itemCount: jobs.length,
               itemBuilder: (context, index) {
                 final job = jobs[index];

@@ -103,8 +103,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
             )
           : RefreshIndicator(
               onRefresh: _loadEmployers,
-              child: ListView.builder(
+              child: ListView.separated(
                 itemCount: employers.length,
+                separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
                 itemBuilder: (context, index) {
                   final employer = employers[index];
                   return ListTile(

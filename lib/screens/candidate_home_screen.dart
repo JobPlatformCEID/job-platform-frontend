@@ -101,7 +101,8 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadJobs,
-      child: ListView.builder(
+      child: ListView.separated(
+        separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
         itemCount: jobs.length,
         itemBuilder: (context, index) {
           final job = jobs[index];
