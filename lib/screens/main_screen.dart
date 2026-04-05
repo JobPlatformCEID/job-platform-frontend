@@ -23,12 +23,6 @@ class _MainScreenState extends State<MainScreen> {
   String _searchQuery = '';
   int _selectedIndex = 0;
 
-  static const _searchHints = [
-    'Search job postings',
-    'Search conversations',
-    'Search posts',
-  ];
-
   Future<void> _handleLogout(BuildContext context) async {
     await widget.auth.logout();
     if (context.mounted) {
@@ -44,13 +38,19 @@ class _MainScreenState extends State<MainScreen> {
     final user = widget.auth.user!;
     final isCandidate = user is Candidate;
 
+    final searchHints = [
+      isCandidate ? 'Search job postings' : 'Search your job postings',
+      'Search conversations',
+      'Search posts',
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: TextField(
           controller: _searchController,
           onChanged: (value) => setState(() => _searchQuery = value.trim()),
           decoration: InputDecoration(
-            hintText: _searchHints[_selectedIndex],
+            hintText: searchHints[_selectedIndex],
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
