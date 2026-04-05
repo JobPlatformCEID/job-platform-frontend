@@ -74,6 +74,23 @@ class Server {
     return _parseResponse(response);
   }
 
+  // Sends a GET request to the given endpoint, expecting a JSON array response
+  Future<List<dynamic>> sendGetList(String endpoint, {String? token}) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('GET $endpoint');
+
+    final response = await http
+        .get(url, headers: _buildHeaders(token: token))
+        .timeout(_timeout);
+
+    if (response.statusCode >= 400) {
+      _log.warning('HTTP ${response.statusCode} on ${response.request?.url}');
+      throw ServerException(response.statusCode, response.body);
+    }
+
+    return jsonDecode(response.body) as List<dynamic>;
+  }
+
   // Sends a POST request with a JSON body to the given endpoint
   Future<Map<String, dynamic>> sendPost(String endpoint, Map<String, dynamic> body, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');

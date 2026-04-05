@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
+import '../user.dart';
 import 'server_settings_screen.dart';
 import 'welcome_screen.dart';
 import 'profile_screen.dart';
+import 'candidate_home_screen.dart';
+import 'employer_home_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final Server server;
@@ -27,63 +30,29 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ServerSettingsScreen(server: server),
-                ),
-              );
-            },
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ProfileScreen(auth: auth)),
+            ),
+            icon: const Icon(Icons.person_outlined),
+            tooltip: 'My Profile',
+          ),
+          IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ServerSettingsScreen(server: server)),
+            ),
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Server Settings',
           ),
+          IconButton(
+            onPressed: () => _handleLogout(context),
+            icon: const Icon(Icons.logout),
+            tooltip: 'Log out',
+          ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.work_outline,
-                size: 72,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Welcome back, ${auth.user!.username}!',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your next opportunity is waiting.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 48),
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ProfileScreen(auth: auth),
-                    ),
-                  );
-                },
-                child: const Text('My Profile'),
-              ),
-              const SizedBox(height: 48),
-              OutlinedButton(
-                onPressed: () => _handleLogout(context),
-                child: const Text('Log out'),
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: auth.user is Candidate
+          ? CandidateHomeScreen(auth: auth, server: server)
+          : EmployerHomeScreen(auth: auth, server: server),
     );
   }
 }

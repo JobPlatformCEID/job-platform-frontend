@@ -14,6 +14,7 @@ abstract class User {
 }
 
 class Candidate extends User {
+  int? candidateProfileId;
   String phone = '';
   String location = '';
   String bio = '';
@@ -26,6 +27,7 @@ class Candidate extends User {
   @override
   Future<void> fetchProfile() async {
     final data = await server.sendGet('/api/candidates/me/', token: token);
+    candidateProfileId = data['id'] as int;
     phone = data['phone'] as String? ?? '';
     location = data['location'] as String? ?? '';
     bio = data['bio'] as String? ?? '';
@@ -44,6 +46,7 @@ class Candidate extends User {
 }
 
 class Employer extends User {
+  int? employerProfileId;
   String companyName = '';
   String description = '';
   String location = '';
@@ -55,6 +58,7 @@ class Employer extends User {
   @override
   Future<void> fetchProfile() async {
     final data = await server.sendGet('/api/employers/me/', token: token);
+    employerProfileId = data['id'] as int;
     companyName = data['company_name'] as String? ?? '';
     description = data['description'] as String? ?? '';
     location = data['location'] as String? ?? '';
