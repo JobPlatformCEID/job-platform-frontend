@@ -1,6 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../auth.dart';
-import '../server.dart';
 import 'video_call_screen.dart';
 
 class CallWaitingRoom extends StatefulWidget {
@@ -18,12 +20,19 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
   bool isConnecting = false;
   String? error;
 
+  WebSocketChannel? _channel;
+  StreamSubscription? _subscription;
+
+  // True once the host has sent 'call_started' from VideoCallScreen
+  bool _callStarted = false;
+
   @override
   void initState() {
     super.initState();
     _fetchRoomData();
   }
 
+  // ── API ───────────────────────────────────────────────────────────────────
   Future<void> _fetchRoomData() async {
     try {
       final response = await widget.auth.user!.server
@@ -32,6 +41,7 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
         roomData = response;
         isLoading = false;
       });
+      _connectWebSocket();
     } catch (e) {
       setState(() {
         error = 'Failed to load room: $e';
@@ -40,17 +50,69 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
     }
   }
 
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  void _connectWebSocket() {
+    final token = widget.auth.user!.token;
+    final serverUrl = widget.auth.user!.server.getServerUrl()!;
+    final wsUrl = serverUrl
+            .replaceFirst('http://', 'ws://')
+            .replaceFirst('https://', 'wss://') +
+        '/ws/calls/1/?token=$token';
+
+    _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+
+    _subscription = _channel!.stream.listen(
+      (data) => _handleWebSocketMessage(jsonDecode(data as String)),
+      onError: (e) => debugPrint('WebSocket error: $e'),
+      onDone: () => debugPrint('WebSocket closed'),
+    );
+  }
+
+  void _handleWebSocketMessage(Map<String, dynamic> message) {
+    final type = message['type'];
+
+    // Server sends this on initial connect — call_started is false at this
+    // point so we only use it to know if the room is active at all.
+    if (type == 'room_status') {
+      final callStarted = message['call_started'] as bool? ?? false;
+      setState(() => _callStarted = callStarted);
+    }
+
+    // Host entered VideoCallScreen and broadcast call_started → light up button
+    if (type == 'call_started') {
+      setState(() => _callStarted = true);
+    }
+  }
+
+  // Sends a notification message to the host's chat box in VideoCallScreen.
+  // Uses the dedicated 'notify_host' type so the server only delivers it to
+  // the host — guests do NOT see it in their own UI.
+  void _notifyHost() {
+    if (_channel == null || !_callStarted) return;
+    _channel!.sink.add(jsonEncode({
+      'type':    'notify_host',
+      'message': '${widget.auth.user!.username} is waiting and would like to join the call.',
+    }));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Host has been notified!')),
+    );
+  }
+
+  // ── Navigation ────────────────────────────────────────────────────────────
+  // Host only — navigates to VideoCallScreen which will then broadcast
+  // 'call_started' to everyone in the waiting room on its initState.
   Future<void> _startCall() async {
     setState(() => isConnecting = true);
-
     try {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => VideoCallScreen(
-              roomId: roomData!['id'].toString(),
-              token: widget.auth.user!.token,
+              roomId:          roomData!['id'].toString(),
+              token:           widget.auth.user!.token,
+              serverUrl:       widget.auth.user!.server.getServerUrl()!,
               currentUsername: widget.auth.user!.username,
+              isHost:          true,
             ),
           ),
         );
@@ -60,17 +122,23 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to connect: $e')),
         );
+        setState(() => isConnecting = false);
       }
-    } finally {
-      if (mounted) setState(() => isConnecting = false);
     }
   }
 
-  bool get isHost {
-    if (roomData == null) return false;
-    return widget.auth.user?.username == roomData!['host'];
+  bool get isHost =>
+      roomData != null &&
+      widget.auth.user?.username == roomData!['host'];
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    _channel?.sink.close();
+    super.dispose();
   }
 
+  // ── UI ────────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -110,7 +178,7 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
       );
     }
 
-    final String roomName = roomData!['room_name'] ?? 'Unknown Room';
+    final String roomName     = roomData!['room_name'] ?? 'Unknown Room';
     final String hostUsername = roomData!['host'] ?? 'Unknown Host';
 
     return Scaffold(
@@ -121,136 +189,147 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
         elevation: 1,
       ),
       body: Center(
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          margin: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  shape: BoxShape.circle,
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            margin: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: Icon(
-                  Icons.video_call,
-                  size: 64,
-                  color: Colors.blue[700],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                roomName,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Host: $hostUsername',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 32),
-
-              // ── HOST VIEW ──────────────────────────────────────────────────
-              if (isHost) ...[
-                if (isConnecting) ...[
-                  CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(Colors.green),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Icon ──────────────────────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Connecting to call...',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.green,
+                  child: Icon(Icons.video_call, size: 64, color: Colors.blue[700]),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  roomName,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Host: $hostUsername',
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 32),
+
+                // ── HOST VIEW ──────────────────────────────────────────────
+                if (isHost) ...[
+                  if (isConnecting) ...[
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Connecting to call...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ] else ...[
+                    ElevatedButton.icon(
+                      onPressed: _startCall,
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text('Start Call'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'You are the host. Start the call when ready.',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+
+                // ── GUEST VIEW ─────────────────────────────────────────────
+                ] else ...[
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _callStarted ? Colors.green : Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Establishing WebSocket connection...',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ] else ...[
+                  const SizedBox(height: 16),
+                  if (!_callStarted) ...[
+                    const Text(
+                      "Host hasn't started the call yet.",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "You'll be notified the moment the host starts.",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ] else ...[
+                    const Text(
+                      'Host is in the call!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.green,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Tap \"Notify Host\" to let them know you're ready.",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: _startCall,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start Call'),
+                    onPressed: _callStarted ? _notifyHost : null,
+                    icon: const Icon(Icons.notifications),
+                    label: const Text('Notify Host'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+                      backgroundColor:
+                          _callStarted ? Colors.orange : Colors.grey[300],
+                      foregroundColor:
+                          _callStarted ? Colors.white : Colors.grey[500],
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.grey[500],
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 32, vertical: 16),
+                          horizontal: 24, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'You are the host. Start the call when ready.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
                 ],
-
-              // ── GUEST VIEW ─────────────────────────────────────────────────
-              ] else ...[
-                CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Waiting for host to start the call...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Please stay in this room. You will be connected automatically.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Notifying host...')),
-                    );
-                  },
-                  icon: const Icon(Icons.notifications),
-                  label: const Text('Notify Host'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
