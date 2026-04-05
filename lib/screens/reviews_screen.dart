@@ -192,6 +192,72 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     );
   }
 
+  // TODO: The server doesn't expose the userId so we can't check which reviews the user owns
+  // For now, if the user tries to edit a review that doesn't belong to them, let the server error out. 
+  void _showReviewMenu(Review review) {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showEditReviewSheet(review);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outlined, color: Theme.of(context).colorScheme.error),
+              title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              onTap: () {
+                Navigator.of(context).pop();
+                _handleDelete(review);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditReviewSheet(Review review) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CreateReviewSheet(
+        employer: widget.employer,
+        server: widget.server,
+        token: widget.token,
+        existing: review,
+        onCreated: (updated) => setState(() {
+          final index = _reviews.indexWhere((r) => r.id == updated.id);
+          if (index != -1) _reviews[index] = updated;
+        }),
+      ),
+    );
+  }
+
+  Future<void> _handleDelete(Review review) async {
+    try {
+      await Review.delete(
+        widget.server,
+        widget.token,
+        widget.employer['id'] as int,
+        review.id,
+      );
+      if (mounted) setState(() => _reviews.removeWhere((r) => r.id == review.id));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not delete review.')),
+        );
+      }
+    }
+  }
+
   // Builds a row of stars for a given score out of 10
   Widget _buildStars(BuildContext context, int score) {
     const totalStars = 5;
@@ -290,6 +356,9 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                       subtitle: review.content.isNotEmpty
                                           ? Text(review.content)
                                           : null,
+                                      onLongPress: widget.auth.user is Candidate
+                                          ? () => _showReviewMenu(review)
+                                          : null,
                                     );
                                   },
                                 ),
@@ -318,12 +387,14 @@ class _CreateReviewSheet extends StatefulWidget {
   final Server server;
   final String token;
   final void Function(Review review) onCreated;
+  final Review? existing;
 
   const _CreateReviewSheet({
     required this.employer,
     required this.server,
     required this.token,
     required this.onCreated,
+    this.existing,
   });
 
   @override
@@ -335,16 +406,34 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
   int _score = 5;
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existing != null) {
+      _score = widget.existing!.score;
+      _contentController.text = widget.existing!.content;
+    }
+  }
+
   Future<void> _handleSubmit() async {
     setState(() => _isLoading = true);
     try {
-      final review = await Review.create(
-        widget.server,
-        widget.token,
-        widget.employer['id'] as int,
-        score: _score,
-        content: _contentController.text.trim(),
-      );
+      final review = widget.existing == null
+          ? await Review.create(
+              widget.server,
+              widget.token,
+              widget.employer['id'] as int,
+              score: _score,
+              content: _contentController.text.trim(),
+            )
+          : await Review.update(
+              widget.server,
+              widget.token,
+              widget.employer['id'] as int,
+              widget.existing!.id,
+              score: _score,
+              content: _contentController.text.trim(),
+            );
       if (mounted) {
         Navigator.of(context).pop();
         widget.onCreated(review);
@@ -371,7 +460,7 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Leave a review', style: Theme.of(context).textTheme.headlineSmall),
+          Text(widget.existing == null ? 'Leave a review' : 'Edit review', style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 24),
 
           // Score slider
@@ -402,7 +491,7 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
             onPressed: _isLoading ? null : _handleSubmit,
             child: _isLoading
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Submit'),
+                : Text(widget.existing == null ? 'Submit' : 'Save'),
           ),
         ],
       ),

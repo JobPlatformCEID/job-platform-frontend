@@ -48,6 +48,32 @@ class Review {
     }, token: token);
     return Review.fromJson(data);
   }
+
+  // Updates a review
+  static Future<Review> update(
+    Server server,
+    String token,
+    int employerId,
+    int reviewId, {
+    required int score,
+    String content = '',
+  }) async {
+    final data = await server.sendPut('/api/reviews/$employerId/$reviewId/', {
+      'score': score,
+      'content': content,
+    }, token: token);
+    return Review.fromJson(data);
+  }
+
+  // Deletes a review
+  static Future<void> delete(
+    Server server,
+    String token,
+    int employerId,
+    int reviewId,
+  ) async {
+    await server.sendDelete('/api/reviews/$employerId/$reviewId/', token: token);
+  }
 }
 
 // Fetches all employer profiles for the reviews screen
