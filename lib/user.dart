@@ -182,5 +182,14 @@ class User {
       return await _server.sendGet('/api/employers/me/', token: _token);
     }
   }
+
+   //updates the users avatar
+  Future<void> uploadAvatar(String filePath) async {
+    await _server.sendFile('/api/me/avatar/', filePath, token: _token);
+  }
+
+  Future<Map<String, dynamic>> fetchAvatar() async {
+    return await _server.sendGet('/api/me/avatar/', token: _token);
+  }
   
 }

@@ -128,6 +128,23 @@ class Server {
     }
     return jsonDecode(response.body);
   }
+
+  Future<Map<String, dynamic>> sendFile(String endpoint, String filePath, {String? token}) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('PATCH (multipart) $endpoint');
+
+    final request = http.MultipartRequest('PATCH', url);
+
+    if (token != null) {
+      request.headers['Authorization'] = 'Token $token';
+    }
+
+    request.files.add(await http.MultipartFile.fromPath('avatar', filePath));
+
+    final streamed = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(response);
+  }
 }
 
 class ServerException implements Exception {
