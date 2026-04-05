@@ -28,6 +28,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   bool _isLoading = true;
   String? _error;
   WebSocketChannel? _channel;
+  bool _otherUserSeen = false;
 
   String get _token => widget.auth.user!.token;
   int get _conversationId => widget.conversation.id;
@@ -84,8 +85,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
             );
             if (mounted) setState(() => _messages.add(message));
             _scrollToBottom();
+          } else if (type == 'read') { 
+            final readerId = json['reader_id'] as int?;
+            // If the other user read the messages, show seen indicator
+            if (readerId != null &&
+                readerId == widget.conversation.otherUserId) {
+              if (mounted) setState(() => _otherUserSeen = true);
+            }
           }
-          // type == 'read' can be handled later
         },
         onError: (e) {
           if (mounted) setState(() => _error = 'Connection lost.');
@@ -101,6 +108,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (content.isEmpty) return;
     _channel?.sink.add(jsonEncode({'content': content}));
     _messageController.clear();
+    if (mounted) setState(() => _otherUserSeen = false);
   }
 
   void _scrollToBottom() {
@@ -157,11 +165,27 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final message = _messages[index];
-                          final isOwn = message.senderUsername == widget.auth.user!.token.hashCode;
-                          return _MessageBubble(
-                            message: message,
-                            isOwn: isOwn,
-                            onLongPress: () => _handleDeleteMessage(message),
+                          final isOwn = message.senderUsername == widget.auth.user!.username;
+                          final isLast = index == _messages.length - 1;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _MessageBubble(
+                                message: message,
+                                isOwn: isOwn,
+                                onLongPress: () => _handleDeleteMessage(message),
+                              ),
+                              if (isLast && isOwn && _otherUserSeen)
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8, bottom: 4),
+                                  child: Text(
+                                    'Seen',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           );
                         },
                       ),
