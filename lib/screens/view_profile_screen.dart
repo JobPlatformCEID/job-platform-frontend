@@ -197,6 +197,28 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                       ],
                     ),
                   ),
+                  _ProfileSection(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                            Text(
+                                'Bio',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.primary,
+                                ),
+                            ),
+                            const SizedBox(height: 8,),
+                            Text(
+                                _profileData?['bio'] ?? 'No bio yet.',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                            ),
+                        ],
+                    )
+                  
+                  ),
                 ],
               ),
             ),
