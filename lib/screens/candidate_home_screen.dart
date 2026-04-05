@@ -7,8 +7,14 @@ import '../server.dart';
 class CandidateHomeScreen extends StatefulWidget {
   final Auth auth;
   final Server server;
+  final String searchQuery;
 
-  const CandidateHomeScreen({super.key, required this.auth, required this.server});
+  const CandidateHomeScreen({
+    super.key,
+    required this.auth,
+    required this.server,
+    required this.searchQuery,
+  });
 
   @override
   State<CandidateHomeScreen> createState() => _CandidateHomeScreenState();
@@ -20,6 +26,13 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
   String? _error;
 
   Candidate get _candidate => widget.auth.user as Candidate;
+
+  // Filters the full job list by the search query from HomeScreen
+  List<JobPosting> get _filteredJobs {
+    if (widget.searchQuery.isEmpty) return _jobs;
+    final query = widget.searchQuery.toLowerCase();
+    return _jobs.where((job) => job.title.toLowerCase().contains(query)).toList();
+  }
 
   @override
   void initState() {
@@ -76,16 +89,22 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)));
 
-    if (_jobs.isEmpty) {
-      return const Center(child: Text('No job postings available.'));
+    final jobs = _filteredJobs;
+
+    if (jobs.isEmpty) {
+      return Center(
+        child: Text(
+          widget.searchQuery.isEmpty ? 'No job postings available.' : 'No results for "${widget.searchQuery}".',
+        ),
+      );
     }
 
     return RefreshIndicator(
       onRefresh: _loadJobs,
       child: ListView.builder(
-        itemCount: _jobs.length,
+        itemCount: jobs.length,
         itemBuilder: (context, index) {
-          final job = _jobs[index];
+          final job = jobs[index];
           return ListTile(
             title: Text(job.title),
             subtitle: Text(

@@ -7,8 +7,14 @@ import '../server.dart';
 class EmployerHomeScreen extends StatefulWidget {
   final Auth auth;
   final Server server;
+  final String searchQuery;
 
-  const EmployerHomeScreen({super.key, required this.auth, required this.server});
+  const EmployerHomeScreen({
+    super.key,
+    required this.auth,
+    required this.server,
+    required this.searchQuery,
+  });
 
   @override
   State<EmployerHomeScreen> createState() => _EmployerHomeScreenState();
@@ -20,6 +26,13 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
   String? _error;
 
   Employer get _employer => widget.auth.user as Employer;
+
+  // Filters the employer's job list by the search query from HomeScreen
+  List<JobPosting> get _filteredJobs {
+    if (widget.searchQuery.isEmpty) return _jobs;
+    final query = widget.searchQuery.toLowerCase();
+    return _jobs.where((job) => job.title.toLowerCase().contains(query)).toList();
+  }
 
   @override
   void initState() {
@@ -174,17 +187,25 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)));
 
+    final jobs = _filteredJobs;
+
     return Stack(
       children: [
-        if (_jobs.isEmpty)
-          const Center(child: Text('No job postings yet. Tap + to create one.'))
+        if (jobs.isEmpty)
+          Center(
+            child: Text(
+              widget.searchQuery.isEmpty
+                  ? 'No job postings yet. Tap + to create one.'
+                  : 'No results for "${widget.searchQuery}".',
+            ),
+          )
         else
           RefreshIndicator(
             onRefresh: _loadJobs,
             child: ListView.builder(
-              itemCount: _jobs.length,
+              itemCount: jobs.length,
               itemBuilder: (context, index) {
-                final job = _jobs[index];
+                final job = jobs[index];
                 return ListTile(
                   title: Text(job.title),
                   subtitle: Text(

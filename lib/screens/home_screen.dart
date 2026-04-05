@@ -8,17 +8,25 @@ import 'profile_screen.dart';
 import 'candidate_home_screen.dart';
 import 'employer_home_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Server server;
   final Auth auth;
 
   const HomeScreen({super.key, required this.server, required this.auth});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
   Future<void> _handleLogout(BuildContext context) async {
-    await auth.logout();
+    await widget.auth.logout();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => WelcomeScreen(server: server, auth: auth)),
+        MaterialPageRoute(builder: (_) => WelcomeScreen(server: widget.server, auth: widget.auth)),
         (_) => false,
       );
     }
@@ -26,19 +34,39 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = auth.user!;
+    final user = widget.auth.user!;
     final isCandidate = user is Candidate;
 
     return Scaffold(
       appBar: AppBar(
-        // Hamburger menu — provided automatically by Scaffold when drawer is set
+        title: TextField(
+          controller: _searchController,
+          onChanged: (value) => setState(() => _searchQuery = value.trim()),
+          decoration: InputDecoration(
+            hintText: isCandidate ? 'Search job postings' : 'Search your job postings',
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            filled: false,
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  )
+                : null,
+          ),
+        ),
         actions: [
           // Profile avatar button
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ProfileScreen(auth: auth)),
+                MaterialPageRoute(builder: (_) => ProfileScreen(auth: widget.auth)),
               ),
               child: CircleAvatar(
                 backgroundColor: Theme.of(context).colorScheme.primaryContainer,
@@ -53,8 +81,16 @@ class HomeScreen extends StatelessWidget {
       ),
       drawer: _buildDrawer(context, user, isCandidate),
       body: isCandidate
-          ? CandidateHomeScreen(auth: auth, server: server)
-          : EmployerHomeScreen(auth: auth, server: server),
+          ? CandidateHomeScreen(
+              auth: widget.auth,
+              server: widget.server,
+              searchQuery: _searchQuery,
+            )
+          : EmployerHomeScreen(
+              auth: widget.auth,
+              server: widget.server,
+              searchQuery: _searchQuery,
+            ),
     );
   }
 
@@ -100,7 +136,7 @@ class HomeScreen extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ServerSettingsScreen(server: server)),
+                  MaterialPageRoute(builder: (_) => ServerSettingsScreen(server: widget.server)),
                 );
               },
             ),
@@ -126,5 +162,11 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }
