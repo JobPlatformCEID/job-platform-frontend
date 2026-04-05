@@ -486,29 +486,29 @@ class _PostDetailSheet extends StatefulWidget {
 
 class _PostDetailSheetState extends State<_PostDetailSheet> {
   List<PostImage> _images = [];
-  bool _isLoadingImages = true;
+  bool _isLoading = true;
   late Post _post;
 
   @override
   void initState() {
     super.initState();
     _post = widget.post;
-    _loadImages();
+    _fetchPost();
   }
 
-  Future<void> _loadImages() async {
+  Future<void> _fetchPost() async {
     try {
-      final images = await PostImage.fetchPostImages(
-        widget.server,
-        widget.auth.user!.token,
-        _post.id,
-      );
+      final fresh = await Post.fetchPost(widget.server, widget.auth.user!.token, widget.post.id);
       if (mounted) setState(() {
-        _images = images;
-        _isLoadingImages = false;
+        _post = fresh;
+        _images = fresh.images;
+        _isLoading = false;
       });
     } catch (e) {
-      if (mounted) setState(() => _isLoadingImages = false);
+      if (mounted) setState(() {
+        _images = widget.post.images;  // fallback to what we have from social feed
+        _isLoading = false;
+      });
     }
   }
 
@@ -621,7 +621,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   const SizedBox(height: 24),
 
                   // Images
-                  if (_isLoadingImages)
+                  if (_isLoading)
                     const Center(child: CircularProgressIndicator())
                   else if (_images.isNotEmpty) ...[
                     Text('Photos', style: Theme.of(context).textTheme.titleSmall),
@@ -722,19 +722,8 @@ class _EditPostSheetState extends State<_EditPostSheet> {
   void initState() {
     super.initState();
     _contentController = TextEditingController(text: widget.post.content);
-    _loadImages();
-  }
-
-  Future<void> _loadImages() async {
-    try {
-      final images = await PostImage.fetchPostImages(widget.server, widget.token, widget.post.id);
-      if (mounted) setState(() {
-        _existingImages = images;
-        _isLoadingImages = false;
-      });
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingImages = false);
-    }
+    _existingImages = List.from(widget.post.images);
+    _isLoadingImages = false;
   }
 
   Future<void> _pickImages() async {

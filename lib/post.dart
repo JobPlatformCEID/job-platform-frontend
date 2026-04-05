@@ -91,11 +91,6 @@ class PostImage {
     );
   }
 
-  static Future<List<PostImage>> fetchPostImages(Server server, String token, int postId) async {
-    final list = await server.sendGetList('/api/posts/$postId/images/', token: token);
-    return list.map((i) => PostImage.fromJson(i)).toList();
-  }
-
   static Future<PostImage> uploadImage(
     Server server,
     String token,
