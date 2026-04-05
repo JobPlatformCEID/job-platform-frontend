@@ -8,6 +8,7 @@ import 'profile_screen.dart';
 import 'candidate_home_screen.dart';
 import 'employer_home_screen.dart';
 import 'reviews_screen.dart';
+import 'social_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -96,7 +97,7 @@ class _MainScreenState extends State<MainScreen> {
         behavior: HitTestBehavior.opaque,
         child: switch (_selectedIndex) {
           1 => _buildPlaceholder('Messages not implemented yet.'),
-          2 => _buildPlaceholder('Social not implemented yet.'),
+          2 => SocialScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
           _ => isCandidate
               ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
               : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
