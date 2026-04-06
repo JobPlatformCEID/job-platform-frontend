@@ -39,7 +39,9 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = widget.auth.user!;
+    final user = widget.auth.user;
+    if (user == null) return const Scaffold(body: SizedBox.shrink());
+
     final isCandidate = user is Candidate;
 
     final searchHints = [
@@ -92,7 +94,7 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
-      drawer: _buildDrawer(context, user, isCandidate),
+      drawer: _buildDrawer(context, user!, isCandidate),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         behavior: HitTestBehavior.opaque,
