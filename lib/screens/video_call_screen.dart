@@ -354,13 +354,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     final pc = await createPeerConnection(_iceServers);
     participant.pc = pc;
 
-    // Add local tracks if media is already ready
-    if (_localStream != null) {
-      debugPrint('[VideoCallScreen] Local stream ready, adding tracks to PC for $username');
-      _localStream!.getTracks().forEach((t) => pc.addTrack(t, _localStream!));
-    } else {
-      debugPrint('[VideoCallScreen] Local stream NOT ready yet for $username. Will add tracks later.');
-    }
+    // Don't add tracks here - tracks are added in _startLocalMedia after stream is ready
+    // or in _handleOffer when answering an offer to prevent duplicate additions
+    debugPrint('[VideoCallScreen] PeerConnection created for $username, tracks will be added when stream is ready');
 
     pc.onTrack = (event) {
       debugPrint('[VideoCallScreen] onTrack triggered for $username. Streams: ${event.streams.length}');
@@ -413,8 +409,23 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   Future<void> _handleOffer(String sender, Map<String, dynamic> offerMap) async {
     debugPrint('[VideoCallScreen] Received offer from $sender');
     final pc = await _ensurePc(sender);
+    
     await pc.setRemoteDescription(RTCSessionDescription(
         offerMap['sdp'] as String, offerMap['type'] as String));
+    
+    // BUG 3 FIX: Ensure local tracks are added before creating answer
+    // Add tracks after remote description is set so PC is in correct state
+    if (_localStream != null) {
+      debugPrint('[VideoCallScreen] Adding local tracks to PC for $sender before answering');
+      for (final track in _localStream!.getTracks()) {
+        try {
+          await pc.addTrack(track, _localStream!);
+        } catch (e) {
+          debugPrint('[VideoCallScreen] Error adding track: $e');
+        }
+      }
+    }
+    
     final answer = await pc.createAnswer(_offerConstraints);
     await pc.setLocalDescription(answer);
     debugPrint('[VideoCallScreen] Sending answer to $sender');
