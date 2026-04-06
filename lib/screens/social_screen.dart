@@ -106,6 +106,7 @@ class _SocialScreenState extends State<SocialScreen> {
               images: p.images,
               createdAt: p.createdAt,
               updatedAt: p.updatedAt,
+              isLikedByMe: p.isLikedByMe,
             );
           });
         },
@@ -114,45 +115,37 @@ class _SocialScreenState extends State<SocialScreen> {
   }
 
   Future<void> _toggleLike(Post post) async {
+    final index = _posts.indexWhere((p) => p.id == post.id);
+    if (index == -1) return;
+
+    final wasLiked = post.isLikedByMe;
+
+    // Optimistic update
+    setState(() {
+      _posts[index] = Post(
+        id: post.id,
+        user: post.user,
+        username: post.username,
+        fullName: post.fullName,
+        content: post.content,
+        likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
+        commentsCount: post.commentsCount,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        images: post.images,
+        isLikedByMe: !wasLiked,
+      );
+    });
+
     try {
-      final index = _posts.indexWhere((p) => p.id == post.id);
-      if (index == -1) return;
-      // Optimistic update
-      setState(() {
-        _posts[index] = Post(
-          id: post.id,
-          user: post.user,
-          username: post.username,
-          fullName: post.fullName,
-          content: post.content,
-          likesCount: post.likesCount + 1,
-          commentsCount: post.commentsCount,
-          createdAt: post.createdAt,
-          updatedAt: post.updatedAt,
-          images: post.images,
-        );
-      });
-      await post.likePost(widget.server, widget.auth.user!.token);
-    } catch (e) {
-      // If it failed, try unlike (toggle)
-      try {
+      if (wasLiked) {
         await post.unlikePost(widget.server, widget.auth.user!.token);
-        final index = _posts.indexWhere((p) => p.id == post.id);
-        if (mounted && index != -1) setState(() {
-          _posts[index] = Post(
-            id: post.id,
-            user: post.user,
-            username: post.username,
-            fullName: post.fullName,
-            content: post.content,
-            likesCount: (post.likesCount - 1).clamp(0, double.maxFinite.toInt()),
-            commentsCount: post.commentsCount,
-            createdAt: post.createdAt,
-            updatedAt: post.updatedAt,
-            images: post.images,
-          );
-        });
-      } catch (_) {}
+      } else {
+        await post.likePost(widget.server, widget.auth.user!.token);
+      }
+    } catch (e) {
+      // Revert on failure
+      if (mounted) setState(() => _posts[index] = post);
     }
   }
 
@@ -276,11 +269,14 @@ class _PostCard extends StatelessWidget {
               // Actions
               Row(
                 children: [
-                  IconButton(
-                    onPressed: onLike,
-                    icon: const Icon(Icons.favorite_border),
-                    iconSize: 20,
+                IconButton(
+                  onPressed: onLike,
+                  icon: Icon(
+                    post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
+                    color: post.isLikedByMe ? Colors.red : null,
                   ),
+                  iconSize: 20,
+                ),
                   Text('${post.likesCount}', style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(width: 16),
                   IconButton(

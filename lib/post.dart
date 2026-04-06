@@ -11,6 +11,7 @@ class Post {
   final String createdAt;
   final String updatedAt;
   final List<PostImage> images;
+  final bool isLikedByMe;
 
   const Post({
     required this.id,
@@ -23,6 +24,7 @@ class Post {
     required this.createdAt,
     required this.updatedAt,
     required this.images,
+    required this.isLikedByMe,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class Post {
       images: (json['images'] as List? ?? [])
         .map((i) => PostImage.fromJson(i))
         .toList(),
+      isLikedByMe: json['is_liked_by_me'] as bool? ?? false,
     );
   }
 
