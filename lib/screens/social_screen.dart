@@ -337,8 +337,19 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
   Future<void> _pickImages() async {
     final images = await _picker.pickMultiImage();
-    if (images.isNotEmpty) {
-      setState(() => _selectedImages.addAll(images));
+    final maxImageLen =  20 * 1024 * 1024;
+
+    final List<XFile> oversized = [];
+    for (final image in images) {
+      final bytes = await image.readAsBytes();
+      if (bytes.length > maxImageLen) {
+        oversized.add(image);
+      } else {
+        setState(() => _selectedImages.add(image));
+      }
+    }
+    if (oversized.isNotEmpty && mounted) {
+      setState(() => _error = '${oversized.length} image(s) exceeded the 20MB limit and were not added.');
     }
   }
 
@@ -776,7 +787,20 @@ class _EditPostSheetState extends State<_EditPostSheet> {
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     final images = await picker.pickMultiImage();
-    if (images.isNotEmpty) setState(() => _newImages.addAll(images));
+    final maxImageLen =  20 * 1024 * 1024;
+
+    final List<XFile> oversized = [];
+    for (final image in images) {
+      final bytes = await image.readAsBytes();
+      if (bytes.length > maxImageLen) {
+        oversized.add(image);
+      } else {
+        setState(() => _newImages.add(image));
+      }
+    }
+    if (oversized.isNotEmpty && mounted) {
+      setState(() => _error = '${oversized.length} image(s) exceeded the 20MB limit and were not added.');
+    }
   }
 
   Future<void> _deleteExistingImage(PostImage image) async {
