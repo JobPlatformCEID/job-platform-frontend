@@ -16,14 +16,13 @@ class CallWaitingRoom extends StatefulWidget {
 
 class _CallWaitingRoomState extends State<CallWaitingRoom> {
   Map<String, dynamic>? roomData;
-  bool isLoading = true;
+  bool isLoading    = true;
   bool isConnecting = false;
   String? error;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
 
-  // True once the host has sent 'call_started' from VideoCallScreen
   bool _callStarted = false;
 
   @override
@@ -38,13 +37,13 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
       final response = await widget.auth.user!.server
           .sendGet('/api/calls/1/', token: widget.auth.user!.token);
       setState(() {
-        roomData = response;
+        roomData  = response;
         isLoading = false;
       });
       _connectWebSocket();
     } catch (e) {
       setState(() {
-        error = 'Failed to load room: $e';
+        error     = 'Failed to load room: $e';
         isLoading = false;
       });
     }
@@ -52,9 +51,9 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
 
   // ── WebSocket ─────────────────────────────────────────────────────────────
   void _connectWebSocket() {
-    final token = widget.auth.user!.token;
+    final token     = widget.auth.user!.token;
     final serverUrl = widget.auth.user!.server.getServerUrl()!;
-    final wsUrl = serverUrl
+    final wsUrl     = serverUrl
             .replaceFirst('http://', 'ws://')
             .replaceFirst('https://', 'wss://') +
         '/ws/calls/1/?token=$token';
@@ -64,29 +63,44 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
     _subscription = _channel!.stream.listen(
       (data) => _handleWebSocketMessage(jsonDecode(data as String)),
       onError: (e) => debugPrint('WebSocket error: $e'),
-      onDone: () => debugPrint('WebSocket closed'),
+      // onDone fires whenever the server closes the connection — including
+      // when the host kicks this guest (close code 4003).
+      onDone: _handleWebSocketClosed,
     );
+  }
+
+  void _handleWebSocketClosed() {
+    debugPrint('WebSocket closed');
+    // The server closes with 4003 when this user is kicked.
+    // Navigate away from the waiting room so the guest isn't stuck.
+    if (mounted && !isHost) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have been removed from the waiting room.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleWebSocketMessage(Map<String, dynamic> message) {
     final type = message['type'];
 
-    // Server sends this on initial connect — call_started is false at this
-    // point so we only use it to know if the room is active at all.
+    // room_status is sent on initial connect and now carries the persisted
+    // call_started flag, so guests who join after the host are handled too.
     if (type == 'room_status') {
       final callStarted = message['call_started'] as bool? ?? false;
       setState(() => _callStarted = callStarted);
     }
 
-    // Host entered VideoCallScreen and broadcast call_started → light up button
+    // Broadcast from the host when they enter VideoCallScreen
     if (type == 'call_started') {
       setState(() => _callStarted = true);
     }
   }
 
-  // Sends a notification message to the host's chat box in VideoCallScreen.
-  // Uses the dedicated 'notify_host' type so the server only delivers it to
-  // the host — guests do NOT see it in their own UI.
+  // ── Actions ───────────────────────────────────────────────────────────────
   void _notifyHost() {
     if (_channel == null || !_callStarted) return;
     _channel!.sink.add(jsonEncode({
@@ -98,9 +112,6 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
     );
   }
 
-  // ── Navigation ────────────────────────────────────────────────────────────
-  // Host only — navigates to VideoCallScreen which will then broadcast
-  // 'call_started' to everyone in the waiting room on its initState.
   Future<void> _startCall() async {
     setState(() => isConnecting = true);
     try {
@@ -207,7 +218,6 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // ── Icon ──────────────────────────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -229,7 +239,7 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
                 ),
                 const SizedBox(height: 32),
 
-                // ── HOST VIEW ──────────────────────────────────────────────
+                // ── HOST VIEW ────────────────────────────────────────────
                 if (isHost) ...[
                   if (isConnecting) ...[
                     const CircularProgressIndicator(
@@ -267,7 +277,7 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
                     ),
                   ],
 
-                // ── GUEST VIEW ─────────────────────────────────────────────
+                // ── GUEST VIEW ───────────────────────────────────────────
                 ] else ...[
                   CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(
@@ -303,7 +313,7 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      "Tap \"Notify Host\" to let them know you're ready.",
+                      'Tap "Notify Host" to let them know you\'re ready.',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       textAlign: TextAlign.center,
                     ),

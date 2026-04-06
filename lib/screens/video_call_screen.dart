@@ -32,8 +32,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   bool _isSpeakerOn = false;
 
   bool _showWaitingPanel = false;
-  // Keyed by username for O(1) add/remove — value is the display username
-  final Map<String, String> _waitingGuests = {};
+
+  // username -> user_id (int stored as String for simplicity)
+  // We need the id because the kick action on the server expects a user_id.
+  final Map<String, int> _waitingGuests = {};
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -59,16 +61,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     );
   }
 
-  // The server sends users as List<{id: int, username: String}>.
-  // Rebuild _waitingGuests from it, excluding the host (self).
+  // Server sends users as List<{id: int, username: String}>.
+  // We store username -> id so we can kick by id.
   void _syncGuestsFromUsersList(dynamic users) {
     if (users is! List) return;
-    final updated = <String, String>{};
+    final updated = <String, int>{};
     for (final u in users) {
       if (u is Map) {
         final username = u['username'] as String? ?? '';
-        if (username.isNotEmpty && username != widget.currentUsername) {
-          updated[username] = username;
+        final id       = u['id'] as int?;
+        if (username.isNotEmpty && username != widget.currentUsername && id != null) {
+          updated[username] = id;
         }
       }
     }
@@ -82,19 +85,15 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
   void _handleWebSocketMessage(Map<String, dynamic> message) {
     final type = message['type'];
 
-    // Server confirmed our connection — broadcast call_started (host only)
-    // and seed the guest list from whoever is already present
     if (type == 'room_status' && widget.isHost) {
       _channel!.sink.add(jsonEncode({'type': 'call_started'}));
       _syncGuestsFromUsersList(message['users']);
     }
 
-    // Someone joined or left — always resync from the authoritative list
     if ((type == 'user_joined' || type == 'user_left') && widget.isHost) {
       _syncGuestsFromUsersList(message['users']);
     }
 
-    // Incoming chat / notify_host message
     if (type == 'message') {
       final sender  = message['sender'] as String? ?? 'Unknown';
       final content = message['message'] as String? ?? '';
@@ -126,12 +125,23 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 
   void _acceptGuest(String username) {
     debugPrint('Accept guest: $username (placeholder)');
-    // TODO: implement
+    // TODO: implement accept / admit to call
   }
 
+  // Sends a kick message over the existing WebSocket — the server checks that
+  // the sender is the host, then closes the target's connection with code 4003.
   void _rejectGuest(String username) {
-    debugPrint('Reject guest: $username (placeholder)');
-    // TODO: implement kick
+    final userId = _waitingGuests[username];
+    if (userId == null || _channel == null) return;
+
+    _channel!.sink.add(jsonEncode({
+      'type':    'kick',
+      'user_id': userId,
+    }));
+
+    // Optimistically remove from local list so the panel updates immediately
+    // without waiting for the user_left event to bounce back from the server.
+    setState(() => _waitingGuests.remove(username));
   }
 
   @override
@@ -152,10 +162,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ── Main column ────────────────────────────────────────────────
           Column(
             children: [
-              // Video area
+              // ── Video area ───────────────────────────────────────────────
               Expanded(
                 flex: 3,
                 child: Container(
@@ -176,7 +185,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 ),
               ),
 
-              // Messages area
+              // ── Messages area ────────────────────────────────────────────
               Expanded(
                 flex: 1,
                 child: Container(
@@ -283,7 +292,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 ),
               ),
 
-              // Control bar
+              // ── Control bar ──────────────────────────────────────────────
               Container(
                 color: Colors.grey[900],
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -350,7 +359,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
             ],
           ),
 
-          // ── Waiting panel — floats above control bar, bottom-right ─────
+          // ── Waiting panel overlay ────────────────────────────────────────
           if (widget.isHost && _showWaitingPanel)
             Positioned(
               bottom: 80,
