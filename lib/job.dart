@@ -58,6 +58,12 @@ class JobPosting {
     return list.map((j) => JobPosting.fromJson(j)).toList();
   }
 
+  // Fetches a job posting by ID
+  static Future<JobPosting> fetchById(Server server, String token, int jobId) async {
+    final data = await server.sendGet('/api/jobs/$jobId/', token: token);
+    return JobPosting.fromJson(data);
+  }
+
   // Creates a new job posting (employer only)
   static Future<JobPosting> create(
     Server server,
@@ -127,6 +133,9 @@ class JobApplication {
   final String? candidateUsername;
   final String? candidateFullName;
   final int job;
+  final String? jobTitle;
+  final String? companyName;
+  final int? employerId;
   String status;
   final String createdAt;
 
@@ -136,6 +145,9 @@ class JobApplication {
     required this.candidateUsername,
     required this.candidateFullName,
     required this.job,
+    required this.jobTitle,
+    required this.companyName,
+    required this.employerId,
     required this.status,
     required this.createdAt,
   });
@@ -147,13 +159,16 @@ class JobApplication {
       candidateUsername: json['candidate_username'] as String?,
       candidateFullName: json['candidate_full_name'] as String?,
       job: json['job'] as int,
+      jobTitle: json['job_title'] as String?,
+      companyName: json['company_name'] as String?,
+      employerId: json['employer_id'] as int?,
       status: json['status'] as String,
       createdAt: json['created_at'] as String,
     );
   }
 
-  // Fetches all applications for the employer's job postings
-  static Future<List<JobApplication>> fetchAll(Server server, String token) async {
+  // Fetches all applications (employers: for all their job postings, candidates: all their applications)
+  static Future<List<JobApplication>> fetchApplications(Server server, String token) async {
     final list = await server.sendGetList('/api/jobs/applications/', token: token);
     return list.map((a) => JobApplication.fromJson(a)).toList();
   }

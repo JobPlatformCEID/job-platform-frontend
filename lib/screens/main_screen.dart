@@ -10,6 +10,7 @@ import 'employer_home_screen.dart';
 import 'reviews_screen.dart';
 import 'social_screen.dart';
 import 'conversations_screen.dart';
+import 'candidate_applications_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -122,10 +123,6 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildPlaceholder(String message) {
-    return Center(child: Text(message, style: Theme.of(context).textTheme.bodyMedium));
-  }
-
   Widget _buildDrawer(BuildContext context, User user, bool isCandidate) {
     return Drawer(
       child: SafeArea(
@@ -170,7 +167,18 @@ class _MainScreenState extends State<MainScreen> {
 
             // Role-specific items
             if (isCandidate) ...[
-              // TODO: Add My job applications here when server supports it
+              ListTile(
+                leading: const Icon(Icons.assignment_outlined),
+                title: const Text('My job applications'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CandidateApplicationsScreen(auth: widget.auth, server: widget.server),
+                    ),
+                  );
+                },
+              ),
             ],
 
             // Settings

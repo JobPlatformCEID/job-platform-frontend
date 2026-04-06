@@ -504,8 +504,9 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
 
   Future<void> _loadApplications() async {
     try {
-      final all = await JobApplication.fetchAll(widget.server, widget.token);
+      final all = await JobApplication.fetchApplications(widget.server, widget.token);
       if (mounted) setState(() {
+         // TODO: Maybe we should add a server-side endpoint to get all applications for each job
         _applications = all.where((a) => a.job == widget.job.id).toList();
         _isLoading = false;
       });
