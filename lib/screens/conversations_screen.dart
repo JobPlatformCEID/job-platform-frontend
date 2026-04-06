@@ -118,7 +118,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           auth: widget.auth,
         ),
       ),
-    );
+    ).then((_) => _loadConversations());
   }
 
   Future<void> _handleDelete(Conversation conversation) async {

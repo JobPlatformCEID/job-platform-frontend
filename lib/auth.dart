@@ -12,6 +12,7 @@ class Auth {
   static const _tokenKey = 'auth_token';
   static const _usernameKey = 'auth_username';
   static const _roleKey = 'auth_role';
+  static const _userIdKey = "auth_id";
 
   final Server _server;
   User? user;
@@ -24,13 +25,14 @@ class Auth {
       'username': username,
       'password': password,
     });
-
+  
     final token = response['token'] as String;
     final role = _stringToRole(response['role'] as String);
+    final userId = response['id'] as int;
 
-    user = _createUser(username, token, role);
+    user = _createUser(username, token, role, userId);
     _log.info('Logged in as $username (${_roleToString(role)})');
-    await _saveSession(username, token, _roleToString(role));
+    await _saveSession(username, token, _roleToString(role), userId);
   }
 
   // Register: Creates a new account on the server and then logs in
@@ -62,12 +64,12 @@ class Auth {
   }
 
   // Method that creates the right User subclass based on role
-  User _createUser(String username, String token, UserRole role) {
+  User _createUser(String username, String token, UserRole role, int userId) {
     switch (role) {
       case UserRole.candidate:
-        return Candidate(server: _server, username: username, token: token);
+        return Candidate(server: _server, username: username, token: token, userId: userId);
       case UserRole.employer:
-        return Employer(server: _server, username: username, token: token);
+        return Employer(server: _server, username: username, token: token, userId: userId);
     }
   }
 
@@ -76,9 +78,10 @@ class Auth {
     final savedToken = await _storage.read(key: _tokenKey);
     final savedUsername = await _storage.read(key: _usernameKey);
     final savedRole = await _storage.read(key: _roleKey);
+    final savedUserId = await _storage.read(key: _userIdKey);
 
-    if (savedToken != null && savedUsername != null && savedRole != null) {
-      user = _createUser(savedUsername, savedToken, _stringToRole(savedRole));
+    if (savedToken != null && savedUsername != null && savedRole != null && savedUserId != null) {
+      user = _createUser(savedUsername, savedToken, _stringToRole(savedRole), int.parse(savedUserId));
       _log.info('Session restored for $savedUsername (${_stringToRole(savedRole)})');
       return true;
     }
@@ -88,10 +91,11 @@ class Auth {
   }
 
   // Helper method that writes the current session to secure storage.
-  Future<void> _saveSession(String username, String token, String role) async {
+  Future<void> _saveSession(String username, String token, String role, int userId) async {
     await _storage.write(key: _tokenKey, value: token);
     await _storage.write(key: _usernameKey, value: username);
     await _storage.write(key: _roleKey, value: role);
+    await _storage.write(key: _userIdKey, value: userId.toString());
   }
 
   // Helper method that removes all session keys from secure storage.
@@ -99,6 +103,7 @@ class Auth {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _usernameKey);
     await _storage.delete(key: _roleKey);
+    await _storage.delete(key: _userIdKey);
   }
 
   // Helper method that converts a role string into a [UserRole] enum value

@@ -136,9 +136,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
-  // TODO: This wont work for now, we need the server to give us the user's id kek
-  bool _isOwnMessage(Message message) => message.sender == widget.auth.user!.token.hashCode;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -165,7 +162,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         itemCount: _messages.length,
                         itemBuilder: (context, index) {
                           final message = _messages[index];
-                          final isOwn = message.senderUsername == widget.auth.user!.username;
+                          final isOwn = message.sender == widget.auth.user!.userId;
                           final isLast = index == _messages.length - 1;
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.end,

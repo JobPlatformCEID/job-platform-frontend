@@ -5,9 +5,10 @@ abstract class User {
   final Server server;
   final String token;
   final String username;
+  final int userId;
 
   // Constructor
-  User({required this.server, required this.username, required this.token});
+  User({required this.server, required this.username, required this.token, required this.userId});
 
   Future<void> fetchProfile();
   Future<void> updateProfile();
@@ -22,7 +23,7 @@ class Candidate extends User {
 //  double score = 0;
 
   // Constructor
-  Candidate({required super.server, required super.username, required super.token});
+  Candidate({required super.server, required super.username, required super.token, required super.userId});
 
   @override
   Future<void> fetchProfile() async {
@@ -53,7 +54,7 @@ class Employer extends User {
   String website = '';
 
   // Constructor
-  Employer({required super.server, required super.username, required super.token});
+  Employer({required super.server, required super.username, required super.token, required super.userId});
 
   @override
   Future<void> fetchProfile() async {

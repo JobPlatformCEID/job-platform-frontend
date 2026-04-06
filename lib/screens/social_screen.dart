@@ -91,6 +91,7 @@ class _SocialScreenState extends State<SocialScreen> {
         post: post,
         server: widget.server,
         token: widget.auth.user!.token,
+        currentUserId: widget.auth.user!.userId,
         onCommentAdded: () { 
           final index = _posts.indexWhere((p) => p.id == post.id);
           if (index != -1 && mounted) setState(() {
@@ -619,11 +620,11 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   Expanded(
                     child: Text('User #${_post.user}', style: Theme.of(context).textTheme.titleSmall),
                   ),
-                  // TODO: only show for post owner when userId is available (same thing as reviews)
-                  IconButton(
-                    icon: const Icon(Icons.more_vert),
-                    onPressed: _showPostMenu,
-                  ),
+                  if (_post.user == widget.auth.user!.userId)
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: _showPostMenu,
+                    ),
                 ],
               ),
             ),
@@ -960,12 +961,14 @@ class _CommentsSheet extends StatefulWidget {
   final Post post;
   final Server server;
   final String token;
+  final int currentUserId;
   final VoidCallback? onCommentAdded;
 
   const _CommentsSheet({
     required this.post,
     required this.server,
     required this.token,
+    required this.currentUserId,
     this.onCommentAdded,
   });
 
@@ -993,10 +996,18 @@ class _CommentsSheetState extends State<_CommentsSheet> {
         widget.token,
         widget.post.id,
       );
-      if (mounted) setState(() {
-        _comments = comments;
-        _isLoading = false;
+      if (mounted) {
+        setState(() {
+          // Sort comments to show the current user's ones first
+          comments.sort((a, b) {
+            if (a.user == widget.currentUserId) return -1;
+            if (b.user == widget.currentUserId) return 1;
+            return 0;
+          });
+          _comments = comments;
+          _isLoading = false;
       });
+      }
     } catch (e) {
       if (mounted) setState(() {
         _isLoading = false;
@@ -1015,10 +1026,10 @@ class _CommentsSheetState extends State<_CommentsSheet> {
         widget.post.id,
         content: _commentController.text.trim(),
       );
-      if (mounted) setState(() {
-        _comments.add(comment);
+      if (mounted) {
         _commentController.clear();
-      });
+        await _loadComments();
+      }
       widget.onCommentAdded?.call(); 
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not post comment.');
@@ -1027,7 +1038,6 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     }
   }
 
-  // TODO: Same as reviews — no userId stored, so show menu for all comments and let server reject
   void _showCommentMenu(Comment comment) {
     showModalBottomSheet(
       context: context,
@@ -1122,9 +1132,23 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                   child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
                                 ),
-                                title: Text('User #${comment.user}', style: Theme.of(context).textTheme.titleSmall),
+                                title: Row(
+                                  children: [
+                                    Text('User #${comment.user}', style: Theme.of(context).textTheme.titleSmall),
+                                    if (comment.user == widget.currentUserId) ...[
+                                      const SizedBox(width: 8),
+                                      Chip(
+                                        label: const Text('Me'),
+                                        padding: EdgeInsets.zero,
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                    ],
+                                  ],
+                                ),
                                 subtitle: Text(comment.content),
-                                onLongPress: () => _showCommentMenu(comment),
+                                onLongPress: comment.user == widget.currentUserId
+                                    ? () => _showCommentMenu(comment)
+                                    : null,
                               );
                             },
                           ),

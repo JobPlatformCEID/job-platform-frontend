@@ -168,10 +168,18 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
         widget.token,
         widget.employer['id'] as int,
       );
-      if (mounted) setState(() {
-        _reviews = reviews;
-        _isLoading = false;
+      if (mounted) {
+        setState(() {
+          // Sort so the current user's review appears first
+          reviews.sort((a, b) {
+            if (a.owner == widget.auth.user!.userId) return -1;
+            if (b.owner == widget.auth.user!.userId) return 1;
+            return 0;
+          });
+          _reviews = reviews;
+          _isLoading = false;
       });
+      }
     } catch (e) {
       if (mounted) setState(() {
         _isLoading = false;
@@ -193,8 +201,6 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     );
   }
 
-  // TODO: The server doesn't expose the userId so we can't check which reviews the user owns
-  // For now, if the user tries to edit a review that doesn't belong to them, let the server error out. 
   void _showReviewMenu(Review review) {
     showModalBottomSheet(
       context: context,
@@ -341,9 +347,21 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                                         child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
                                       ),
-                                      title: Text(
-                                        '${review.score}/10${review.edited ? ' (edited)' : ''}',
-                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      title: Row(
+                                        children: [
+                                          Text(
+                                            '${review.score}/10${review.edited ? ' (edited)' : ''}',
+                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          ),
+                                          if (review.owner == widget.auth.user!.userId) ...[
+                                            const SizedBox(width: 8),
+                                            Chip(
+                                              label: const Text('Me'),
+                                              padding: EdgeInsets.zero,
+                                              visualDensity: VisualDensity.compact,
+                                            ),
+                                          ],
+                                        ],
                                       ),
                                       subtitle: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +373,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                           ],
                                         ],
                                       ),
-                                      onLongPress: widget.auth.user is Candidate
+                                      onLongPress: review.owner == widget.auth.user!.userId
                                           ? () => _showReviewMenu(review)
                                           : null,
                                     );

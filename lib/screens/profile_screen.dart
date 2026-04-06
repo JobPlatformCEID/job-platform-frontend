@@ -156,6 +156,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label: 'Username',
                 value: _user.username,
               ),
+              const SizedBox(height: 8),
+              _buildInfoField(
+                label: 'User ID',
+                value: '#${_user.userId}'
+              ),
             ],
           ),
         ),
