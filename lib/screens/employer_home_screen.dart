@@ -579,7 +579,6 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
                                       isScrollControlled: true,
                                       builder: (_) => UserProfileSheet(
                                         userId: application.candidateUserId!,
-                                        profileId: application.candidate,
                                         server: widget.server,
                                         token: widget.token,
                                       ),

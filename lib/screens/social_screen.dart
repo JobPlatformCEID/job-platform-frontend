@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import '../auth.dart';
 import '../server.dart';
 import '../post.dart';
+import 'user_profile_sheet.dart';
 
 class SocialScreen extends StatefulWidget {
   final Auth auth;
@@ -173,6 +174,8 @@ class _SocialScreenState extends State<SocialScreen> {
                 final post = posts[index];
                 return _PostCard(
                   post: post,
+                  server: widget.server,
+                  token: widget.auth.user!.token,
                   onTap: () => _showPostDetail(post),
                   onLike: () => _toggleLike(post),
                   onComment: () => _showComments(post),
@@ -196,12 +199,16 @@ class _SocialScreenState extends State<SocialScreen> {
 
 class _PostCard extends StatelessWidget {
   final Post post;
+  final Server server;
+  final String token;
   final VoidCallback onTap;
   final VoidCallback onLike;
   final VoidCallback onComment;
 
   const _PostCard({
     required this.post,
+    required this.server,
+    required this.token,
     required this.onTap,
     required this.onLike,
     required this.onComment,
@@ -222,9 +229,20 @@ class _PostCard extends StatelessWidget {
               // Header
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  GestureDetector(
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => UserProfileSheet(
+                        userId: post.user,
+                        server: server,
+                        token: token,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Text(post.fullName, style: Theme.of(context).textTheme.titleSmall),
@@ -613,9 +631,20 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  GestureDetector(
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => UserProfileSheet(
+                        userId: _post.user,
+                        server: widget.server,
+                        token: widget.auth.user!.token,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1129,9 +1158,20 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                             itemBuilder: (context, index) {
                               final comment = _comments[index];
                               return ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                  child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                leading: GestureDetector(
+                                  onTap: () => showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    builder: (_) => UserProfileSheet(
+                                      userId: comment.user,
+                                      server: widget.server,
+                                      token: widget.token,
+                                    ),
+                                  ),
+                                  child: CircleAvatar(
+                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                    child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                  ),
                                 ),
                                 title: Row(
                                   children: [

@@ -3,6 +3,7 @@ import '../server.dart';
 import '../auth.dart';
 import '../user.dart';
 import '../review.dart';
+import 'user_profile_sheet.dart';
 
 class ReviewsScreen extends StatefulWidget {
   final Auth auth;
@@ -343,11 +344,22 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                   itemBuilder: (context, index) {
                                     final review = _reviews[index];
                                     return ListTile(
-                                      leading: CircleAvatar(
-                                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                        child: Text(
-                                          (review.ownerFullName ?? review.ownerUsername ?? '?')[0].toUpperCase(),
-                                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                      leading: GestureDetector(
+                                        onTap: review.owner != null ? () => showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          builder: (_) => UserProfileSheet(
+                                            userId: review.owner!,
+                                            server: widget.server,
+                                            token: widget.token,
+                                          ),
+                                        ) : null,
+                                        child: CircleAvatar(
+                                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                          child: Text(
+                                            (review.ownerFullName ?? review.ownerUsername ?? '?')[0].toUpperCase(),
+                                            style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                          ),
                                         ),
                                       ),
                                       title: Row(

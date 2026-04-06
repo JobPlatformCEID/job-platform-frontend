@@ -5,14 +5,12 @@ import 'company_profile_sheet.dart';
 
 class UserProfileSheet extends StatefulWidget {
   final int userId;
-  final int? profileId;
   final Server server;
   final String token;
 
   const UserProfileSheet({
     super.key,
     required this.userId,
-    required this.profileId,
     required this.server,
     required this.token,
   });
@@ -48,12 +46,13 @@ class _UserProfileSheetState extends State<UserProfileSheet> {
   }
 
   void _showCandidateProfile() {
-    if (widget.profileId == null) return;
+    final profileId = _user!['profile_id'] as int?;
+    if (profileId == null) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => CandidateProfileSheet(
-        profileId: widget.profileId!,
+        profileId: profileId,
         server: widget.server,
         token: widget.token,
       ),
@@ -61,12 +60,13 @@ class _UserProfileSheetState extends State<UserProfileSheet> {
   }
 
   void _showCompanyProfile() {
-    if (widget.profileId == null) return;
+    final profileId = _user!['profile_id'] as int?;
+    if (profileId == null) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => CompanyProfileSheet(
-        profileId: widget.profileId!,
+        profileId: profileId,
         server: widget.server,
         token: widget.token,
       ),
@@ -138,7 +138,7 @@ class _UserProfileSheetState extends State<UserProfileSheet> {
             const SizedBox(height: 24),
 
             // Profile button
-            if (widget.profileId != null)
+            if (_user!['profile_id'] != null)
               OutlinedButton.icon(
                 onPressed: isCandidate ? _showCandidateProfile : _showCompanyProfile,
                 icon: Icon(isCandidate ? Icons.person_outline : Icons.business_outlined),
