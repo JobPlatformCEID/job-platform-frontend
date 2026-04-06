@@ -3,6 +3,7 @@ import '../auth.dart';
 import '../user.dart';
 import '../job.dart';
 import '../server.dart';
+import 'user_profile_sheet.dart';
 
 class EmployerHomeScreen extends StatefulWidget {
   final Auth auth;
@@ -572,11 +573,20 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
                               itemBuilder: (context, index) {
                                 final application = _applications[index];
                                 return ListTile(
-                                  leading: CircleAvatar(
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                    child: Icon(
-                                      Icons.person_outline,
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                  leading: GestureDetector(
+                                    onTap: () => showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      builder: (_) => UserProfileSheet(
+                                        userId: application.candidateUserId!,
+                                        profileId: application.candidate,
+                                        server: widget.server,
+                                        token: widget.token,
+                                      ),
+                                    ),
+                                    child: CircleAvatar(
+                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                      child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
                                     ),
                                   ),
                                   title: Text(application.candidateFullName ?? application.candidateUsername ?? 'Candidate #${application.candidate}'),

@@ -166,26 +166,17 @@ class _ApplicationDetailScreenState extends State<_ApplicationDetailScreen> {
     );
   }
 
-  Future<void> _showCompanyProfile() async {
-    try {
-      final data = await widget.server.sendGet(
-        '/api/employers/${widget.application.employerId}/',
+  void _showCompanyProfile() {
+    if (widget.application.employerId == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CompanyProfileSheet(
+        profileId: widget.application.employerId!,
+        server: widget.server,
         token: widget.token,
-      );
-      if (mounted) {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          builder: (_) => CompanyProfileSheet(employer: data),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load company profile.')),
-        );
-      }
-    }
+      ),
+    );
   }
 
   Color _statusColor(BuildContext context, String status) {
@@ -243,7 +234,7 @@ class _ApplicationDetailScreenState extends State<_ApplicationDetailScreen> {
                 // Link to company profile
                 OutlinedButton.icon(
                   onPressed: widget.application.employerId != null
-                      ? () => _showCompanyProfile()
+                      ? _showCompanyProfile
                       : null,
                   icon: const Icon(Icons.business_outlined),
                   label: Text(widget.application.companyName ?? 'Company profile'),

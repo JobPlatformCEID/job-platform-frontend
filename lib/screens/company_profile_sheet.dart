@@ -1,9 +1,50 @@
 import 'package:flutter/material.dart';
+import '../server.dart';
 
-class CompanyProfileSheet extends StatelessWidget {
-  final Map<String, dynamic> employer;
+class CompanyProfileSheet extends StatefulWidget {
+  final int profileId;
+  final Server server;
+  final String token;
 
-  const CompanyProfileSheet({required this.employer});
+  const CompanyProfileSheet({
+    super.key,
+    required this.profileId,
+    required this.server,
+    required this.token,
+  });
+
+  @override
+  State<CompanyProfileSheet> createState() => _CompanyProfileSheetState();
+}
+
+class _CompanyProfileSheetState extends State<CompanyProfileSheet> {
+  Map<String, dynamic>? _profile;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final data = await widget.server.sendGet(
+        '/api/employers/${widget.profileId}/',
+        token: widget.token,
+      );
+      if (mounted) setState(() {
+        _profile = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() {
+        _isLoading = false;
+        _error = 'Could not load company profile.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +54,10 @@ class CompanyProfileSheet extends StatelessWidget {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
+        if (_isLoading) return const Center(child: CircularProgressIndicator());
+        if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)));
+
+        final employer = _profile!;
         return ListView(
           controller: scrollController,
           padding: const EdgeInsets.all(24),
@@ -35,23 +80,19 @@ class CompanyProfileSheet extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             if ((employer['location'] as String?)?.isNotEmpty == true) ...[
-              Row(
-                children: [
-                  const Icon(Icons.location_on_outlined, size: 16),
-                  const SizedBox(width: 8),
-                  Text(employer['location'] as String, style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
+              Row(children: [
+                const Icon(Icons.location_on_outlined, size: 16),
+                const SizedBox(width: 8),
+                Text(employer['location'] as String, style: Theme.of(context).textTheme.bodyMedium),
+              ]),
               const SizedBox(height: 16),
             ],
             if ((employer['website'] as String?)?.isNotEmpty == true) ...[
-              Row(
-                children: [
-                  const Icon(Icons.link_outlined, size: 16),
-                  const SizedBox(width: 8),
-                  Text(employer['website'] as String, style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
+              Row(children: [
+                const Icon(Icons.link_outlined, size: 16),
+                const SizedBox(width: 8),
+                Text(employer['website'] as String, style: Theme.of(context).textTheme.bodyMedium),
+              ]),
               const SizedBox(height: 16),
             ],
             if ((employer['description'] as String?)?.isNotEmpty == true) ...[
