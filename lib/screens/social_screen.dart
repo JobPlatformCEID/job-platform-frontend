@@ -3,7 +3,6 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import '../auth.dart';
 import '../server.dart';
-import '../user.dart';
 import '../post.dart';
 
 class SocialScreen extends StatefulWidget {
@@ -99,6 +98,8 @@ class _SocialScreenState extends State<SocialScreen> {
             _posts[index] = Post(
               id: p.id,
               user: p.user,
+              username: p.username,
+              fullName: p.fullName,
               content: p.content,
               likesCount: p.likesCount,
               commentsCount: p.commentsCount + 1,
@@ -121,6 +122,8 @@ class _SocialScreenState extends State<SocialScreen> {
         _posts[index] = Post(
           id: post.id,
           user: post.user,
+          username: post.username,
+          fullName: post.fullName,
           content: post.content,
           likesCount: post.likesCount + 1,
           commentsCount: post.commentsCount,
@@ -139,6 +142,8 @@ class _SocialScreenState extends State<SocialScreen> {
           _posts[index] = Post(
             id: post.id,
             user: post.user,
+            username: post.username,
+            fullName: post.fullName,
             content: post.content,
             likesCount: (post.likesCount - 1).clamp(0, double.maxFinite.toInt()),
             commentsCount: post.commentsCount,
@@ -229,7 +234,7 @@ class _PostCard extends StatelessWidget {
                     child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
                   ),
                   const SizedBox(width: 12),
-                  Text('User #${post.user}', style: Theme.of(context).textTheme.titleSmall),
+                  Text(post.fullName, style: Theme.of(context).textTheme.titleSmall),
                 ],
               ),
               const SizedBox(height: 12),
@@ -618,7 +623,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text('User #${_post.user}', style: Theme.of(context).textTheme.titleSmall),
+                    child: Text(_post.fullName, style: Theme.of(context).textTheme.titleSmall),
                   ),
                   if (_post.user == widget.auth.user!.userId)
                     IconButton(
@@ -1134,7 +1139,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                 ),
                                 title: Row(
                                   children: [
-                                    Text('User #${comment.user}', style: Theme.of(context).textTheme.titleSmall),
+                                    Text(comment.fullName ?? comment.username ?? 'User #${comment.user}', style: Theme.of(context).textTheme.titleSmall),
                                     if (comment.user == widget.currentUserId) ...[
                                       const SizedBox(width: 8),
                                       Chip(

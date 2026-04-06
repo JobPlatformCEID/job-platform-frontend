@@ -3,6 +3,8 @@ import '../server.dart';
 class Review {
   final int id;
   final int? owner;
+  final String? ownerUsername;
+  final String? ownerFullName;
   final String content;
   final int score;
   final String createdAt;
@@ -10,7 +12,9 @@ class Review {
 
   const Review({
     required this.id,
-    this.owner,
+    required this.owner,
+    required this.ownerUsername,
+    required this.ownerFullName,
     required this.content,
     required this.score,
     required this.createdAt,
@@ -21,6 +25,8 @@ class Review {
     return Review(
       id: json['id'] as int,
       owner: json['owner'] as int?,
+      ownerUsername: json['owner_username'] as String?,
+      ownerFullName: json['owner_full_name'] as String?,
       content: json['content'] as String? ?? '',
       score: json['score'] as int,
       createdAt: json['created_at'] as String,

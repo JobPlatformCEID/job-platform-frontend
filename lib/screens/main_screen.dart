@@ -146,7 +146,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   const SizedBox(width: 16),
                   Text(
-                    user.username,
+                    user.fullName,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ],

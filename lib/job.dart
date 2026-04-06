@@ -124,6 +124,8 @@ class JobPosting {
 class JobApplication {
   final int id;
   final int candidate;
+  final String? candidateUsername;
+  final String? candidateFullName;
   final int job;
   String status;
   final String createdAt;
@@ -131,6 +133,8 @@ class JobApplication {
   JobApplication({
     required this.id,
     required this.candidate,
+    required this.candidateUsername,
+    required this.candidateFullName,
     required this.job,
     required this.status,
     required this.createdAt,
@@ -140,6 +144,8 @@ class JobApplication {
     return JobApplication(
       id: json['id'] as int,
       candidate: json['candidate'] as int,
+      candidateUsername: json['candidate_username'] as String?,
+      candidateFullName: json['candidate_full_name'] as String?,
       job: json['job'] as int,
       status: json['status'] as String,
       createdAt: json['created_at'] as String,

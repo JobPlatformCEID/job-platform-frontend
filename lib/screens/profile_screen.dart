@@ -149,7 +149,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildInfoField(
                 label: 'Full name',
-                value: '${_user.username}', // TODO: replace when we add first/last name on user (needs server change)
+                value: _user.fullName,
               ),
               const SizedBox(height: 8),
               _buildInfoField(

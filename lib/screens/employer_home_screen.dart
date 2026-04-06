@@ -578,7 +578,7 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
                                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                                     ),
                                   ),
-                                  title: Text('Candidate #${application.candidate}'),
+                                  title: Text(application.candidateFullName ?? application.candidateUsername ?? 'Candidate #${application.candidate}'),
                                   subtitle: Text(
                                     application.status[0].toUpperCase() + application.status.substring(1),
                                     style: TextStyle(color: _statusColor(context, application.status)),

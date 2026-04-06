@@ -6,9 +6,25 @@ abstract class User {
   final String token;
   final String username;
   final int userId;
+  final String firstName;
+  final String lastName;
+  final String email;
+
+  String get fullName {
+    final name = '$firstName $lastName'.trim();
+    return name.isNotEmpty ? name : username;
+  }
 
   // Constructor
-  User({required this.server, required this.username, required this.token, required this.userId});
+  User({
+    required this.server,
+    required this.username,
+    required this.token,
+    required this.userId,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
+  });
 
   Future<void> fetchProfile();
   Future<void> updateProfile();
@@ -23,7 +39,15 @@ class Candidate extends User {
 //  double score = 0;
 
   // Constructor
-  Candidate({required super.server, required super.username, required super.token, required super.userId});
+  Candidate({
+    required super.server,
+    required super.username,
+    required super.token,
+    required super.userId,
+    required super.firstName,
+    required super.lastName,
+    required super.email,
+  });
 
   @override
   Future<void> fetchProfile() async {
@@ -54,7 +78,15 @@ class Employer extends User {
   String website = '';
 
   // Constructor
-  Employer({required super.server, required super.username, required super.token, required super.userId});
+  Employer({
+    required super.server,
+    required super.username,
+    required super.token,
+    required super.userId,
+    required super.firstName,
+    required super.lastName,
+    required super.email,
+    });
 
   @override
   Future<void> fetchProfile() async {

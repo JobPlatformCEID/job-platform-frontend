@@ -345,12 +345,15 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                     return ListTile(
                                       leading: CircleAvatar(
                                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                        child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                        child: Text(
+                                          (review.ownerFullName ?? review.ownerUsername ?? '?')[0].toUpperCase(),
+                                          style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                        ),
                                       ),
                                       title: Row(
                                         children: [
                                           Text(
-                                            '${review.score}/10${review.edited ? ' (edited)' : ''}',
+                                            '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/10${review.edited ? ' (edited)' : ''}',
                                             style: Theme.of(context).textTheme.bodyMedium,
                                           ),
                                           if (review.owner == widget.auth.user!.userId) ...[

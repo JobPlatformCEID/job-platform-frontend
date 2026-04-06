@@ -13,6 +13,9 @@ class Auth {
   static const _usernameKey = 'auth_username';
   static const _roleKey = 'auth_role';
   static const _userIdKey = "auth_id";
+  static const _firstNameKey = 'auth_first_name';
+  static const _lastNameKey = 'auth_last_name';
+  static const _emailKey = 'auth_email';
 
   final Server _server;
   User? user;
@@ -29,10 +32,13 @@ class Auth {
     final token = response['token'] as String;
     final role = _stringToRole(response['role'] as String);
     final userId = response['id'] as int;
+    final firstName = response['first_name'] as String? ?? '';
+    final lastName = response['last_name'] as String? ?? '';
+    final email = response['email'] as String? ?? '';
 
-    user = _createUser(username, token, role, userId);
+    user = _createUser(username, token, role, userId, firstName, lastName, email);
     _log.info('Logged in as $username (${_roleToString(role)})');
-    await _saveSession(username, token, _roleToString(role), userId);
+    await _saveSession(username, token, _roleToString(role), userId, firstName, lastName, email);
   }
 
   // Register: Creates a new account on the server and then logs in
@@ -64,12 +70,12 @@ class Auth {
   }
 
   // Method that creates the right User subclass based on role
-  User _createUser(String username, String token, UserRole role, int userId) {
+  User _createUser(String username, String token, UserRole role, int userId, String firstName, String lastName, String email) {
     switch (role) {
       case UserRole.candidate:
-        return Candidate(server: _server, username: username, token: token, userId: userId);
+        return Candidate(server: _server, username: username, token: token, userId: userId, firstName: firstName, lastName: lastName, email: email);
       case UserRole.employer:
-        return Employer(server: _server, username: username, token: token, userId: userId);
+        return Employer(server: _server, username: username, token: token, userId: userId, firstName: firstName, lastName: lastName, email: email);
     }
   }
 
@@ -79,9 +85,12 @@ class Auth {
     final savedUsername = await _storage.read(key: _usernameKey);
     final savedRole = await _storage.read(key: _roleKey);
     final savedUserId = await _storage.read(key: _userIdKey);
+    final savedFirstName = await _storage.read(key: _firstNameKey) ?? '';
+    final savedLastName = await _storage.read(key: _lastNameKey) ?? '';
+    final savedEmail = await _storage.read(key: _emailKey) ?? '';
 
     if (savedToken != null && savedUsername != null && savedRole != null && savedUserId != null) {
-      user = _createUser(savedUsername, savedToken, _stringToRole(savedRole), int.parse(savedUserId));
+      user = _createUser(savedUsername, savedToken, _stringToRole(savedRole), int.parse(savedUserId), savedFirstName, savedLastName, savedEmail);
       _log.info('Session restored for $savedUsername (${_stringToRole(savedRole)})');
       return true;
     }
@@ -91,11 +100,14 @@ class Auth {
   }
 
   // Helper method that writes the current session to secure storage.
-  Future<void> _saveSession(String username, String token, String role, int userId) async {
+  Future<void> _saveSession(String username, String token, String role, int userId, String firstName, String lastName, String email) async {
     await _storage.write(key: _tokenKey, value: token);
     await _storage.write(key: _usernameKey, value: username);
     await _storage.write(key: _roleKey, value: role);
     await _storage.write(key: _userIdKey, value: userId.toString());
+    await _storage.write(key: _firstNameKey, value: firstName);
+    await _storage.write(key: _lastNameKey, value: lastName);
+    await _storage.write(key: _emailKey, value: email);
   }
 
   // Helper method that removes all session keys from secure storage.
@@ -104,6 +116,9 @@ class Auth {
     await _storage.delete(key: _usernameKey);
     await _storage.delete(key: _roleKey);
     await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _firstNameKey);
+    await _storage.delete(key: _lastNameKey);
+    await _storage.delete(key: _emailKey);
   }
 
   // Helper method that converts a role string into a [UserRole] enum value

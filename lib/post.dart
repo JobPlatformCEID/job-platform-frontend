@@ -3,6 +3,8 @@ import 'server.dart';
 class Post {
   final int id;
   final int user;
+  final String username;
+  final String fullName;
   final String content;
   final int likesCount;
   final int commentsCount;
@@ -13,6 +15,8 @@ class Post {
   const Post({
     required this.id,
     required this.user,
+    required this.username,
+    required this.fullName,
     required this.content,
     required this.likesCount,
     required this.commentsCount,
@@ -25,6 +29,8 @@ class Post {
     return Post(
       id: json['id'] as int,
       user: json['user'] as int,
+      username: json['username'] as String,
+      fullName: json['full_name'] as String? ?? json['username'] as String,
       content: json['content'] as String,
       likesCount: json['likes_count'] as int? ?? 0,
       commentsCount: json['comments_count'] as int? ?? 0,
@@ -116,6 +122,8 @@ class PostImage {
 class Comment {
   final int id;
   final int user;
+  final String? username;
+  final String? fullName;
   final int post;
   final String content;
   final String createdAt;
@@ -124,6 +132,8 @@ class Comment {
   const Comment({
     required this.id,
     required this.user,
+    required this.username,
+    required this.fullName,
     required this.post,
     required this.content,
     required this.createdAt,
@@ -134,6 +144,8 @@ class Comment {
     return Comment(
       id: json['id'] as int,
       user: json['user'] as int,
+      username: json['username'] as String?,
+      fullName: json['full_name'] as String?,
       post: json['post'] as int,
       content: json['content'] as String,
       createdAt: json['created_at'] as String,
