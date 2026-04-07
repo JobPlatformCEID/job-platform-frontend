@@ -189,6 +189,10 @@ Future<void> _loadUserData() async {
               ),
             ],
 
+            // Spacer pushes logout to the bottom
+            const Spacer(),
+            const Divider(),
+
             // Settings
             ListTile(
               leading: const Icon(Icons.settings_outlined),
@@ -200,10 +204,6 @@ Future<void> _loadUserData() async {
                 );
               },
             ),
-
-            // Spacer pushes logout to the bottom
-            const Spacer(),
-            const Divider(),
 
             // Logout
             ListTile(
