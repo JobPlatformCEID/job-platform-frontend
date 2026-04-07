@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 import '../auth.dart';
 import '../user.dart';
 import '../widgets/user_avatar.dart';
@@ -20,6 +21,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   User get _user => widget.auth.user!;
   bool get _isCandidate => _user is Candidate;
+
+  XFile? _pendingAvatar;
+  Uint8List? _pendingAvatarBytes;
 
   // User controllers
   final _firstNameController = TextEditingController();
@@ -106,10 +110,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await Future.wait([
         _user.updateMe(),
         _user.updateProfile(),
+        if (_pendingAvatar != null && _pendingAvatarBytes != null)
+          _user.updateAvatar(_pendingAvatarBytes!, _pendingAvatar!.name),
       ]);
       if (mounted) setState(() {
         _isEditing = false;
         _isLoading = false;
+        _pendingAvatar = null;
+        _pendingAvatarBytes = null;
       });
     } catch (e) {
       if (mounted) setState(() {
@@ -124,13 +132,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
-    try {
-      final bytes = await image.readAsBytes();
-      await _user.updateAvatar(bytes, image.name);
-      if (mounted) setState(() {});
-    } catch (e) {
-      if (mounted) setState(() => _error = 'Could not upload avatar.');
-    }
+    final bytes = await image.readAsBytes();
+    setState(() {
+      _pendingAvatar = image;
+      _pendingAvatarBytes = bytes;
+    });
   }
 
   @override
@@ -171,11 +177,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Avatar
         Stack(
           children: [
-            UserAvatar(
-              avatarUrl: _user.avatarUrl,
-              displayName: _user.fullName,
-              radius: 48,
-            ),
+            _pendingAvatarBytes != null
+                ? CircleAvatar(
+                    radius: 48,
+                    backgroundImage: MemoryImage(_pendingAvatarBytes!),
+                  )
+                : UserAvatar(
+                    avatarUrl: _user.avatarUrl,
+                    displayName: _user.fullName,
+                    radius: 48,
+                  ),
             if (_isEditing)
               Positioned(
                 bottom: 0,
