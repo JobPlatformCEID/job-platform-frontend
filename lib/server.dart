@@ -7,7 +7,7 @@ class Server {
   final _log = Logger('Server');
   static const _storage = FlutterSecureStorage();
   static const _urlKey = 'server_url';
-  static const _timeout = Duration(seconds: 10);
+  static const _timeout = Duration(seconds: 3);
 
   String? _serverUrl;
 
