@@ -5,6 +5,7 @@ class Post {
   final int user;
   final String username;
   final String fullName;
+  final String? avatar;
   final String content;
   final int likesCount;
   final int commentsCount;
@@ -18,6 +19,7 @@ class Post {
     required this.user,
     required this.username,
     required this.fullName,
+    required this.avatar,
     required this.content,
     required this.likesCount,
     required this.commentsCount,
@@ -33,6 +35,7 @@ class Post {
       user: json['user'] as int,
       username: json['username'] as String,
       fullName: json['full_name'] as String? ?? json['username'] as String,
+      avatar: json['avatar'] as String?,
       content: json['content'] as String,
       likesCount: json['likes_count'] as int? ?? 0,
       commentsCount: json['comments_count'] as int? ?? 0,
@@ -127,6 +130,7 @@ class Comment {
   final int user;
   final String? username;
   final String? fullName;
+  final String? avatar;
   final int post;
   final String content;
   final String createdAt;
@@ -137,6 +141,7 @@ class Comment {
     required this.user,
     required this.username,
     required this.fullName,
+    required this.avatar,
     required this.post,
     required this.content,
     required this.createdAt,
@@ -149,6 +154,7 @@ class Comment {
       user: json['user'] as int,
       username: json['username'] as String?,
       fullName: json['full_name'] as String?,
+      avatar: json['avatar'] as String?,
       post: json['post'] as int,
       content: json['content'] as String,
       createdAt: json['created_at'] as String,

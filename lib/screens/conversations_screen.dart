@@ -160,7 +160,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                 final conversation = conversations[index];
                 return ListTile(
                   leading: UserAvatar(
-                    avatarUrl: null,
+                    avatarUrl: conversation.otherUserAvatar,
                     displayName: conversation.otherUsername ?? '',
                   ),
                   title: Text(conversation.otherUsername ?? 'User #${conversation.otherUserId}'),

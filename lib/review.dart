@@ -5,6 +5,7 @@ class Review {
   final int? owner;
   final String? ownerUsername;
   final String? ownerFullName;
+  final String? ownerAvatar;
   final String content;
   final int score;
   final String createdAt;
@@ -15,6 +16,7 @@ class Review {
     required this.owner,
     required this.ownerUsername,
     required this.ownerFullName,
+    required this.ownerAvatar,
     required this.content,
     required this.score,
     required this.createdAt,
@@ -27,6 +29,7 @@ class Review {
       owner: json['owner'] as int?,
       ownerUsername: json['owner_username'] as String?,
       ownerFullName: json['owner_full_name'] as String?,
+      ownerAvatar: json['owner_avatar'] as String?,
       content: json['content'] as String? ?? '',
       score: json['score'] as int,
       createdAt: json['created_at'] as String,

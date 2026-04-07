@@ -585,7 +585,7 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
                                       ),
                                     ),
                                     child: UserAvatar(
-                                      avatarUrl: null,
+                                      avatarUrl: application.candidateAvatar,
                                       displayName: application.candidateFullName ?? application.candidateUsername ?? '',
                                     ),
                                   ),

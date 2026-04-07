@@ -133,6 +133,7 @@ class JobApplication {
   final String? candidateUsername;
   final String? candidateFullName;
   final int? candidateUserId;
+  final String? candidateAvatar;
   final int job;
   final String? jobTitle;
   final String? companyName;
@@ -146,6 +147,7 @@ class JobApplication {
     required this.candidateUsername,
     required this.candidateFullName,
     required this.candidateUserId,
+    required this.candidateAvatar,
     required this.job,
     required this.jobTitle,
     required this.companyName,
@@ -161,6 +163,7 @@ class JobApplication {
       candidateUsername: json['candidate_username'] as String?,
       candidateFullName: json['candidate_full_name'] as String?,
       candidateUserId: json['candidate_user_id'] as int?,
+      candidateAvatar: json['candidate_avatar'] as String?,
       job: json['job'] as int,
       jobTitle: json['job_title'] as String?,
       companyName: json['company_name'] as String?,

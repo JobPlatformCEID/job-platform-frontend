@@ -357,7 +357,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                           ),
                                         ) : null,
                                         child: UserAvatar(
-                                          avatarUrl: null,
+                                          avatarUrl: review.ownerAvatar,
                                           displayName: review.ownerFullName ?? review.ownerUsername ?? '',
                                         ),
                                       ),

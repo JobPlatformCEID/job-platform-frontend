@@ -102,6 +102,7 @@ class _SocialScreenState extends State<SocialScreen> {
               user: p.user,
               username: p.username,
               fullName: p.fullName,
+              avatar: p.avatar,
               content: p.content,
               likesCount: p.likesCount,
               commentsCount: p.commentsCount + 1,
@@ -129,6 +130,7 @@ class _SocialScreenState extends State<SocialScreen> {
         user: post.user,
         username: post.username,
         fullName: post.fullName,
+        avatar: post.avatar,
         content: post.content,
         likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
         commentsCount: post.commentsCount,
@@ -241,7 +243,7 @@ class _PostCard extends StatelessWidget {
                       ),
                     ),
                     child: UserAvatar(
-                      avatarUrl: null,
+                      avatarUrl: post.avatar,
                       displayName: post.fullName,
                     ),
                   ),
@@ -654,7 +656,7 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                       ),
                     ),
                     child: UserAvatar(
-                      avatarUrl: null,
+                      avatarUrl: _post.avatar,
                       displayName: _post.fullName,
                     ),
                   ),
@@ -1194,7 +1196,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                     ),
                                   ),
                                   child: UserAvatar(
-                                    avatarUrl: null,
+                                    avatarUrl: comment.avatar,
                                     displayName: comment.fullName ?? comment.username ?? '',
                                   ),
                                 ),

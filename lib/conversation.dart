@@ -4,6 +4,7 @@ class Conversation {
   final int id;
   final int? otherUserId;
   final String? otherUsername;
+  final String? otherUserAvatar;
   final Message? lastMessage;
   final Map<int, int> readStatuses;
   final String createdAt;
@@ -12,6 +13,7 @@ class Conversation {
     required this.id,
     this.otherUserId,
     this.otherUsername,
+    this.otherUserAvatar,
     this.lastMessage,
     this.readStatuses = const {},
     required this.createdAt,
@@ -24,6 +26,7 @@ class Conversation {
       id: json['id'] as int,
       otherUserId: otherUser?['id'] as int?,
       otherUsername: otherUser?['username'] as String?,
+      otherUserAvatar: otherUser?['avatar'] as String?,
       lastMessage: lastMessageJson != null ? Message.fromJson(lastMessageJson) : null,
       readStatuses: (json['read_statuses'] as Map<String, dynamic>?) 
         ?.map((k, v) => MapEntry(int.parse(k), v as int)) ?? {},
