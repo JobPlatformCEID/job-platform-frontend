@@ -3,6 +3,7 @@ import '../auth.dart';
 import '../server.dart';
 import '../conversation.dart';
 import 'messages_screen.dart';
+import '../widgets/user_avatar.dart';
 
 class ConversationsScreen extends StatefulWidget {
   final Auth auth;
@@ -158,9 +159,9 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  leading: UserAvatar(
+                    avatarUrl: null,
+                    displayName: conversation.otherUsername ?? '',
                   ),
                   title: Text(conversation.otherUsername ?? 'User #${conversation.otherUserId}'),
                   subtitle: conversation.lastMessage != null

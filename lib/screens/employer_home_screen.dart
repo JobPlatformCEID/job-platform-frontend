@@ -4,6 +4,7 @@ import '../user.dart';
 import '../job.dart';
 import '../server.dart';
 import 'user_profile_sheet.dart';
+import '../widgets/user_avatar.dart';
 
 class EmployerHomeScreen extends StatefulWidget {
   final Auth auth;
@@ -583,9 +584,9 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
                                         token: widget.token,
                                       ),
                                     ),
-                                    child: CircleAvatar(
-                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                      child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                    child: UserAvatar(
+                                      avatarUrl: null,
+                                      displayName: application.candidateFullName ?? application.candidateUsername ?? '',
                                     ),
                                   ),
                                   title: Text(application.candidateFullName ?? application.candidateUsername ?? 'Candidate #${application.candidate}'),

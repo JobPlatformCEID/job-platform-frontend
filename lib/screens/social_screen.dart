@@ -5,6 +5,7 @@ import '../auth.dart';
 import '../server.dart';
 import '../post.dart';
 import 'user_profile_sheet.dart';
+import '../widgets/user_avatar.dart';
 
 class SocialScreen extends StatefulWidget {
   final Auth auth;
@@ -239,9 +240,9 @@ class _PostCard extends StatelessWidget {
                         token: token,
                       ),
                     ),
-                    child: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    child: UserAvatar(
+                      avatarUrl: null,
+                      displayName: post.fullName,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -652,9 +653,9 @@ class _PostDetailSheetState extends State<_PostDetailSheet> {
                         token: widget.auth.user!.token,
                       ),
                     ),
-                    child: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                    child: UserAvatar(
+                      avatarUrl: null,
+                      displayName: _post.fullName,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1192,9 +1193,9 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                       token: widget.token,
                                     ),
                                   ),
-                                  child: CircleAvatar(
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                    child: Icon(Icons.person_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                                  child: UserAvatar(
+                                    avatarUrl: null,
+                                    displayName: comment.fullName ?? comment.username ?? '',
                                   ),
                                 ),
                                 title: Row(

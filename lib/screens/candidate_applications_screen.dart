@@ -83,6 +83,7 @@ class _CandidateApplicationsScreenState extends State<CandidateApplicationsScree
                           final application = _applications[index];
                           final status = application.status;
                           return ListTile(
+                            // TODO: What should this avatar show? Maybe a photo of the company?
                             leading: CircleAvatar(
                               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                               child: Icon(Icons.work_outline, color: Theme.of(context).colorScheme.onPrimaryContainer),

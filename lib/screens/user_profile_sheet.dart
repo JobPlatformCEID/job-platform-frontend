@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../server.dart';
 import 'candidate_profile_sheet.dart';
 import 'company_profile_sheet.dart';
+import '../widgets/user_avatar.dart';
 
 class UserProfileSheet extends StatefulWidget {
   final int userId;
@@ -97,16 +98,10 @@ class _UserProfileSheetState extends State<UserProfileSheet> {
             // Avatar + name
             Row(
               children: [
-                CircleAvatar(
+                UserAvatar(
+                  avatarUrl: _user!['avatar'] as String?,
+                  displayName: displayName,
                   radius: 32,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  child: Text(
-                    displayName[0].toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
-                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

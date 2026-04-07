@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../auth.dart';
 import '../user.dart';
+import '../widgets/user_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Auth auth;
@@ -18,6 +20,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   User get _user => widget.auth.user!;
   bool get _isCandidate => _user is Candidate;
+
+  // User controllers
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
 
   // Candidate controllers
   final _phoneController = TextEditingController();
@@ -38,7 +45,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     try {
-      await _user.fetchProfile();
+      await Future.wait([
+        _user.fetchMe(),
+        _user.fetchProfile(),
+      ]);
       _syncControllersFromUser();
       if (mounted) setState(() => _isLoading = false);
     } catch (e) {
@@ -51,6 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Populates controllers from the user object after a fetch
   void _syncControllersFromUser() {
+    _firstNameController.text = _user.firstName;
+    _lastNameController.text = _user.lastName;
+    _emailController.text = _user.email;
+
     if (_isCandidate) {
       final candidate = _user as Candidate;
       _phoneController.text = candidate.phone;
@@ -67,6 +81,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Writes controller values back to the user object before a save
   void _syncUserFromControllers() {
+    _user.firstName = _firstNameController.text.trim();
+    _user.lastName = _lastNameController.text.trim();
+    _user.email = _emailController.text.trim();
+
     if (_isCandidate) {
       final candidate = _user as Candidate;
       candidate.phone = _phoneController.text.trim();
@@ -85,7 +103,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _syncUserFromControllers();
     setState(() => _isLoading = true);
     try {
-      await _user.updateProfile();
+      await Future.wait([
+        _user.updateMe(),
+        _user.updateProfile(),
+      ]);
       if (mounted) setState(() {
         _isEditing = false;
         _isLoading = false;
@@ -95,6 +116,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isLoading = false;
         _error = 'Could not save profile.';
       });
+    }
+  }
+
+  Future<void> _pickAvatar() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+
+    try {
+      final bytes = await image.readAsBytes();
+      await _user.updateAvatar(bytes, image.name);
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not upload avatar.');
     }
   }
 
@@ -131,39 +166,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildHeader() {
-    return Row(
+    return Column(
       children: [
-        CircleAvatar(
-          radius: 48,
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          child: Icon(
-            Icons.person_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+        // Avatar
+        Stack(
+          children: [
+            UserAvatar(
+              avatarUrl: _user.avatarUrl,
+              displayName: _user.fullName,
+              radius: 48,
+            ),
+            if (_isEditing)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: GestureDetector(
+                  onTap: _pickAvatar,
+                  // When editing: Show a small camera icon overlay on top of the avatar
+                  child: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: Icon(Icons.camera_alt_outlined, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                  ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(width: 24),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInfoField(
-                label: 'Full name',
-                value: _user.fullName,
-              ),
-              const SizedBox(height: 8),
-              _buildInfoField(
-                label: 'Username',
-                value: _user.username,
-              ),
-              const SizedBox(height: 8),
-              _buildInfoField(
-                label: 'User ID',
-                value: '#${_user.userId}'
-              ),
-            ],
-          ),
+        const SizedBox(height: 16),
+        Chip(
+          label: Text(_isCandidate ? 'Candidate' : 'Employer'),
+          avatar: Icon(_isCandidate ? Icons.person_outline : Icons.business_outlined, size: 16),
         ),
+        const SizedBox(height: 24),
+        _buildInfoField(label: 'Username', value: _user.username),
+        const SizedBox(height: 8),
+        _buildInfoField(label: 'User ID', value: '#${_user.userId}'),
+        const SizedBox(height: 8),
+        _buildEditableField(label: 'First name', controller: _firstNameController, icon: Icons.person_outline),
+        const SizedBox(height: 8),
+        _buildEditableField(label: 'Last name', controller: _lastNameController, icon: Icons.person_outline),
+        const SizedBox(height: 8),
+        _buildEditableField(label: 'Email', controller: _emailController, icon: Icons.email_outlined),
+        const Divider(height: 32),
       ],
     );
   }
@@ -311,6 +355,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
     _phoneController.dispose();
     _locationController.dispose();
     _bioController.dispose();

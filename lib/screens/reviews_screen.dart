@@ -4,6 +4,7 @@ import '../auth.dart';
 import '../user.dart';
 import '../review.dart';
 import 'user_profile_sheet.dart';
+import '../widgets/user_avatar.dart';
 
 class ReviewsScreen extends StatefulWidget {
   final Auth auth;
@@ -110,6 +111,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 itemBuilder: (context, index) {
                   final employer = employers[index];
                   return ListTile(
+                    // TODO: What should this avatar show? Maybe a photo of the company?
                     leading: CircleAvatar(
                       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                       child: Icon(Icons.business_outlined, color: Theme.of(context).colorScheme.onPrimaryContainer),
@@ -354,12 +356,9 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                             token: widget.token,
                                           ),
                                         ) : null,
-                                        child: CircleAvatar(
-                                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                          child: Text(
-                                            (review.ownerFullName ?? review.ownerUsername ?? '?')[0].toUpperCase(),
-                                            style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer),
-                                          ),
+                                        child: UserAvatar(
+                                          avatarUrl: null,
+                                          displayName: review.ownerFullName ?? review.ownerUsername ?? '',
                                         ),
                                       ),
                                       title: Row(

@@ -64,6 +64,7 @@ class _CompanyProfileSheetState extends State<CompanyProfileSheet> {
           children: [
             Row(
               children: [
+                 // TODO: What should this avatar show? Maybe a photo of the company?
                 CircleAvatar(
                   radius: 32,
                   backgroundColor: Theme.of(context).colorScheme.primaryContainer,

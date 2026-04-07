@@ -6,9 +6,10 @@ abstract class User {
   final String token;
   final String username;
   final int userId;
-  final String firstName;
-  final String lastName;
-  final String email;
+  String firstName;
+  String lastName;
+  String email;
+  String? avatarUrl;
 
   String get fullName {
     final name = '$firstName $lastName'.trim();
@@ -21,10 +22,41 @@ abstract class User {
     required this.username,
     required this.token,
     required this.userId,
-    required this.firstName,
-    required this.lastName,
-    required this.email,
+    this.firstName = '',
+    this.lastName = '',
+    this.email = '',
+    this.avatarUrl,
   });
+
+  // Get all user info from the server
+  Future<void> fetchMe() async {
+    final data = await server.sendGet('/api/users/me/', token: token);
+    firstName = data['first_name'] as String? ?? '';
+    lastName = data['last_name'] as String? ?? '';
+    email = data['email'] as String? ?? '';
+    avatarUrl = data['avatar'] as String?;
+  }
+
+  // Updates user info
+  Future<void> updateMe() async {
+    await server.sendPatch('/api/users/me/', {
+      'first_name': firstName,
+      'last_name': lastName,
+      'email': email,
+    }, token: token);
+  }
+
+  // Uploads an avatar for the current user
+  Future<void> updateAvatar(List<int> bytes, String filename) async {
+    await server.sendMultipartPatch(
+      '/api/users/me/',
+      'avatar',
+      bytes,
+      filename,
+      token: token,
+    );
+    await fetchMe();
+  }
 
   Future<void> fetchProfile();
   Future<void> updateProfile();
@@ -44,9 +76,6 @@ class Candidate extends User {
     required super.username,
     required super.token,
     required super.userId,
-    required super.firstName,
-    required super.lastName,
-    required super.email,
   });
 
   @override
@@ -83,9 +112,6 @@ class Employer extends User {
     required super.username,
     required super.token,
     required super.userId,
-    required super.firstName,
-    required super.lastName,
-    required super.email,
     });
 
   @override

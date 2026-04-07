@@ -11,6 +11,7 @@ import 'reviews_screen.dart';
 import 'social_screen.dart';
 import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
+import '../widgets/user_avatar.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -79,17 +80,15 @@ class _MainScreenState extends State<MainScreen> {
         actions: [
           // Profile avatar button
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 14),
             child: GestureDetector(
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => ProfileScreen(auth: widget.auth)),
               ),
-              child: CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                child: Icon(
-                  Icons.person_outline,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
+              child: UserAvatar(
+                avatarUrl: user.avatarUrl,
+                displayName: user.fullName,
+                radius: 18,
               ),
             ),
           ),
@@ -134,14 +133,10 @@ class _MainScreenState extends State<MainScreen> {
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 28,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
+                  UserAvatar(
+                    avatarUrl: user.avatarUrl,
+                    displayName: user.fullName,
+                    radius: 24,
                   ),
                   const SizedBox(width: 16),
                   Text(
