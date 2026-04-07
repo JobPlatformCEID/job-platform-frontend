@@ -11,6 +11,7 @@ import 'reviews_screen.dart';
 import 'social_screen.dart';
 import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
+import 'calls_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -49,6 +50,7 @@ class _MainScreenState extends State<MainScreen> {
       isCandidate ? 'Search job postings' : 'Search your job postings',
       'Search conversations',
       'Search posts',
+      'Search video calls',
     ];
 
     return Scaffold(
@@ -102,6 +104,7 @@ class _MainScreenState extends State<MainScreen> {
         child: switch (_selectedIndex) {
           1 => ConversationsScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
           2 => SocialScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
+          3 => CallsScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
           _ => isCandidate
               ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
               : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
@@ -118,6 +121,7 @@ class _MainScreenState extends State<MainScreen> {
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
           NavigationDestination(icon: Icon(Icons.people_outlined), selectedIcon: Icon(Icons.people), label: 'Social'),
+          NavigationDestination(icon: Icon(Icons.videocam_outlined), selectedIcon: Icon(Icons.videocam), label: 'Calls'),
         ],
       ),
     );
@@ -162,6 +166,14 @@ class _MainScreenState extends State<MainScreen> {
                     builder: (_) => ReviewsScreen(auth: widget.auth, server: widget.server),
                   ),
                 );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: const Text('Video Calls'),
+              onTap: () {
+                Navigator.of(context).pop();
+                setState(() => _selectedIndex = 3);
               },
             ),
 
