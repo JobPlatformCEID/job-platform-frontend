@@ -85,6 +85,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
             );
             if (mounted) setState(() => _messages.add(message));
             _scrollToBottom();
+
+            // Send read acknowledgment if message is from the other user
+            if (message.sender != widget.auth.user!.userId) {
+              _channel?.sink.add(jsonEncode({
+                'type': 'read',
+                'message_id': message.id,
+              }));
+            }
           } else if (type == 'read') { 
             final readerId = json['reader_id'] as int?;
             final lastReadMessageId = json['last_read_message_id'] as int? ?? 0;
