@@ -87,7 +87,11 @@ class Auth {
 
     if (savedToken != null && savedUsername != null && savedRole != null && savedUserId != null) {
       user = _createUser(savedUsername, savedToken, _stringToRole(savedRole), int.parse(savedUserId));
-      await user!.fetchMe();
+      try {
+        await user!.fetchMe();
+      } catch (e) {
+        _log.warning('Could not fetch user data on session restore: $e');
+      }
       _log.info('Session restored for $savedUsername (${_stringToRole(savedRole)})');
       return true;
     }
