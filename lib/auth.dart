@@ -56,8 +56,13 @@ class Auth {
     await login(username, password);
   }
 
-  // Log out: Removes the User reference
+  // Log out: Sends the logout request and deletes the local user reference
   Future<void> logout() async {
+    try {
+      await _server.sendPost('/api/auth/logout/', {}, token: user?.token);
+    } catch (e) {
+      _log.warning('Could not invalidate user login token on server: $e');
+    }
     _log.info('Logging out ${user?.username}');
     user = null;
     await _clearSession();
