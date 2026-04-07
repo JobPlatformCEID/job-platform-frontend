@@ -18,7 +18,7 @@ class VideoCallsManagmentScreen extends StatelessWidget {
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => CallWaitingRoom(auth: auth),
+                builder: (_) => CallWaitingRoom(auth: auth, roomId: '1'),
               ),
             );
           },

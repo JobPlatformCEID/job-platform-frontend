@@ -7,7 +7,9 @@ import 'video_call_screen.dart';
 
 class CallWaitingRoom extends StatefulWidget {
   final Auth auth;
-  const CallWaitingRoom({super.key, required this.auth});
+  final String roomId; // FIX: Dynamic roomId parameter
+  const CallWaitingRoom({super.key, required this.auth, required this.roomId});
+  
   @override
   State<CallWaitingRoom> createState() => _CallWaitingRoomState();
 }
@@ -31,7 +33,8 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
 
   Future<void> _fetchRoomData() async {
     try {
-      final response = await widget.auth.user!.server.sendGet('/api/calls/1/', token: widget.auth.user!.token);
+      // FIX: Use dynamic roomId
+      final response = await widget.auth.user!.server.sendGet('/api/calls/${widget.roomId}/', token: widget.auth.user!.token);
       debugPrint('[CallWaitingRoom] Fetched room data successfully: $response');
       setState(() { roomData = response; isLoading = false; });
       _connectWebSocket();
@@ -44,7 +47,8 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
   void _connectWebSocket() {
     final token = widget.auth.user!.token;
     final serverUrl = widget.auth.user!.server.getServerUrl()!;
-    final wsUrl = serverUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://') + '/ws/calls/1/?token=$token';
+    // FIX: Use dynamic roomId
+    final wsUrl = serverUrl.replaceFirst('http://', 'ws://').replaceFirst('https://', 'wss://') + '/ws/calls/${widget.roomId}/?token=$token';
     debugPrint('[CallWaitingRoom] Connecting WebSocket to $wsUrl');
     _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
     _subscription = _channel!.stream.listen(
@@ -91,38 +95,33 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
 
   void _navigateToCall({String? hostUsername, List<dynamic>? initialUsers, List<dynamic>? initialWaiting}) {
     if (!mounted) return;
-    debugPrint('[CallWaitingRoom] Transitioning to Call Screen. Passing WS channel and initial data.');
-    debugPrint('[CallWaitingRoom] _channel is null: ${_channel == null}');
+    debugPrint('[CallWaitingRoom] Transitioning to Call Screen.');
     
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => VideoCallScreen(
-          roomId: roomData!['id'].toString(),
-          token: widget.auth.user!.token,
-          serverUrl: widget.auth.user!.server.getServerUrl()!,
-          currentUsername: widget.auth.user!.username,
-          isHost: isHost,
-          hostUsername: hostUsername ?? roomData!['host'] as String?,
-          existingChannel: _channel,
-          initialUsers: initialUsers,
-          initialWaiting: initialWaiting,
-        ),
-      ),
+    // FIX: CRITICAL - Cancel subscription and CLOSE channel BEFORE navigation
+    // VideoCallScreen will create its OWN fresh connection
+    _subscription?.cancel();
+    _channel?.sink.close();  // Close our connection
+    _channel = null;         // Mark as disposed
+    _subscription = null;
+    
+    final videoCallScreen = VideoCallScreen(
+      roomId: widget.roomId, // FIX: Pass dynamic roomId
+      token: widget.auth.user!.token,
+      serverUrl: widget.auth.user!.server.getServerUrl()!,
+      currentUsername: widget.auth.user!.username,
+      isHost: isHost,
+      hostUsername: hostUsername ?? roomData!['host'] as String?,
+      // FIX: Do NOT pass existingChannel - let VideoCallScreen create fresh connection
+      initialUsers: initialUsers,
+      initialWaiting: initialWaiting,
     );
     
-    // Cancel subscription and clear channel after navigation completes
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _subscription?.cancel();
-      _subscription = null;
-      _channel = null;
-    });
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => videoCallScreen));
   }
 
   Future<void> _startCall() async {
     debugPrint('[CallWaitingRoom] Host manually starting the call...');
     setState(() { isConnecting = true; _navigating = true; });
-    // Get current room status from the latest WebSocket message
-    // We'll pass empty lists since the host is starting fresh
     _navigateToCall(hostUsername: roomData!['host'] as String?, initialUsers: [], initialWaiting: []);
   }
 
@@ -132,7 +131,10 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
   void dispose() {
     debugPrint('[CallWaitingRoom] Disposing waiting room...');
     _subscription?.cancel();
-    _channel?.sink.close();
+    // FIX: Only close if we still own the channel (not already closed during navigation)
+    if (_channel != null) {
+      _channel!.sink.close();
+    }
     super.dispose();
   }
 
@@ -152,31 +154,25 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
       body: Center(
         child: SingleChildScrollView(
           child: Container(
-            padding: const EdgeInsets.all(32),
-            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32), margin: const EdgeInsets.all(24),
             decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))]),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle), child: Icon(Icons.video_call, size: 64, color: Colors.blue[700])),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(padding: const EdgeInsets.all(24), decoration: BoxDecoration(color: Colors.blue[50], shape: BoxShape.circle), child: Icon(Icons.video_call, size: 64, color: Colors.blue[700])),
+              const SizedBox(height: 24), Text(roomName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 8), Text('Host: $hostUsername', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+              const SizedBox(height: 32),
+              if (isHost) ...[
+                if (isConnecting) ...[const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.green)), const SizedBox(height: 16), const Text('Connecting to call...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.green))]
+                else ...[ElevatedButton.icon(onPressed: _startCall, icon: const Icon(Icons.play_arrow), label: const Text('Start Call'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))), const SizedBox(height: 16), Text('You are the host. Start the call when ready.', style: TextStyle(fontSize: 14, color: Colors.grey[600]), textAlign: TextAlign.center)],
+              ] else ...[
+                CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_callStarted ? Colors.green : Colors.grey)),
+                const SizedBox(height: 16),
+                if (!_callStarted) ...[const Text("Host hasn't started the call yet.", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey), textAlign: TextAlign.center), const SizedBox(height: 8), Text("You'll be notified the moment the host starts.", style: TextStyle(fontSize: 14, color: Colors.grey[500]), textAlign: TextAlign.center)]
+                else ...[const Text('Host is in the call!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.green), textAlign: TextAlign.center), const SizedBox(height: 8), Text('Tap "Notify Host" to let them know you\'re ready.', style: TextStyle(fontSize: 14, color: Colors.grey[600]), textAlign: TextAlign.center)],
                 const SizedBox(height: 24),
-                Text(roomName, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                Text('Host: $hostUsername', style: TextStyle(fontSize: 16, color: Colors.grey[600])),
-                const SizedBox(height: 32),
-                if (isHost) ...[
-                  if (isConnecting) ...[const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.green)), const SizedBox(height: 16), const Text('Connecting to call...', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.green))]
-                  else ...[ElevatedButton.icon(onPressed: _startCall, icon: const Icon(Icons.play_arrow), label: const Text('Start Call'), style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))), const SizedBox(height: 16), Text('You are the host. Start the call when ready.', style: TextStyle(fontSize: 14, color: Colors.grey[600]), textAlign: TextAlign.center)],
-                ] else ...[
-                  CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(_callStarted ? Colors.green : Colors.grey)),
-                  const SizedBox(height: 16),
-                  if (!_callStarted) ...[const Text("Host hasn't started the call yet.", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.grey), textAlign: TextAlign.center), const SizedBox(height: 8), Text("You'll be notified the moment the host starts.", style: TextStyle(fontSize: 14, color: Colors.grey[500]), textAlign: TextAlign.center)]
-                  else ...[const Text('Host is in the call!', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Colors.green), textAlign: TextAlign.center), const SizedBox(height: 8), Text('Tap "Notify Host" to let them know you\'re ready.', style: TextStyle(fontSize: 14, color: Colors.grey[600]), textAlign: TextAlign.center)],
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(onPressed: _callStarted ? _notifyHost : null, icon: const Icon(Icons.notifications), label: const Text('Notify Host'), style: ElevatedButton.styleFrom(backgroundColor: _callStarted ? Colors.orange : Colors.grey[300], foregroundColor: _callStarted ? Colors.white : Colors.grey[500], padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
-                ],
+                ElevatedButton.icon(onPressed: _callStarted ? _notifyHost : null, icon: const Icon(Icons.notifications), label: const Text('Notify Host'), style: ElevatedButton.styleFrom(backgroundColor: _callStarted ? Colors.orange : Colors.grey[300], foregroundColor: _callStarted ? Colors.white : Colors.grey[500], padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)))),
               ],
-            ),
+            ]),
           ),
         ),
       ),
