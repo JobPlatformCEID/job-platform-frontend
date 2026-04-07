@@ -39,6 +39,19 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+Future<void> _loadUserData() async {
+  try {
+    await widget.auth.user?.fetchMe();
+    if (mounted) setState(() {});
+  } catch (_) {}
+}
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.auth.user;
