@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:typed_data';
 import '../server.dart';
 import '../auth.dart';
 import 'build_profile_screen.dart';
@@ -24,6 +26,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
+
+  // For avatar uploading on register
+  XFile? _selectedAvatar;
+  Uint8List? _avatarBytes;
+
+  Future<void> _pickAvatar() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    setState(() {
+      _selectedAvatar = image;
+      _avatarBytes = bytes;
+    });
+  }
 
   // Shared state variables
   bool _isLoading = false;
@@ -78,6 +95,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         lastName: lastName,
         email: email,
       );
+
+      // Upload avatar if selected
+      if (_selectedAvatar != null && _avatarBytes != null) {
+        await widget.auth.user!.updateAvatar(_avatarBytes!, _selectedAvatar!.name);
+      }
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -213,6 +235,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 32),
+
+            Center(
+              child: GestureDetector(
+                onTap: _pickAvatar,
+                child: Stack(
+                  children: [
+                    _avatarBytes != null
+                        ? CircleAvatar(
+                            radius: 48,
+                            backgroundImage: MemoryImage(_avatarBytes!),
+                          )
+                        : CircleAvatar(
+                            radius: 48,
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            child: Icon(
+                              Icons.person_outline,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: Icon(Icons.camera_alt_outlined, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
 
             TextField(
               controller: _firstNameController,
