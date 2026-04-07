@@ -5,6 +5,7 @@ class Conversation {
   final int? otherUserId;
   final String? otherUsername;
   final Message? lastMessage;
+  final Map<int, int> readStatuses;
   final String createdAt;
 
   const Conversation({
@@ -12,6 +13,7 @@ class Conversation {
     this.otherUserId,
     this.otherUsername,
     this.lastMessage,
+    this.readStatuses = const {},
     required this.createdAt,
   });
 
@@ -23,6 +25,8 @@ class Conversation {
       otherUserId: otherUser?['id'] as int?,
       otherUsername: otherUser?['username'] as String?,
       lastMessage: lastMessageJson != null ? Message.fromJson(lastMessageJson) : null,
+      readStatuses: (json['read_statuses'] as Map<String, dynamic>?) 
+        ?.map((k, v) => MapEntry(int.parse(k), v as int)) ?? {},
       createdAt: json['created_at'] as String,
     );
   }
@@ -48,7 +52,6 @@ class Message {
   final String? senderUsername;
   final int conversation;
   final String content;
-  final bool isRead;
   final String createdAt;
 
   const Message({
@@ -57,7 +60,6 @@ class Message {
     this.senderUsername,
     required this.conversation,
     required this.content,
-    required this.isRead,
     required this.createdAt,
   });
 
@@ -68,7 +70,6 @@ class Message {
       senderUsername: json['sender_username'] as String?,
       conversation: json['conversation'] as int,
       content: json['content'] as String,
-      isRead: json['is_read'] as bool? ?? false,
       createdAt: json['created_at'] as String,
     );
   }
