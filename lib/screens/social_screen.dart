@@ -384,9 +384,10 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
         );
       }
 
+      final fresh = await Post.fetchPost(widget.server, widget.token, post.id);
       if (mounted) {
         Navigator.of(context).pop();
-        widget.onCreated(post);
+        widget.onCreated(fresh);
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not create post.');
