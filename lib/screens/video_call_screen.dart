@@ -108,19 +108,24 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       for (final u in widget.initialUsers!) {
         final name = u['username'] as String? ?? '';
         if (name.isNotEmpty && name != widget.currentUsername) {
-          _ensurePc(name);
+          // Only create PC if we're lex-smaller (we'll initiate the offer)
+          if (widget.currentUsername.compareTo(name) < 0) {
+            _ensurePc(name);
+          }
         }
       }
     }
 
+    debugPrint('[VideoCallScreen] widget.existingChannel is null: ${widget.existingChannel == null}');
     _channel = widget.existingChannel;
     if (_channel == null) {
       debugPrint('[VideoCallScreen] No existing WS channel provided, creating new one...');
       _openWebSocket();
+      _listenWebSocket();
     } else {
       debugPrint('[VideoCallScreen] Using existing WS channel');
+      _listenWebSocket(); // Take over the existing subscription
     }
-    _listenWebSocket();
 
     // Start renderer init + camera in background — screen renders immediately
     _localRenderer.initialize().then((_) {
@@ -230,11 +235,15 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       case 'room_status':
         _syncWaiting(msg['waiting_users']);
         // On initial connect, create PCs for anyone already active
+        // Use lex-smaller check to prevent double-offer race conditions
         final active = msg['users'] as List? ?? [];
         for (final u in active) {
           final name = u['username'] as String? ?? '';
           if (name.isNotEmpty && name != widget.currentUsername) {
-            await _ensurePc(name);
+            // Only create PC if we're lex-smaller (we'll initiate the offer)
+            if (widget.currentUsername.compareTo(name) < 0) {
+              await _ensurePc(name);
+            }
           }
         }
         break;
@@ -260,7 +269,11 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       case 'user_left':
         _syncWaiting(msg['waiting_users']);
         final leaver = msg['username'] as String?;
-        if (leaver != null) _removeParticipant(leaver);
+        debugPrint('[VideoCallScreen] user_left: leaver=$leaver, currentUsername=${widget.currentUsername}, shouldRemove=${leaver != null && leaver != widget.currentUsername}');
+        // Don't remove ourselves - we're navigating away, not being removed by someone else
+        if (leaver != null && leaver != widget.currentUsername) {
+          _removeParticipant(leaver);
+        }
         break;
 
       case 'user_admitted':
@@ -268,14 +281,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         _syncWaiting(msg['waiting_users']);
         final admitted = msg['username'] as String?;
         if (admitted != null) {
-          // BUG 2 FIX: If I am the one admitted, ensure PCs for everyone currently active!
+          // BUG 2 FIX: If I am the one admitted, ensure PCs for everyone currently active
+          // Use lex-smaller check to prevent double-offer race conditions
           if (admitted == widget.currentUsername) {
              debugPrint('[VideoCallScreen] I was admitted! Setting up PCs for active users.');
              final active = msg['users'] as List? ?? [];
              for (final u in active) {
                final name = u['username'] as String? ?? '';
                if (name.isNotEmpty && name != widget.currentUsername) {
-                 await _ensurePc(name);
+                 // Only create PC if we're lex-smaller (we'll initiate the offer)
+                 if (widget.currentUsername.compareTo(name) < 0) {
+                   await _ensurePc(name);
+                 }
                }
              }
           } else {
@@ -378,6 +395,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       debugPrint('[VideoCallScreen] PC state for $username changed to $state');
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        debugPrint('[VideoCallScreen] Removing participant $username due to connection state $state');
         if (mounted) _removeParticipant(username);
       }
     };
@@ -408,6 +426,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
 
   Future<void> _handleOffer(String sender, Map<String, dynamic> offerMap) async {
     debugPrint('[VideoCallScreen] Received offer from $sender');
+    
+    // Check if we already have a local offer (race condition)
+    // If so, remove the PC and recreate it to get into correct state
+    final existingPc = _participants[sender]?.pc;
+    if (existingPc != null) {
+      final localDesc = await existingPc.getLocalDescription();
+      if (localDesc != null && localDesc.type == 'offer') {
+        debugPrint('[VideoCallScreen] PC in wrong state (have-local-offer), removing and recreating');
+        _removeParticipant(sender);
+      }
+    }
+    
     final pc = await _ensurePc(sender);
     
     await pc.setRemoteDescription(RTCSessionDescription(

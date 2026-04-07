@@ -92,8 +92,8 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
   void _navigateToCall({String? hostUsername, List<dynamic>? initialUsers, List<dynamic>? initialWaiting}) {
     if (!mounted) return;
     debugPrint('[CallWaitingRoom] Transitioning to Call Screen. Passing WS channel and initial data.');
-    _subscription?.cancel();
-    _subscription = null;
+    debugPrint('[CallWaitingRoom] _channel is null: ${_channel == null}');
+    
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => VideoCallScreen(
@@ -109,13 +109,21 @@ class _CallWaitingRoomState extends State<CallWaitingRoom> {
         ),
       ),
     );
-    _channel = null;
+    
+    // Cancel subscription and clear channel after navigation completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _subscription?.cancel();
+      _subscription = null;
+      _channel = null;
+    });
   }
 
   Future<void> _startCall() async {
     debugPrint('[CallWaitingRoom] Host manually starting the call...');
     setState(() { isConnecting = true; _navigating = true; });
-    _navigateToCall(hostUsername: roomData!['host'] as String?);
+    // Get current room status from the latest WebSocket message
+    // We'll pass empty lists since the host is starting fresh
+    _navigateToCall(hostUsername: roomData!['host'] as String?, initialUsers: [], initialWaiting: []);
   }
 
   bool get isHost => roomData != null && widget.auth.user?.username == roomData!['host'];
