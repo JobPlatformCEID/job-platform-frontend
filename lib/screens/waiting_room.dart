@@ -176,6 +176,9 @@ class _WaitingRoomState extends State<WaitingRoom> {
             builder: (context) => VideoCallScreen(
               room: room,
               roomName: _roomData?['room_name'] ?? 'Room',
+              isHost: true,
+              auth: widget.auth,
+              roomId: widget.roomId,
             ),
           ),
         );
@@ -221,6 +224,9 @@ class _WaitingRoomState extends State<WaitingRoom> {
             builder: (context) => VideoCallScreen(
               room: room,
               roomName: _roomData?['room_name'] ?? 'Room',
+              isHost: false,
+              auth: widget.auth,
+              roomId: widget.roomId,
             ),
           ),
         );
