@@ -22,6 +22,8 @@ class Auth {
   
   Auth({required Server server}) : _server = server;
 
+  Server get server => _server;
+
   // Login: Sends credentials to the server and stores the token
   Future<void> login(String username, String password) async {
     final response = await _server.sendPost('/api/auth/login/', {

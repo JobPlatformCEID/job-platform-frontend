@@ -30,7 +30,7 @@ class Room {
       host: json['host'] as String,
       meetingDate: json['meeting_date'] as String,
       description: json['description'] as String,
-      isActive: json['is_active'] as bool,
+      isActive: json['is_active'] as bool? ?? false,
       createdAt: json['created_at'] as String,
     );
   }
