@@ -6,15 +6,14 @@ import 'package:livekit_client/livekit_client.dart';
 import '../auth.dart';
 import 'video_call_screen.dart';
 
-// Minimal skeleton - matches CallsScreen._joinRoom() call
 class WaitingRoom extends StatefulWidget {
   final Auth auth;
-  final String roomId;  
+  final String roomId;
 
   const WaitingRoom({
     super.key,
     required this.auth,
-    required this.roomId,  
+    required this.roomId,
   });
 
   @override
@@ -22,141 +21,128 @@ class WaitingRoom extends StatefulWidget {
 }
 
 class _WaitingRoomState extends State<WaitingRoom> {
-  
-  // Stores the room details from backend:
-  // id, room_name, host, host_id, meeting_date, description, is_active, created_at
   Map<String, dynamic>? _roomData;
   bool _hostJoined = false;
-  
-  // WebSocket channel for real-time communication with backend
+
   WebSocketChannel? _wsChannel;
 
   Future<void> _fetchRoomData() async {
     try {
-        // Fetch room data (now includes host_id from backend)
-        final response = await widget.auth.server.sendGet(
-            '/api/calls/${widget.roomId}/', 
-            token: widget.auth.user!.token
-        );
+      final response = await widget.auth.server.sendGet(
+        '/api/calls/${widget.roomId}/',
+        token: widget.auth.user!.token,
+      );
 
-        setState(() {
-          _roomData = response;
-        });
+      setState(() {
+        _roomData = response;
+      });
 
-        debugPrint('[CallWaitingRoom] Fetched room data successfully: $response');
+      debugPrint('[WaitingRoom] Fetched room data: $response');
 
-        final meetingDate = DateTime.parse(response['meeting_date']);
-        if (DateTime.now().isBefore(meetingDate)) {
-          _leave_room();
-        }
-
-    } 
-    catch (e) {
-      debugPrint('[CallWaitingRoom] Error fetching room data: $e');
+      final meetingDate = DateTime.parse(response['meeting_date']);
+      if (DateTime.now().isBefore(meetingDate)) {
+        _leaveRoom();
+      }
+    } catch (e) {
+      debugPrint('[WaitingRoom] Error fetching room data: $e');
     }
   }
 
-  void _leave_room(){
-    //close the wsChanel automatically calls disconnect so the user exits the waiting room
+  void _leaveRoom() {
     _wsChannel?.sink.close();
     Navigator.pop(context);
   }
 
-  Future<void> _put_user_in_waiting_list() async {
+  Future<void> _connectToWaitingList() async {
     try {
       final serverUrl = widget.auth.server.getServerUrl();
       final token = widget.auth.user!.token;
-      
-      // Convert http:// to ws:// or https:// to wss://
+
       final wsUrl = serverUrl!.replaceFirst('http', 'ws');
       final fullUrl = '$wsUrl/ws/calls/${widget.roomId}/?token=$token';
-      
+
       debugPrint('[WaitingRoom] Connecting to: $fullUrl');
-      debugPrint('[WaitingRoom] Token length: ${token.length}');
-      
+
       _wsChannel = WebSocketChannel.connect(Uri.parse(fullUrl));
-      
+
       _wsChannel!.stream.listen(
         (message) {
           final data = jsonDecode(message);
           debugPrint('[WaitingRoom] WS message: $data');
-          
+
           final type = data['type'];
-          
-          // Initial room state - check if host already present
+
           if (type == 'room_state') {
-            debugPrint('[WaitingRoom] room_state received: ${data}'); 
+            // Initial state on connect: tells us if host already started.
+            final hostPresent = data['host_present'];
             setState(() {
-             final host_present = data['host_present'];
-              _hostJoined = (host_present == true || host_present == 1);
+              _hostJoined = (hostPresent == true || hostPresent == 1);
             });
           }
-          
-          // Host joined the call
+
           if (type == 'call_started') {
+            // Host has just started the call — unlock the Notify button.
             setState(() {
               _hostJoined = true;
             });
           }
-          
-          // When this user gets admitted, check if they are the host
+
           if (type == 'admitted') {
-            final currentUserId = widget.auth.user?.userId;
-            final hostId = _roomData?['host_id'];
-            if (currentUserId != null && currentUserId == hostId) {
-              setState(() {
-                _hostJoined = true;
-              });
-            }
-            _start_call(data['livekit_url'], data['livekit_token']);
+            // We were admitted by the host — join LiveKit immediately.
+            // Do NOT call _startCall here for the host.
+            // The host never receives 'admitted'; they get their token from
+            // the REST endpoint and call _startCall themselves via the button.
+            // Guests are the only ones who receive this message.
+            _joinCallAsGuest(data['livekit_url'], data['livekit_token']);
           }
         },
         onError: (error) {
           debugPrint('[WaitingRoom] WS error: $error');
         },
         onDone: () {
-          debugPrint('[WaitingRoom] WS closed with code: ${_wsChannel?.closeCode}');
-          debugPrint('[WaitingRoom] WS close reason: ${_wsChannel?.closeReason}');
+          debugPrint('[WaitingRoom] WS closed — code: ${_wsChannel?.closeCode}, reason: ${_wsChannel?.closeReason}');
         },
       );
-      
-      debugPrint('[WaitingRoom] Connected to WebSocket, user in waiting list');
+
+      debugPrint('[WaitingRoom] WebSocket connected, in waiting list');
     } catch (e) {
-      debugPrint('[WaitingRoom] Failed to connect: $e');
+      debugPrint('[WaitingRoom] Failed to connect WebSocket: $e');
     }
   }
 
-  void _notify_host(){
+  void _notifyHost() {
     final user = widget.auth.user;
     if (user == null || _wsChannel == null) return;
-    
-    final message = '${user.username} (${user.fullName}) is waiting and would like to join';
-    
+
+    final message =
+        '${user.username} (${user.fullName}) is waiting and would like to join';
+
     _wsChannel!.sink.add(jsonEncode({
       'type': 'notify_host',
       'message': message,
     }));
-    
+
     debugPrint('[WaitingRoom] Notified host: $message');
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Host has been notified')),
+      const SnackBar(content: Text('Host has been notified')),
     );
   }
 
-  void _start_call(String livekitUrl, String livekitToken) async {
+  /// Called by the HOST after pressing "Start Call".
+  /// Order of operations:
+  ///   1. Get LiveKit token from REST endpoint.
+  ///   2. Connect to LiveKit room.
+  ///   3. Enable camera + mic.
+  ///   4. THEN send 'call_started' over WebSocket so the backend marks
+  ///      the host as admitted and notifies guests. This ensures guests
+  ///      only get the green light once the host is truly live.
+  ///   5. Close the WebSocket and navigate to VideoCallScreen.
+
+  Future<void> _startCallAsHost(String livekitUrl, String livekitToken) async {
+    final room = Room();
+
     try {
-      // Notify guests that host is starting the call BEFORE connecting to LiveKit
-      if (_wsChannel != null) {
-        _wsChannel!.sink.add(jsonEncode({
-          'type': 'call_started',
-        }));
-        // Give time for message to propagate
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-      
-      final room = Room();
-      
       await room.connect(
         livekitUrl,
         livekitToken,
@@ -166,7 +152,61 @@ class _WaitingRoomState extends State<WaitingRoom> {
         ),
       );
 
-      // Initialize camera and mic in parallel to speed up startup
+      await Future.wait([
+        room.localParticipant?.setCameraEnabled(true) ?? Future.value(),
+        room.localParticipant?.setMicrophoneEnabled(true) ?? Future.value(),
+      ]);
+
+      // Send call_started AFTER camera/mic are confirmed live —
+      // not before connecting (old bug). Guests now only unlock their
+      // Notify button once the host is genuinely in the call.
+      if (_wsChannel != null) {
+        _wsChannel!.sink.add(jsonEncode({'type': 'call_started'}));
+        // Small delay so the message reaches the backend before we
+        // close the socket below.
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+
+      _wsChannel?.sink.close();
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VideoCallScreen(
+              room: room,
+              roomName: _roomData?['room_name'] ?? 'Room',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[WaitingRoom] Failed to start call: $e');
+      // Dispose the room if something went wrong so we don't leak it.
+      await room.disconnect();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to start call: $e')),
+        );
+      }
+    }
+  }
+
+  /// Called when the GUEST receives an 'admitted' message.
+  /// The LiveKit URL and token arrive over the WebSocket from the backend.
+  Future<void> _joinCallAsGuest(String livekitUrl, String livekitToken) async {
+    final room = Room();
+
+    try {
+      await room.connect(
+        livekitUrl,
+        livekitToken,
+        roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
+        ),
+      );
+
       await Future.wait([
         room.localParticipant?.setCameraEnabled(true) ?? Future.value(),
         room.localParticipant?.setMicrophoneEnabled(true) ?? Future.value(),
@@ -186,7 +226,8 @@ class _WaitingRoomState extends State<WaitingRoom> {
         );
       }
     } catch (e) {
-      debugPrint('[WaitingRoom] Failed to connect to LiveKit: $e');
+      debugPrint('[WaitingRoom] Guest failed to join call: $e');
+      await room.disconnect();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to join call: $e')),
@@ -199,7 +240,7 @@ class _WaitingRoomState extends State<WaitingRoom> {
   void initState() {
     super.initState();
     _fetchRoomData().then((_) {
-      _put_user_in_waiting_list();
+      _connectToWaitingList();
     }).catchError((e) {
       debugPrint('[WaitingRoom] Init failed: $e');
       if (mounted) {
@@ -215,12 +256,12 @@ class _WaitingRoomState extends State<WaitingRoom> {
     _wsChannel?.sink.close();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final isHost = widget.auth.user?.userId == _roomData?['host_id'];
     final roomName = _roomData?['room_name'] ?? 'Room #${widget.roomId}';
-    
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -234,7 +275,7 @@ class _WaitingRoomState extends State<WaitingRoom> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: _leave_room,
+          onPressed: _leaveRoom,
         ),
       ),
       body: SafeArea(
@@ -243,7 +284,7 @@ class _WaitingRoomState extends State<WaitingRoom> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Room Info Card
+              // Status Card
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -259,7 +300,6 @@ class _WaitingRoomState extends State<WaitingRoom> {
                 ),
                 child: Column(
                   children: [
-                    // Status Icon
                     Container(
                       width: 80,
                       height: 80,
@@ -276,8 +316,6 @@ class _WaitingRoomState extends State<WaitingRoom> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
-                    // Status Text
                     if (!_hostJoined) ...[
                       const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -287,7 +325,8 @@ class _WaitingRoomState extends State<WaitingRoom> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.orange),
                             ),
                           ),
                           SizedBox(width: 12),
@@ -303,7 +342,7 @@ class _WaitingRoomState extends State<WaitingRoom> {
                       ),
                     ] else ...[
                       const Text(
-                        'Waiting for host to accept you in call',
+                        'Waiting for host to accept you',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w500,
@@ -312,38 +351,31 @@ class _WaitingRoomState extends State<WaitingRoom> {
                       ),
                     ],
                     const SizedBox(height: 8),
-                    
-                    // Subtitle
                     Text(
                       isHost
                           ? 'You are the host of this room'
                           : 'You are a guest in this room',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
-              // Action Buttons
+
+              // Action button
               if (isHost)
-                // Host View - Start Call Button
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      // Host calls API to get LiveKit token, then joins
                       try {
                         final response = await widget.auth.server.sendGet(
                           '/api/calls/${widget.roomId}/join/',
                           token: widget.auth.user!.token,
                         );
-                        _start_call(
+                        await _startCallAsHost(
                           response['livekit_url'],
                           response['livekit_token'],
                         );
@@ -360,9 +392,7 @@ class _WaitingRoomState extends State<WaitingRoom> {
                     label: const Text(
                       'Start Call',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          fontSize: 16, fontWeight: FontWeight.w600),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
@@ -375,12 +405,12 @@ class _WaitingRoomState extends State<WaitingRoom> {
                   ),
                 )
               else
-                // Guest View - Notify Button (disabled until host joins)
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton.icon(
-                    onPressed: _hostJoined ? _notify_host : null,
+                    // Notify button is disabled until host has started the call.
+                    onPressed: _hostJoined ? _notifyHost : null,
                     icon: Icon(
                       Icons.notifications_active,
                       size: 24,
@@ -395,9 +425,8 @@ class _WaitingRoomState extends State<WaitingRoom> {
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _hostJoined
-                          ? Colors.blue
-                          : Colors.grey[300],
+                      backgroundColor:
+                          _hostJoined ? Colors.blue : Colors.grey[300],
                       disabledBackgroundColor: Colors.grey[300],
                       disabledForegroundColor: Colors.grey[500],
                       shape: RoundedRectangleBorder(
@@ -407,22 +436,20 @@ class _WaitingRoomState extends State<WaitingRoom> {
                     ),
                   ),
                 ),
-              
+
               const SizedBox(height: 16),
-              
-              // Leave Button
+
+              // Leave button
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: OutlinedButton.icon(
-                  onPressed: _leave_room,
+                  onPressed: _leaveRoom,
                   icon: const Icon(Icons.exit_to_app, size: 24),
                   label: const Text(
                     'Leave Room',
                     style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                        fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red[400],
@@ -433,10 +460,10 @@ class _WaitingRoomState extends State<WaitingRoom> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
-              // Room Details
+
+              // Room details
               if (_roomData != null) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -450,28 +477,26 @@ class _WaitingRoomState extends State<WaitingRoom> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                          Icon(Icons.person,
+                              size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 8),
                           Text(
                             'Host: ${_roomData!['host']}',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                            ),
+                                fontSize: 14, color: Colors.grey[700]),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.schedule, size: 16, color: Colors.grey[600]),
+                          Icon(Icons.schedule,
+                              size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 8),
                           Text(
                             'Meeting: ${_roomData!['meeting_date']}',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                            ),
+                                fontSize: 14, color: Colors.grey[700]),
                           ),
                         ],
                       ),
@@ -479,15 +504,14 @@ class _WaitingRoomState extends State<WaitingRoom> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            Icon(Icons.description, size: 16, color: Colors.grey[600]),
+                            Icon(Icons.description,
+                                size: 16, color: Colors.grey[600]),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 _roomData!['description'],
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[700],
-                                ),
+                                    fontSize: 14, color: Colors.grey[700]),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
