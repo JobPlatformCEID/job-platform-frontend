@@ -124,7 +124,10 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
           content: '$fromUser: $msg',
           kind: _msgKind.notification,
         ));
-        
+        // Auto-show admit dialog for host
+        if (widget.isHost && mounted) {
+          _showAdmitPrompt(fromUser, msg);
+        }
         break;
 
       case 'user_wants_to_join':
@@ -137,9 +140,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         break;
 
       case 'waiting_users_updated':
-        // Host receives updated waiting list - update UI if needed
-        final waitingUsers = data['waiting_users'] as List<dynamic>?;
-        debugPrint('[VideoCallScreen] Waiting users updated: $waitingUsers');
+        final waitingUsernames = data['waiting_users'] as List<dynamic>?;
+        debugPrint('[VideoCallScreen] Waiting users updated: $waitingUsernames');
+        setState(() {
+          _waitingUsers.clear();
+          waitingUsernames?.forEach((username) {
+            final name = username as String;
+            _waitingUsers[name] = _WaitingUser(
+              id: name.hashCode, // temporary ID
+              username: name,
+            );
+          });
+        });
         break;
 
       case 'kicked':
@@ -242,18 +254,30 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     setState(() => _isCameraEnabled = newState);
   }
 
-  void _leaveCall(){
-
+  void _leaveCall() {
+    _wsChannel?.sink.close();
+    widget.room.disconnect();
+    Navigator.pop(context);
   }
 
   // Host only actions
 
-  void _admitUser(String username){
-
+  void _admitUser(String username) {
+    if (!widget.isHost) return;
+    _wsChannel?.sink.add(jsonEncode({
+      'type': 'admit_guest',
+      'username': username,
+    }));
+    debugPrint('[VideoCallScreen] Admitting user: $username');
   }
 
-  void _kickUser(String username){
-
+  void _kickUser(String username) {
+    if (!widget.isHost) return;
+    _wsChannel?.sink.add(jsonEncode({
+      'type': 'kick_user',
+      'username': username,
+    }));
+    debugPrint('[VideoCallScreen] Kicking user: $username');
   }
 
   
@@ -263,55 +287,269 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.roomName),
+        backgroundColor: Colors.black87,
+        foregroundColor: Colors.white,
         actions: [
+          // Waiting users badge for host
+          if (widget.isHost && _waitingUsers.isNotEmpty)
+            Badge(
+              label: Text('${_waitingUsers.length}'),
+              child: IconButton(
+                icon: const Icon(Icons.people_outline),
+                onPressed: _showWaitingUsersDialog,
+              ),
+            ),
           IconButton(
-            icon: const Icon(Icons.call_end),
-            onPressed: () {
-              widget.room.disconnect();
-              Navigator.pop(context);
-            },
+            icon: const Icon(Icons.call_end, color: Colors.red),
+            onPressed: _leaveCall,
           ),
         ],
       ),
       body: Column(
         children: [
-          // Local video (your camera - already connected)
+          // Video grid area
           Expanded(
-            flex: 1,
+            flex: 5,
             child: Container(
               color: Colors.black,
-              child: widget.room.localParticipant != null
-                  ? VideoTrackWidget(
-                      participant: widget.room.localParticipant!,
-                    )
-                  : const Center(
-                      child: CircularProgressIndicator(),
-                    ),
+              child: _buildVideoGrid(),
             ),
           ),
-          // Remote participants
-          Expanded(
-            flex: 2,
-            child: _participants.isEmpty
-                ? const Center(
-                    child: Text('Waiting for others to join...'),
-                  )
-                : GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 1.0,
-                    ),
-                    itemCount: _participants.length,
-                    itemBuilder: (context, index) {
-                      return VideoTrackWidget(
-                        participant: _participants[index],
-                      );
-                    },
+          // Control bar
+          Container(
+            height: 70,
+            color: Colors.black87,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Mic toggle
+                IconButton(
+                  icon: Icon(
+                    _isMicEnabled ? Icons.mic : Icons.mic_off,
+                    color: _isMicEnabled ? Colors.white : Colors.red,
+                    size: 28,
                   ),
+                  onPressed: _toggleMic,
+                ),
+                const SizedBox(width: 24),
+                // Camera toggle
+                IconButton(
+                  icon: Icon(
+                    _isCameraEnabled ? Icons.videocam : Icons.videocam_off,
+                    color: _isCameraEnabled ? Colors.white : Colors.red,
+                    size: 28,
+                  ),
+                  onPressed: _toggleCamera,
+                ),
+                const SizedBox(width: 24),
+                // Leave call
+                IconButton(
+                  icon: const Icon(Icons.call_end, color: Colors.red),
+                  iconSize: 32,
+                  onPressed: _leaveCall,
+                ),
+                const SizedBox(width: 24),
+                // Chat toggle
+                IconButton(
+                  icon: Icon(
+                    Icons.chat_bubble,
+                    color: _unreadMessages > 0 ? Colors.orange : Colors.white,
+                  ),
+                  onPressed: _toggleChatPanel,
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildVideoGrid() {
+    final allParticipants = [
+      if (widget.room.localParticipant != null) widget.room.localParticipant!,
+      ..._participants,
+    ];
+
+    if (allParticipants.isEmpty) {
+      return const Center(
+        child: Text(
+          'Waiting for others to join...',
+          style: TextStyle(color: Colors.white70),
+        ),
+      );
+    }
+
+    // Single participant - fullscreen
+    if (allParticipants.length == 1) {
+      return _buildParticipantTile(allParticipants[0], isLarge: true);
+    }
+
+    // Multiple participants - grid
+    return GridView.builder(
+      padding: const EdgeInsets.all(8),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: allParticipants.length <= 2 ? 1 : 2,
+        childAspectRatio: 16 / 9,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: allParticipants.length,
+      itemBuilder: (context, index) {
+        return _buildParticipantTile(allParticipants[index]);
+      },
+    );
+  }
+
+  Widget _buildParticipantTile(Participant participant, {bool isLarge = false}) {
+    final isLocal = participant is LocalParticipant;
+    final username = participant.identity;
+
+    return Stack(
+      children: [
+        // Video
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: VideoTrackWidget(participant: participant),
+          ),
+        ),
+        // Name badge
+        Positioned(
+          left: 8,
+          bottom: 8,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              isLocal ? 'You ($username)' : username,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+            ),
+          ),
+        ),
+        // Host kick button (only for remote participants)
+        if (widget.isHost && !isLocal)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: IconButton(
+              icon: const Icon(Icons.remove_circle, color: Colors.red, size: 20),
+              onPressed: () => _showKickConfirmDialog(username),
+              tooltip: 'Remove $username',
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showKickConfirmDialog(String username) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove Participant'),
+        content: Text('Remove $username from the call?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _kickUser(username);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAdmitPrompt(String username, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Must choose Yes or No
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.person_add, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text('$username wants to join'),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          // No button
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('No', style: TextStyle(color: Colors.grey)),
+          ),
+          // Yes button
+          ElevatedButton(
+            onPressed: () {
+              _admitUser(username);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Yes, Admit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showWaitingUsersDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Waiting to Join'),
+        content: SizedBox(
+          width: 300,
+          child: _waitingUsers.isEmpty
+              ? const Text('No one is waiting.')
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _waitingUsers.length,
+                  itemBuilder: (context, index) {
+                    final entry = _waitingUsers.entries.elementAt(index);
+                    final user = entry.value;
+                    return ListTile(
+                      leading: const Icon(Icons.person),
+                      title: Text(user.username),
+                      trailing: ElevatedButton(
+                        onPressed: () {
+                          _admitUser(user.username);
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Admit'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toggleChatPanel() {
+    setState(() {
+      _isChatOpen = !_isChatOpen;
+      if (_isChatOpen) _unreadMessages = 0;
+    });
   }
 }
 

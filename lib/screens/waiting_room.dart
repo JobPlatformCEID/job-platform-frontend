@@ -74,9 +74,10 @@ class _WaitingRoomState extends State<WaitingRoom> {
 
           if (type == 'room_state') {
             // Initial state on connect: tells us if host already started.
+            // Backend sends 0 or 1 (integer from Redis sismember), add true/false in case this might change
             final hostPresent = data['host_present'];
             setState(() {
-              _hostJoined = (hostPresent == true || hostPresent == 1);
+              if(hostPresent == 1) _hostJoined = true;
             });
           }
 
