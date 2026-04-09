@@ -1,59 +1,24 @@
+// Video call screen using LiveKit
+// Handles camera, mic, participant grid, and chat
+
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide connectionState;
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import '../auth.dart';
 
-// Data models
-
-class _WaitingUser {
-  final int id;
-  final String username;
-  final DateTime joinedAt;
-
-  _WaitingUser({
-    required this.id,
-    required this.username,
-    DateTime? joinedAt,
-  }) : joinedAt = joinedAt ?? DateTime.now();
-}
-
-// in the future we can add whispers, etc.
-enum _msgKind { chat , notification }
-
-class _ChatMessage{
-  final String sender;
-  final String content;
-  final DateTime timestamp;
-  final _msgKind kind;
-
-  _ChatMessage({
-    required this.sender,
-    required this.content,
-    required this.kind,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-
-}
-
-// screen
 class VideoCallScreen extends StatefulWidget {
-  final Room room;
+  final String livekitUrl;
+  final String livekitToken;
   final String roomName;
-
-  //used to differentiate the uis
   final bool isHost;
-
-  final String roomId;
-  final Auth auth;
 
   const VideoCallScreen({
     super.key,
-    required this.room,
+    required this.livekitUrl,
+    required this.livekitToken,
     required this.roomName,
     required this.isHost,
-    required this.auth,
-    required this.roomId,
   });
 
   @override
@@ -61,525 +26,447 @@ class VideoCallScreen extends StatefulWidget {
 }
 
 class _VideoCallScreenState extends State<VideoCallScreen> {
-  
-  //chat history messages (plus other chat realted)
-  final List<_ChatMessage> _chatMessages = [];
-  final TextEditingController _chatController = TextEditingController();
-  final ScrollController _chatScrollController = ScrollController();
-  int _unreadMessages = 0;
+  Room? _room;
+  bool _connecting = true;
+  String? _error;
 
-  //list of the participants
   List<Participant> _participants = [];
 
-  //this is only for the host to see the people who are waiting 
-  final Map<String, _WaitingUser> _waitingUsers = {};
-  
-  // bool variables for controls
-  bool _isMicEnabled = true;
-  bool _isCameraEnabled = true;
-  bool _isChatOpen = false;
+  bool _micOn    = true;
+  bool _cameraOn = true;
+  bool _chatOpen = false;
+  bool _userLeaving = false;
 
-  // Websockets for waiting room events + host notifications
-  WebSocketChannel? _wsChannel;
+  final List<_Msg> _messages = [];
+  final TextEditingController _chatCtrl = TextEditingController();
+  final ScrollController _scrollCtrl = ScrollController();
+  int _unread = 0;
 
-  Future<void> _connectWebSocket() async {
-    try {
-      final serverUrl = widget.auth.server.getServerUrl();
-      final token = widget.auth.user!.token;
+  // cancel callbacks returned by room.events.on<T>()
+  final List<Future<void> Function()> _unsubs = [];
 
-      final wsUrl = serverUrl!.replaceFirst('http', 'ws');
-      final fullUrl = '$wsUrl/ws/calls/${widget.roomId}/?token=$token';
-
-      debugPrint('[VideoCallScreen] Connecting to WebSocket: $fullUrl');
-
-      _wsChannel = WebSocketChannel.connect(Uri.parse(fullUrl));
-
-      _wsChannel!.stream.listen(
-        (message) {
-          final data = jsonDecode(message);
-          debugPrint('[VideoCallScreen] WS message: $data');
-          _handleWebSocketMessage(data);
-        },
-        onError: (error) {
-          debugPrint('[VideoCallScreen] WS error: $error');
-        },
-        onDone: () {
-          debugPrint('[VideoCallScreen] WS closed');
-        },
-      );
-    } catch (e) {
-      debugPrint('[VideoCallScreen] Failed to connect WebSocket: $e');
-    }
-  }
-
-  void _handleWebSocketMessage(Map<String, dynamic> data) {
-    final type = data['type'];
-
-    switch (type) {
-      case 'host_notification':
-        final msg = data['message'] ?? '';
-        final fromUser = data['from_user'] ?? 'Guest';
-        _addMessage(_ChatMessage(
-          sender: 'System',
-          content: '$fromUser: $msg',
-          kind: _msgKind.notification,
-        ));
-        // Auto-show admit dialog for host
-        if (widget.isHost && mounted) {
-          _showAdmitPrompt(fromUser, msg);
-        }
-        break;
-
-      case 'user_wants_to_join':
-        final fromUser = data['from_user'] ?? 'Guest';
-        _addMessage(_ChatMessage(
-          sender: 'System',
-          content: '$fromUser is waiting to join',
-          kind: _msgKind.notification,
-        ));
-        break;
-
-      case 'waiting_users_updated':
-        final waitingUsernames = data['waiting_users'] as List<dynamic>?;
-        debugPrint('[VideoCallScreen] Waiting users updated: $waitingUsernames');
-        setState(() {
-          _waitingUsers.clear();
-          waitingUsernames?.forEach((username) {
-            final name = username as String;
-            _waitingUsers[name] = _WaitingUser(
-              id: name.hashCode, // temporary ID
-              username: name,
-            );
-          });
-        });
-        break;
-
-      case 'kicked':
-        _wsChannel?.sink.close();
-        widget.room.disconnect();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('You have been removed from the call')),
-          );
-          Navigator.pop(context);
-        }
-        break;
-
-      case 'chat_message':
-        // Handle chat messages from backend (if using WebSocket instead of LiveKit)
-        break;
-    }
-  }
-
-  // setup plus dispose
   @override
   void initState() {
     super.initState();
-    _setupListeners();
-    _updateParticipants();
-    _connectWebSocket();
-  }
-
-  void _setupListeners() {
-    widget.room.addListener(_updateParticipants);
-  }
-
-  void _disposeListeners() {
-    widget.room.removeListener(_updateParticipants);
-  }
-
-  void _updateParticipants() {
-    setState(() {
-      _participants = widget.room.remoteParticipants.values.toList();
-    });
+    _connect();
   }
 
   @override
   void dispose() {
-    _disposeListeners();
-    _wsChannel?.sink.close();
-    widget.room.disconnect();
-    _chatController.dispose();
-    _chatScrollController.dispose();
+    for (final cancel in _unsubs) { cancel(); }
+    _unsubs.clear();
+    _room?.disconnect();  // safe to call regardless of state
+    _chatCtrl.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
-  // chat related functions
+  // Join the call
+  Future<void> _connect() async {
+    try {
+      final room = Room();
 
-  void _addMessage(_ChatMessage msg){
+      // Listen to participant changes
+      room.addListener(_onRoomChanged);
 
-    setState(() {
-      _chatMessages.add(msg);
-      if (!_isChatOpen) _unreadMessages++;
-    });
+      // Listen to incoming data (chat)
+      _unsubs.add(room.events.on<DataReceivedEvent>((e) => _onData(e)));
 
-    debugPrint('Added message sent by ${msg.sender}: ${msg.content} , ${msg.kind}');
-    
-    //TODO integrate with ui.
+      // Listen for being disconnected / kicked
+      _unsubs.add(room.events.on<RoomDisconnectedEvent>((e) {
+        if (mounted && !_userLeaving) Navigator.of(context).pop();
+      }));
+
+      await room.connect(
+        widget.livekitUrl,
+        widget.livekitToken,
+        roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
+        ),
+      );
+
+      // Enable camera and mic right away
+      await room.localParticipant?.setCameraEnabled(true);
+      await room.localParticipant?.setMicrophoneEnabled(true);
+
+      if (mounted) {
+        setState(() {
+          _room       = room;
+          _connecting = false;
+          _participants = room.remoteParticipants.values.toList();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _connecting = false;
+          _error      = 'Could not connect: $e';
+        });
+      }
+    }
   }
 
-  void _sendMessage(){
-    final text = _chatController.text.trim();
-    if (text.isEmpty) return;
-    
-    _chatController.clear();
+  void _onRoomChanged() {
+    if (_room == null || !mounted) return;
+    setState(() {
+      _participants = _room!.remoteParticipants.values.toList();
+    });
+  }
 
-    // Publish bia Livekit data channel to all participants
-    widget.room.localParticipant?.publishData(
-      utf8.encode(jsonEncode({
-        'type': 'chat',
-        'message': text,
-      })),
+  // Handle incoming chat messages
+  void _onData(DataReceivedEvent e) {
+    try {
+      final map  = jsonDecode(utf8.decode(e.data)) as Map<String, dynamic>;
+      final type = map['type'] as String?;
+      if (type == 'chat') {
+        _addMsg(_Msg(
+          sender:  e.participant?.identity ?? 'Guest',
+          content: map['message'] as String? ?? '',
+        ));
+      }
+    } catch (_) {}
+  }
+
+  void _addMsg(_Msg msg) {
+    setState(() {
+      _messages.add(msg);
+      if (!_chatOpen) _unread++;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+      }
+    });
+  }
+
+  void _sendMsg() {
+    final text = _chatCtrl.text.trim();
+    if (text.isEmpty) return;
+    _chatCtrl.clear();
+
+    _room?.localParticipant?.publishData(
+      utf8.encode(jsonEncode({'type': 'chat', 'message': text})),
       reliable: true,
     );
 
-    // Show locally
-    _addMessage(_ChatMessage(
-      sender: widget.auth.user?.username ?? 'You',
+    _addMsg(_Msg(
+      sender:  _room?.localParticipant?.identity ?? 'You',
       content: text,
-      kind: _msgKind.chat,
+      isMe:    true,
     ));
   }
 
-  // Call actions
+  // Mute/unmute toggle
   Future<void> _toggleMic() async {
-    final newState = !_isMicEnabled;
-    await widget.room.localParticipant?.setMicrophoneEnabled(newState);
-    setState(() => _isMicEnabled = newState);
+    final next = !_micOn;
+    await _room?.localParticipant?.setMicrophoneEnabled(next);
+    setState(() => _micOn = next);
   }
 
   Future<void> _toggleCamera() async {
-    final newState = !_isCameraEnabled;
-    await widget.room.localParticipant?.setCameraEnabled(newState);
-    setState(() => _isCameraEnabled = newState);
+    final next = !_cameraOn;
+    await _room?.localParticipant?.setCameraEnabled(next);
+    setState(() => _cameraOn = next);
   }
 
-  void _leaveCall() {
-    _wsChannel?.sink.close();
-    widget.room.disconnect();
-    Navigator.pop(context);
+  Future<void> _leave() async {
+    setState(() => _userLeaving = true);
+    await _room?.disconnect();
+    if (mounted) Navigator.of(context).pop();
   }
-
-  // Host only actions
-
-  void _admitUser(String username) {
-    if (!widget.isHost) return;
-    _wsChannel?.sink.add(jsonEncode({
-      'type': 'admit_guest',
-      'username': username,
-    }));
-    debugPrint('[VideoCallScreen] Admitting user: $username');
-  }
-
-  void _kickUser(String username) {
-    if (!widget.isHost) return;
-    _wsChannel?.sink.add(jsonEncode({
-      'type': 'kick_user',
-      'username': username,
-    }));
-    debugPrint('[VideoCallScreen] Kicking user: $username');
-  }
-
-  
 
   @override
   Widget build(BuildContext context) {
+    if (_connecting) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: const Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 16),
+            Text('Connecting…', style: TextStyle(color: Colors.white70)),
+          ]),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(_error!, style: const TextStyle(color: Colors.white70)),
+            const SizedBox(height: 24),
+            ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Go back')),
+          ]),
+        ),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text(widget.roomName),
         backgroundColor: Colors.black87,
         foregroundColor: Colors.white,
+        title: Text(widget.roomName),
+        automaticallyImplyLeading: false,
         actions: [
-          // Waiting users badge for host
-          if (widget.isHost && _waitingUsers.isNotEmpty)
-            Badge(
-              label: Text('${_waitingUsers.length}'),
-              child: IconButton(
-                icon: const Icon(Icons.people_outline),
-                onPressed: _showWaitingUsersDialog,
-              ),
-            ),
           IconButton(
             icon: const Icon(Icons.call_end, color: Colors.red),
-            onPressed: _leaveCall,
+            onPressed: _leave,
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Video grid area
-          Expanded(
-            flex: 5,
-            child: Container(
-              color: Colors.black,
-              child: _buildVideoGrid(),
-            ),
-          ),
-          // Control bar
-          Container(
-            height: 70,
-            color: Colors.black87,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Mic toggle
-                IconButton(
-                  icon: Icon(
-                    _isMicEnabled ? Icons.mic : Icons.mic_off,
-                    color: _isMicEnabled ? Colors.white : Colors.red,
-                    size: 28,
-                  ),
-                  onPressed: _toggleMic,
-                ),
-                const SizedBox(width: 24),
-                // Camera toggle
-                IconButton(
-                  icon: Icon(
-                    _isCameraEnabled ? Icons.videocam : Icons.videocam_off,
-                    color: _isCameraEnabled ? Colors.white : Colors.red,
-                    size: 28,
-                  ),
-                  onPressed: _toggleCamera,
-                ),
-                const SizedBox(width: 24),
-                // Leave call
-                IconButton(
-                  icon: const Icon(Icons.call_end, color: Colors.red),
-                  iconSize: 32,
-                  onPressed: _leaveCall,
-                ),
-                const SizedBox(width: 24),
-                // Chat toggle
-                IconButton(
-                  icon: Icon(
-                    Icons.chat_bubble,
-                    color: _unreadMessages > 0 ? Colors.orange : Colors.white,
-                  ),
-                  onPressed: _toggleChatPanel,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: Column(children: [
+        // Video grid
+        Expanded(child: _buildGrid()),
+
+        // Chat panel
+        if (_chatOpen) _buildChat(),
+
+        // Control bar
+        _buildControls(),
+      ]),
     );
   }
 
-  Widget _buildVideoGrid() {
-    final allParticipants = [
-      if (widget.room.localParticipant != null) widget.room.localParticipant!,
+  // Build the video grid layout
+  Widget _buildGrid() {
+    final local = _room?.localParticipant;
+    final all   = <Participant>[
+      if (local != null) local,
       ..._participants,
     ];
 
-    if (allParticipants.isEmpty) {
+    if (all.isEmpty) {
       return const Center(
-        child: Text(
-          'Waiting for others to join...',
-          style: TextStyle(color: Colors.white70),
-        ),
+        child: Text('No one else here yet',
+            style: TextStyle(color: Colors.white54)),
       );
     }
 
-    // Single participant - fullscreen
-    if (allParticipants.length == 1) {
-      return _buildParticipantTile(allParticipants[0], isLarge: true);
+    if (all.length == 1) {
+      return _tile(all.first, fill: true);
     }
 
-    // Multiple participants - grid
     return GridView.builder(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(4),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: allParticipants.length <= 2 ? 1 : 2,
+        crossAxisCount: all.length <= 2 ? 1 : 2,
         childAspectRatio: 16 / 9,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
       ),
-      itemCount: allParticipants.length,
-      itemBuilder: (context, index) {
-        return _buildParticipantTile(allParticipants[index]);
-      },
+      itemCount: all.length,
+      itemBuilder: (_, i) => _tile(all[i]),
     );
   }
 
-  Widget _buildParticipantTile(Participant participant, {bool isLarge = false}) {
-    final isLocal = participant is LocalParticipant;
-    final username = participant.identity;
+  Widget _tile(Participant p, {bool fill = false}) {
+    final isLocal = p is LocalParticipant;
 
-    return Stack(
-      children: [
-        // Video
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey[900],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: VideoTrackWidget(participant: participant),
-          ),
+    // Find the first enabled video track
+    VideoTrack? video;
+    for (final pub in p.videoTrackPublications) {
+      if (!pub.muted && pub.track != null) {
+        video = pub.track as VideoTrack?;
+        break;
+      }
+    }
+
+    return Stack(fit: fill ? StackFit.expand : StackFit.passthrough, children: [
+      Container(
+        decoration: BoxDecoration(
+          color: Colors.grey[900],
+          borderRadius: BorderRadius.circular(6),
         ),
-        // Name badge
-        Positioned(
-          left: 8,
-          bottom: 8,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              isLocal ? 'You ($username)' : username,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-          ),
-        ),
-        // Host kick button (only for remote participants)
-        if (widget.isHost && !isLocal)
-          Positioned(
-            right: 8,
-            top: 8,
-            child: IconButton(
-              icon: const Icon(Icons.remove_circle, color: Colors.red, size: 20),
-              onPressed: () => _showKickConfirmDialog(username),
-              tooltip: 'Remove $username',
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showKickConfirmDialog(String username) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Remove Participant'),
-        content: Text('Remove $username from the call?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              _kickUser(username);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAdmitPrompt(String username, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Must choose Yes or No
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.person_add, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text('$username wants to join'),
-          ],
-        ),
-        content: Text(message),
-        actions: [
-          // No button
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('No', style: TextStyle(color: Colors.grey)),
-          ),
-          // Yes button
-          ElevatedButton(
-            onPressed: () {
-              _admitUser(username);
-              Navigator.pop(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Yes, Admit'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showWaitingUsersDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Waiting to Join'),
-        content: SizedBox(
-          width: 300,
-          child: _waitingUsers.isEmpty
-              ? const Text('No one is waiting.')
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _waitingUsers.length,
-                  itemBuilder: (context, index) {
-                    final entry = _waitingUsers.entries.elementAt(index);
-                    final user = entry.value;
-                    return ListTile(
-                      leading: const Icon(Icons.person),
-                      title: Text(user.username),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          _admitUser(user.username);
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Admit'),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: video != null
+              ? VideoTrackRenderer(video, fit: VideoViewFit.cover)
+              : Center(
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.grey[700],
+                      child: Text(
+                        (p.identity.isNotEmpty ? p.identity[0] : '?').toUpperCase(),
+                        style: const TextStyle(fontSize: 24, color: Colors.white),
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(p.identity,
+                        style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  ]),
                 ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
+      // Name badge
+      Positioned(
+        left: 8, bottom: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            isLocal ? '${p.identity} (You)' : p.identity,
+            style: const TextStyle(color: Colors.white, fontSize: 11),
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  // Build the chat panel UI
+  Widget _buildChat() {
+    final myId = _room?.localParticipant?.identity ?? '';
+    return Container(
+      height: 220,
+      color: Colors.grey[900],
+      child: Column(children: [
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollCtrl,
+            padding: const EdgeInsets.all(8),
+            itemCount: _messages.length,
+            itemBuilder: (_, i) {
+              final m   = _messages[i];
+              final me  = m.isMe || m.sender == myId;
+              return Align(
+                alignment: me ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: me ? Colors.blue[700] : Colors.grey[700],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    if (!me)
+                      Text(m.sender,
+                          style: const TextStyle(
+                              color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                    Text(m.content, style: const TextStyle(color: Colors.white)),
+                  ]),
+                ),
+              );
+            },
+          ),
+        ),
+        Container(
+          color: Colors.grey[850],
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _chatCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'Message…',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  border: InputBorder.none,
+                ),
+                onSubmitted: (_) => _sendMsg(),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.send, color: Colors.blue),
+              onPressed: _sendMsg,
+            ),
+          ]),
+        ),
+      ]),
     );
   }
 
-  void _toggleChatPanel() {
-    setState(() {
-      _isChatOpen = !_isChatOpen;
-      if (_isChatOpen) _unreadMessages = 0;
-    });
+  // Build bottom controls (mic, camera, hang up, chat)
+  Widget _buildControls() {
+    return Container(
+      height: 72,
+      color: Colors.black87,
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
+        // Mic
+        _controlBtn(
+          icon: _micOn ? Icons.mic : Icons.mic_off,
+          color: _micOn ? Colors.white : Colors.red,
+          onTap: _toggleMic,
+          label: _micOn ? 'Mute' : 'Unmute',
+        ),
+        // Camera
+        _controlBtn(
+          icon: _cameraOn ? Icons.videocam : Icons.videocam_off,
+          color: _cameraOn ? Colors.white : Colors.red,
+          onTap: _toggleCamera,
+          label: _cameraOn ? 'Stop video' : 'Start video',
+        ),
+        // End call
+        _controlBtn(
+          icon: Icons.call_end,
+          color: Colors.red,
+          onTap: _leave,
+          label: 'Leave',
+          bg: Colors.red.withOpacity(0.15),
+        ),
+        // Chat
+        Stack(alignment: Alignment.topRight, children: [
+          _controlBtn(
+            icon: Icons.chat_bubble_outline,
+            color: _chatOpen ? Colors.blue : Colors.white,
+            onTap: () => setState(() {
+              _chatOpen = !_chatOpen;
+              if (_chatOpen) _unread = 0;
+            }),
+            label: 'Chat',
+          ),
+          if (_unread > 0)
+            Positioned(
+              right: 4, top: 4,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                child: Text('$_unread',
+                    style: const TextStyle(color: Colors.white, fontSize: 9)),
+              ),
+            ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _controlBtn({
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+    required String label,
+    Color? bg,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: bg ?? Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 2),
+          Text(label, style: TextStyle(color: color, fontSize: 10)),
+        ]),
+      ),
+    );
   }
 }
 
-class VideoTrackWidget extends StatelessWidget {
-  final Participant participant;
-
-  const VideoTrackWidget({
-    super.key,
-    required this.participant,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final videoTrack = participant.videoTrackPublications.firstOrNull?.track as VideoTrack?;
-    
-    if (videoTrack == null) {
-      return Container(
-        color: Colors.grey[800],
-        child: Center(
-          child: Text(
-            participant.identity,
-            style: const TextStyle(color: Colors.white),
-          ),
-        ),
-      );
-    }
-
-    return VideoTrackRenderer(
-      videoTrack,
-      fit: VideoViewFit.cover,
-    );
-  }
+// Simple message model for chat
+class _Msg {
+  final String sender;
+  final String content;
+  final bool isMe;
+  _Msg({required this.sender, required this.content, this.isMe = false});
 }
