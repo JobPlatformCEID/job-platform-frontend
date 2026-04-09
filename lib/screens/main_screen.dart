@@ -12,6 +12,7 @@ import 'social_screen.dart';
 import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
 import '../widgets/user_avatar.dart';
+import 'calls_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -168,6 +169,22 @@ Future<void> _loadUserData() async {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => ReviewsScreen(auth: widget.auth, server: widget.server),
+                  ),
+                );
+              },
+            ),
+
+            ListTile(
+              leading: const Icon(Icons.video_call_outlined),
+              title: const Text('Calls'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => CallsScreen(
+                      auth: widget.auth,
+                      server: widget.server,
+                    ),
                   ),
                 );
               },
