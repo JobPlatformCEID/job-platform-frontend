@@ -87,6 +87,81 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
+  Widget _buildVideoGrid() {
+    final count = _participants.length;
+
+    if (count == 0) {
+      return const Center(
+        child: Text('Waiting for participants...', style: TextStyle(color: Colors.white)),
+      );
+    }
+
+    // Layout for 1 participant
+    if (count == 1) {
+      return _ParticipantTile(participant: _participants[0]);
+    }
+
+    // Layout for 2 participants
+    if (count == 2) {
+      // On larger screens show side by side, on smaller stack vertically
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 600;
+          return isWide
+              ? Row(
+                  children: [
+                    Expanded(child: _ParticipantTile(participant: _participants[0])),
+                    const SizedBox(width: 8),
+                    Expanded(child: _ParticipantTile(participant: _participants[1])),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Expanded(child: _ParticipantTile(participant: _participants[0])),
+                    const SizedBox(height: 8),
+                    Expanded(child: _ParticipantTile(participant: _participants[1])),
+                  ],
+                );
+        },
+      );
+    }
+
+    // Layout for 3 participants (grid)
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = count <= 4 ? 2 : 3;
+        final rows = (count / crossAxisCount).ceil();
+
+        return Column(
+          children: List.generate(rows, (rowIndex) {
+            final startIndex = rowIndex * crossAxisCount;
+            final endIndex = (startIndex + crossAxisCount).clamp(0, count);
+            final rowItems = _participants.sublist(startIndex, endIndex);
+
+            return Expanded(
+              child: Row(
+                children: [
+                  ...rowItems.map((p) => Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: _ParticipantTile(participant: p),
+                    ),
+                  )),
+                  // Fill empty slots in last row
+                  if (rowItems.length < crossAxisCount)
+                    ...List.generate(
+                      crossAxisCount - rowItems.length,
+                      (_) => const Expanded(child: SizedBox()),
+                    ),
+                ],
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,27 +179,10 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
                   children: [
                     // Video grid
                     Expanded(
-                      child: _participants.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Waiting for participants...',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            )
-                          : GridView.builder(
-                              padding: const EdgeInsets.all(8),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: _participants.length == 1 ? 1 : 2,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                              ),
-                              itemCount: _participants.length,
-                              itemBuilder: (context, index) {
-                                return _ParticipantTile(
-                                  participant: _participants[index],
-                                );
-                              },
-                            ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _buildVideoGrid(),
+                      ),
                     ),
 
                     // Controls
