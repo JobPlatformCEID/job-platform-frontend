@@ -3,11 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'theme/app_theme.dart';
 import 'server.dart';
-import 'user.dart';
-import 'screens/server_settings_screen.dart';
+import 'auth.dart';
 import 'screens/welcome_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart';
 
 void main() async {
   // Required before any async work in main
@@ -22,21 +20,21 @@ void main() async {
 
   // Create the server and user instances
   final server = Server();
-  final user = User(server: server);
+  final auth = Auth(server: server);
 
   // Load saved data from storage
   await server.loadServerUrl();
-  final bool hasSession = await user.loadSession();
+  final bool hasSession = await auth.loadSession();
 
-  runApp(MyApp(server: server, user: user, hasSession: hasSession));
+  runApp(MyApp(server: server, auth: auth, hasSession: hasSession));
 }
 
 class MyApp extends StatelessWidget {
   final Server server;
-  final User user;
+  final Auth auth;
   final bool hasSession;
 
-  const MyApp({super.key, required this.server, required this.user, required this.hasSession});
+  const MyApp({super.key, required this.server, required this.auth, required this.hasSession});
 
   @override
   Widget build(BuildContext context) {
@@ -51,10 +49,7 @@ class MyApp extends StatelessWidget {
   }
 
   Widget _pickStartScreen() {
-    if (hasSession) {
-      return HomeScreen(server: server, user: user);
-    }
- 
-    return WelcomeScreen(server: server, user: user);
+    if (hasSession) return MainScreen(server: server, auth: auth);
+    return WelcomeScreen(server: server, auth: auth);
   }
 }

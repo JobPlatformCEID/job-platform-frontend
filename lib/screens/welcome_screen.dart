@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
-import '../user.dart';
+import '../auth.dart';
 import 'server_settings_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   final Server server;
-  final User user;
+  final Auth auth;
 
-  const WelcomeScreen({super.key, required this.server, required this.user});
+  const WelcomeScreen({super.key, required this.server, required this.auth});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +57,7 @@ class WelcomeScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => LoginScreen(
                           server: server,
-                          user: user,
+                          auth: auth,
                         ),
                       ),
                     );
@@ -75,7 +75,7 @@ class WelcomeScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => RegisterScreen(
                           server: server,
-                          user: user,
+                          auth: auth,
                         ),
                       ),
                     );

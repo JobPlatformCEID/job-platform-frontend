@@ -1,168 +1,136 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logging/logging.dart';
 import 'server.dart';
 
-// User roles that someone in the platform can have: Matches django User model
-enum UserRole { candidate, employer }
+abstract class User {
+  final Server server;
+  final String token;
+  final String username;
+  final int userId;
+  String firstName;
+  String lastName;
+  String email;
+  String? avatarUrl;
 
-class User {
-  final _log = Logger('User');
-  static const _storage = FlutterSecureStorage();
-  static const _tokenKey = 'auth_token';
-  static const _usernameKey = 'auth_username';
-  static const _roleKey = 'auth_role';
-
-  final Server _server;
-
-  String? _token;
-  String? _username;
-  UserRole? _role;
-
-  User({required Server server}) : _server = server;
-
-  // Getters
-  String? getToken() {
-    return _token;
-  }
-  String? getUsername() {
-    return _username;
-  }
-  UserRole? getRole() {
-    return _role;
+  String get fullName {
+    final name = '$firstName $lastName'.trim();
+    return name.isNotEmpty ? name : username;
   }
 
-  // Returns true if there is a valid token saved
-  bool isLoggedIn() {
-    return _token != null;
+  // Constructor
+  User({
+    required this.server,
+    required this.username,
+    required this.token,
+    required this.userId,
+    this.firstName = '',
+    this.lastName = '',
+    this.email = '',
+    this.avatarUrl,
+  });
+
+  // Get all user info from the server
+  Future<void> fetchMe() async {
+    final data = await server.sendGet('/api/users/me/', token: token);
+    firstName = data['first_name'] as String? ?? '';
+    lastName = data['last_name'] as String? ?? '';
+    email = data['email'] as String? ?? '';
+    avatarUrl = data['avatar'] as String?;
   }
 
-  // Login: Sends credentials to the server and stores the token
-  Future<void> login(String username, String password) async {
-    final response = await _server.sendPost('/api/auth/login/', {
-      'username': username,
-      'password': password,
-    });
-
-    _token = response['token'] as String;
-    _username = username;
-    _role = _parseRole(response['role'] as String);
-
-    _log.info('Logged in as $username (${_roleToString(_role!)})');
-    await _saveSession();
-  }
-
-  // Register: Creates a new account on the server and then logs in
-  Future<void> register(
-    String username,
-    String password,
-    UserRole role, {
-    String firstName = '',
-    String lastName = '',
-    String email = '',
-  }) async {
-    await _server.sendPost('/api/auth/register/', {
-      'username': username,
-      'password': password,
-      'role': _roleToString(role),
+  // Updates user info
+  Future<void> updateMe() async {
+    await server.sendPatch('/api/users/me/', {
       'first_name': firstName,
       'last_name': lastName,
       'email': email,
-    });
-
-    await login(username, password);
+    }, token: token);
   }
 
-  // Sends the required data to build a candidate's profile
-  Future<void> buildCandidateProfile({
-    required String phone,
-    required String location,
-    required String bio,
-  }) async {
-    await _server.sendPut('/api/candidates/me/', {
+  // Uploads an avatar for the current user
+  Future<void> updateAvatar(List<int> bytes, String filename) async {
+    await server.sendMultipartPatch(
+      '/api/users/me/',
+      'avatar',
+      bytes,
+      filename,
+      token: token,
+    );
+    await fetchMe();
+  }
+
+  Future<void> fetchProfile();
+  Future<void> updateProfile();
+}
+
+class Candidate extends User {
+  int? candidateProfileId;
+  String phone = '';
+  String location = '';
+  String bio = '';
+//  String? cv;
+//  double score = 0;
+
+  // Constructor
+  Candidate({
+    required super.server,
+    required super.username,
+    required super.token,
+    required super.userId,
+  });
+
+  @override
+  Future<void> fetchProfile() async {
+    final data = await server.sendGet('/api/candidates/me/', token: token);
+    candidateProfileId = data['id'] as int;
+    phone = data['phone'] as String? ?? '';
+    location = data['location'] as String? ?? '';
+    bio = data['bio'] as String? ?? '';
+//  cv = data['cv'] as String?;
+//  score = (data['score'] as num).toDouble();
+  }
+
+  @override
+  Future<void> updateProfile() async {
+    await server.sendPut('/api/candidates/me/', {
       'phone': phone,
       'location': location,
       'bio': bio,
-    }, token: _token);
+    }, token: token);
+  }
+}
+
+class Employer extends User {
+  int? employerProfileId;
+  String companyName = '';
+  String description = '';
+  String location = '';
+  String website = '';
+
+  // Constructor
+  Employer({
+    required super.server,
+    required super.username,
+    required super.token,
+    required super.userId,
+    });
+
+  @override
+  Future<void> fetchProfile() async {
+    final data = await server.sendGet('/api/employers/me/', token: token);
+    employerProfileId = data['id'] as int;
+    companyName = data['company_name'] as String? ?? '';
+    description = data['description'] as String? ?? '';
+    location = data['location'] as String? ?? '';
+    website = data['website'] as String? ?? '';
   }
 
-  // Sends the required data to build an employer's profile
-  Future<void> buildEmployerProfile({
-    required String companyName,
-    required String description,
-    required String location,
-    required String website,
-  }) async {
-    await _server.sendPut('/api/employers/me/', {
+  @override
+  Future<void> updateProfile() async {
+    await server.sendPut('/api/employers/me/', {
       'company_name': companyName,
       'description': description,
       'location': location,
       'website': website,
-    }, token: _token);
-  }
-
-  // Logout: Clears all stored session data and resets the user state.
-  Future<void> logout() async {
-    _log.info('Logging out $_username');
-
-    _token = null;
-    _username = null;
-    _role = null;
-
-    await _clearSession();
-  }
-
-  // Helper method that loads a previous session's data from storage
-  Future<bool> loadSession() async {
-    final savedToken = await _storage.read(key: _tokenKey);
-    final savedUsername = await _storage.read(key: _usernameKey);
-    final savedRole = await _storage.read(key: _roleKey);
-
-    if (savedToken != null && savedUsername != null && savedRole != null) {
-      _token = savedToken;
-      _username = savedUsername;
-      _role = _parseRole(savedRole);
-
-      _log.info('Session restored for $_username (${_roleToString(_role!)})');
-      return true;
-    }
-
-    _log.info('No saved session found');
-    return false;
-  }
-
-  // Helper method that writes the current session to secure storage.
-  Future<void> _saveSession() async {
-    await _storage.write(key: _tokenKey, value: _token);
-    await _storage.write(key: _usernameKey, value: _username);
-    await _storage.write(key: _roleKey, value: _roleToString(_role!));
-  }
-
-  // Helper method that removes all session keys from secure storage.
-  Future<void> _clearSession() async {
-    await _storage.delete(key: _tokenKey);
-    await _storage.delete(key: _usernameKey);
-    await _storage.delete(key: _roleKey);
-  }
-
-  // Helper method that converts a role string into a [UserRole] enum value
-  static UserRole _parseRole(String role) {
-    switch (role) {
-      case 'candidate':
-        return UserRole.candidate;
-      case 'employer':
-        return UserRole.employer;
-      default:
-        throw ArgumentError('Unknown role: $role');
-    }
-  }
-
-  // Helper method that converts a [UserRole] enum value into a string
-  static String _roleToString(UserRole role) {
-    switch (role) {
-      case UserRole.candidate:
-        return 'candidate';
-      case UserRole.employer:
-        return 'employer';
-    }
+    }, token: token);
   }
 }

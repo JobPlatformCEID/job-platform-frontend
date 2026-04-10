@@ -7,7 +7,7 @@ class Server {
   final _log = Logger('Server');
   static const _storage = FlutterSecureStorage();
   static const _urlKey = 'server_url';
-  static const _timeout = Duration(seconds: 10);
+  static const _timeout = Duration(seconds: 3);
 
   String? _serverUrl;
 
@@ -74,6 +74,23 @@ class Server {
     return _parseResponse(response);
   }
 
+  // Sends a GET request to the given endpoint, expecting a JSON array response
+  Future<List<dynamic>> sendGetList(String endpoint, {String? token}) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('GET $endpoint');
+
+    final response = await http
+        .get(url, headers: _buildHeaders(token: token))
+        .timeout(_timeout);
+
+    if (response.statusCode >= 400) {
+      _log.warning('HTTP ${response.statusCode} on ${response.request?.url}');
+      throw ServerException(response.statusCode, response.body);
+    }
+
+    return jsonDecode(response.body) as List<dynamic>;
+  }
+
   // Sends a POST request with a JSON body to the given endpoint
   Future<Map<String, dynamic>> sendPost(String endpoint, Map<String, dynamic> body, {String? token}) async {
     final url = Uri.parse('$_serverUrl$endpoint');
@@ -118,6 +135,54 @@ class Server {
     if (response.statusCode >= 400) {
       throw ServerException(response.statusCode, response.body);
     }
+  }
+
+  // Sends a multipart POST request with a file to the given endpoint
+  Future<Map<String, dynamic>> sendMultipart(
+    String endpoint,
+    String fieldName,
+    List<int> fileBytes,
+    String filename, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('MULTIPART POST $endpoint');
+
+    final request = http.MultipartRequest('POST', url);
+    if (token != null) request.headers['Authorization'] = 'Token $token';
+    request.files.add(http.MultipartFile.fromBytes(
+      fieldName,
+      fileBytes,
+      filename: filename,
+    ));
+
+    final streamed = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(response);
+  }
+
+  // Sends a multipart PATCH request with a file to the given endpoint
+  Future<Map<String, dynamic>> sendMultipartPatch(
+    String endpoint,
+    String fieldName,
+    List<int> fileBytes,
+    String filename, {
+    String? token,
+  }) async {
+    final url = Uri.parse('$_serverUrl$endpoint');
+    _log.fine('MULTIPART PATCH $endpoint');
+
+    final request = http.MultipartRequest('PATCH', url);
+    if (token != null) request.headers['Authorization'] = 'Token $token';
+    request.files.add(http.MultipartFile.fromBytes(
+      fieldName,
+      fileBytes,
+      filename: filename,
+    ));
+
+    final streamed = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamed);
+    return _parseResponse(response);
   }
 
   // Parses the HTTP response and throws ServerException for invalid HTTP responses

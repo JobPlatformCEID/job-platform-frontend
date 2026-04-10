@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import '../user.dart';
+import '../auth.dart';
 import '../server.dart';
 import 'server_settings_screen.dart';
-import 'home_screen.dart';
+import 'main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final Server server;
-  final User user;
+  final Auth auth;
 
-  const LoginScreen({super.key, required this.server, required this.user});
+  const LoginScreen({super.key, required this.server, required this.auth});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await widget.user.login(username, password);
+      await widget.auth.login(username, password);
       if (mounted) _navigateToHome();
     } on ServerException catch (e) {
       setState(() => _error = _friendlyError(e));
@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _navigateToHome() {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => HomeScreen(server: widget.server, user: widget.user),
+        builder: (_) => MainScreen(server: widget.server, auth: widget.auth)
       ),
       (_) => false,
     );
