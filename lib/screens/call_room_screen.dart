@@ -522,6 +522,7 @@ class _ParticipantTile extends StatefulWidget {
 class _ParticipantTileState extends State<_ParticipantTile> {
   late ConnectionQuality _quality;
   late final List<Future<void> Function()> _unsubs;
+  bool _isSpeaking = false;
 
   @override
   void initState() {
@@ -530,6 +531,9 @@ class _ParticipantTileState extends State<_ParticipantTile> {
     _unsubs = [
       widget.participant.events.on<ParticipantConnectionQualityUpdatedEvent>((e) {
         if (mounted) setState(() => _quality = e.connectionQuality);
+      }),
+      widget.participant.events.on<SpeakingChangedEvent>((e) {
+        if (mounted) setState(() => _isSpeaking = e.speaking);
       }),
     ];
   }
@@ -582,6 +586,9 @@ class _ParticipantTileState extends State<_ParticipantTile> {
       decoration: BoxDecoration(
         color: Colors.grey[900],
         borderRadius: BorderRadius.circular(12),
+        border: _isSpeaking
+            ? Border.all(color: Colors.green, width: 3)
+            : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
