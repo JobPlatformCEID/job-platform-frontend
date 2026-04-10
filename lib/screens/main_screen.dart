@@ -11,6 +11,7 @@ import 'reviews_screen.dart';
 import 'social_screen.dart';
 import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
+import 'ai_interviews_screen.dart';
 import '../widgets/user_avatar.dart';
 import 'calls_screen.dart';
 
@@ -64,6 +65,7 @@ Future<void> _loadUserData() async {
       isCandidate ? 'Search job postings' : 'Search your job postings',
       'Search conversations',
       'Search posts',
+      'AI Interviews',
     ];
 
     return Scaffold(
@@ -115,6 +117,7 @@ Future<void> _loadUserData() async {
         child: switch (_selectedIndex) {
           1 => ConversationsScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
           2 => SocialScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
+          3 => AiInterviewsScreen(server: widget.server, auth: widget.auth),
           _ => isCandidate
               ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
               : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
@@ -131,6 +134,7 @@ Future<void> _loadUserData() async {
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
           NavigationDestination(icon: Icon(Icons.people_outlined), selectedIcon: Icon(Icons.people), label: 'Social'),
+          NavigationDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: 'AI'),
         ],
       ),
     );
