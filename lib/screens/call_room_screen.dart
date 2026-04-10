@@ -252,52 +252,54 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
                     ),
 
                     // Controls
-                    Container(
-                      color: Colors.black87,
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _ControlButton(
-                            icon: _isMicMuted ? Icons.mic_off : Icons.mic,
-                            label: _isMicMuted ? 'Unmute' : 'Mute',
-                            onPressed: _toggleMic,
-                          ),
-                          _ControlButton(
-                            icon: _isCamOff ? Icons.videocam_off : Icons.videocam,
-                            label: _isCamOff ? 'Cam on' : 'Cam off',
-                            onPressed: _toggleCam,
-                          ),
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              _ControlButton(
-                                icon: Icons.chat_outlined,
-                                label: 'Chat',
-                                onPressed: _openChat,
-                              ),
-                              if (_hasUnreadMessages)
-                                Positioned(
-                                  top: -4,
-                                  right: -4,
-                                  child: Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.blue,
-                                      shape: BoxShape.circle,
+                    SafeArea(
+                      child: Container(
+                        color: Colors.black87,
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _ControlButton(
+                              icon: _isMicMuted ? Icons.mic_off : Icons.mic,
+                              label: _isMicMuted ? 'Unmute' : 'Mute',
+                              onPressed: _toggleMic,
+                            ),
+                            _ControlButton(
+                              icon: _isCamOff ? Icons.videocam_off : Icons.videocam,
+                              label: _isCamOff ? 'Cam on' : 'Cam off',
+                              onPressed: _toggleCam,
+                            ),
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                _ControlButton(
+                                  icon: Icons.chat_outlined,
+                                  label: 'Chat',
+                                  onPressed: _openChat,
+                                ),
+                                if (_hasUnreadMessages)
+                                  Positioned(
+                                    top: -4,
+                                    right: -4,
+                                    child: Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.blue,
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
-                          _ControlButton(
-                            icon: Icons.call_end,
-                            label: 'Leave',
-                            color: Colors.red,
-                            onPressed: _leave,
-                          ),
-                        ],
+                              ],
+                            ),
+                            _ControlButton(
+                              icon: Icons.call_end,
+                              label: 'Leave',
+                              color: Colors.red,
+                              onPressed: _leave,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -385,127 +387,163 @@ class _ChatPanelState extends State<_ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) {
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Row(
-                children: [
-                  const Icon(Icons.chat_outlined, color: Colors.white),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'In-call chat',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(color: Colors.white24),
-            Expanded(
-              child: widget.messages.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No messages yet.',
-                        style: TextStyle(color: Colors.grey[500]),
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.3,
+        maxChildSize: 1.0,
+        expand: false,
+        builder: (context, scrollController) {
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.chat_outlined, color: Colors.white),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'In-call chat',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                       ),
-                    )
-                  : ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.all(16),
-                      itemCount: widget.messages.length,
-                      itemBuilder: (context, index) {
-                        final message = widget.messages[index];
-                        final isOwn = message.senderName == widget.displayName;
-                        return Align(
-                          alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            constraints: BoxConstraints(
-                              maxWidth: MediaQuery.of(context).size.width * 0.7,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isOwn ? Colors.blue : Colors.grey[700],
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(12),
-                                topRight: const Radius.circular(12),
-                                bottomLeft: isOwn ? const Radius.circular(12) : const Radius.circular(4),
-                                bottomRight: isOwn ? const Radius.circular(4) : const Radius.circular(12),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white24),
+              Expanded(
+                child: widget.messages.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No messages yet.',
+                          style: TextStyle(color: Colors.grey[500]),
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(16),
+                        itemCount: widget.messages.length,
+                        itemBuilder: (context, index) {
+                          final message = widget.messages[index];
+                          final isOwn = message.senderName == widget.displayName;
+                          return Align(
+                            alignment: isOwn
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isOwn ? Colors.blue : Colors.grey[700],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(12),
+                                  topRight: const Radius.circular(12),
+                                  bottomLeft: isOwn
+                                      ? const Radius.circular(12)
+                                      : const Radius.circular(4),
+                                  bottomRight: isOwn
+                                      ? const Radius.circular(4)
+                                      : const Radius.circular(12),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: isOwn
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  if (!isOwn)
+                                    Text(
+                                      message.senderName,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  Text(
+                                    message.content,
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 14),
+                                  ),
+                                  Text(
+                                    _formatTime(message.sentAt),
+                                    style: const TextStyle(
+                                        color: Colors.white54, fontSize: 10),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: isOwn ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                              children: [
-                                if (!isOwn)
-                                  Text(
-                                    message.senderName,
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                Text(
-                                  message.content,
-                                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                                ),
-                                Text(
-                                  _formatTime(message.sentAt),
-                                  style: const TextStyle(color: Colors.white54, fontSize: 10),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-            const Divider(color: Colors.white24),
-            Padding(
-              padding: EdgeInsets.only(
-                left: 16, right: 16, top: 8,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                          );
+                        },
+                      ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      style: const TextStyle(color: Colors.white),
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _handleSend(),
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: Colors.grey[500]),
-                        filled: true,
-                        fillColor: Colors.grey[800],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
+              const Divider(color: Colors.white24),
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: bottomPadding + 16,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        style: const TextStyle(color: Colors.white),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _handleSend(),
+                        onTap: () {
+                          Future.delayed(
+                            const Duration(milliseconds: 300),
+                            _scrollToBottom,
+                          );
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Type a message...',
+                          hintStyle: TextStyle(color: Colors.grey[500]),
+                          filled: true,
+                          fillColor: Colors.grey[800],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  _isSending
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : IconButton(
-                          icon: const Icon(Icons.send, color: Colors.white),
-                          onPressed: _handleSend,
-                        ),
-                ],
+                    const SizedBox(width: 8),
+                    _isSending
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : IconButton(
+                            icon:
+                                const Icon(Icons.send, color: Colors.white),
+                            onPressed: _handleSend,
+                          ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 }
