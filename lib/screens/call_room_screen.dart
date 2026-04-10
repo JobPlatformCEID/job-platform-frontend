@@ -510,14 +510,70 @@ class _ChatPanelState extends State<_ChatPanel> {
   }
 }
 
-class _ParticipantTile extends StatelessWidget {
+class _ParticipantTile extends StatefulWidget {
   final Participant participant;
 
   const _ParticipantTile({required this.participant});
 
   @override
+  State<_ParticipantTile> createState() => _ParticipantTileState();
+}
+
+class _ParticipantTileState extends State<_ParticipantTile> {
+  late ConnectionQuality _quality;
+  late final List<Future<void> Function()> _unsubs;
+
+  @override
+  void initState() {
+    super.initState();
+    _quality = widget.participant.connectionQuality;
+    _unsubs = [
+      widget.participant.events.on<ParticipantConnectionQualityUpdatedEvent>((e) {
+        if (mounted) setState(() => _quality = e.connectionQuality);
+      }),
+    ];
+  }
+
+  @override
+  void dispose() {
+    for (final cancel in _unsubs) { cancel(); }
+    super.dispose();
+  }
+
+  Widget _buildQualityIcon() {
+    IconData icon;
+    Color color;
+
+    switch (_quality) {
+      case ConnectionQuality.excellent:
+        icon = Icons.signal_cellular_alt;
+        color = Colors.green;
+      case ConnectionQuality.good:
+        icon = Icons.signal_cellular_alt_2_bar;
+        color = Colors.orange;
+      case ConnectionQuality.poor:
+        icon = Icons.signal_cellular_alt_1_bar;
+        color = Colors.red;
+      case ConnectionQuality.lost:
+        icon = Icons.signal_cellular_off;
+        color = Colors.red;
+      default:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, color: color, size: 16),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final videoTrack = participant.videoTrackPublications
+    final videoTrack = widget.participant.videoTrackPublications
         .where((t) => t.track != null && !t.muted)
         .map((t) => t.track as VideoTrack)
         .firstOrNull;
@@ -540,7 +596,7 @@ class _ParticipantTile extends StatelessWidget {
                   radius: 32,
                   backgroundColor: Colors.grey[700],
                   child: Text(
-                    (participant.name ?? '?')[0].toUpperCase(),
+                    (widget.participant.name ?? '?')[0].toUpperCase(),
                     style: const TextStyle(fontSize: 24, color: Colors.white),
                   ),
                 ),
@@ -557,14 +613,12 @@ class _ParticipantTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  participant.name ?? participant.identity,
+                  widget.participant.name ?? widget.participant.identity,
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ),
             ),
-
-            // Mic muted indicator
-            if (participant.isMicrophoneEnabled() == false)
+            if (widget.participant.isMicrophoneEnabled() == false)
               Positioned(
                 top: 8,
                 right: 8,
@@ -577,6 +631,11 @@ class _ParticipantTile extends StatelessWidget {
                   child: const Icon(Icons.mic_off, color: Colors.white, size: 16),
                 ),
               ),
+            Positioned(
+              top: 8,
+              left: 8,
+              child: _buildQualityIcon(),
+            ),
           ],
         ),
       ),
