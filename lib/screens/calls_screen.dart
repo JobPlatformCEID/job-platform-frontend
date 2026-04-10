@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../auth.dart';
 import '../server.dart';
 import '../user.dart';
+import '../calls.dart';
 import 'call_room_screen.dart';
 
 class CallsScreen extends StatefulWidget {
@@ -15,7 +16,7 @@ class CallsScreen extends StatefulWidget {
 }
 
 class _CallsScreenState extends State<CallsScreen> {
-  List<Map<String, dynamic>> _rooms = [];
+  List<CallRoom> _rooms = [];
   bool _isLoading = true;
   String? _error;
 
@@ -27,9 +28,9 @@ class _CallsScreenState extends State<CallsScreen> {
 
   Future<void> _loadRooms() async {
     try {
-      final list = await widget.server.sendGetList('/api/calls/', token: widget.auth.user!.token);
+      final rooms = await CallRoom.fetchAll(widget.server, widget.auth.user!.token);
       if (mounted) setState(() {
-        _rooms = list.cast<Map<String, dynamic>>();
+        _rooms = rooms;
         _isLoading = false;
       });
     } catch (e) {
@@ -40,21 +41,17 @@ class _CallsScreenState extends State<CallsScreen> {
     }
   }
 
-  Future<void> _joinRoom(Map<String, dynamic> room) async {
+  Future<void> _joinRoom(CallRoom room) async {
     try {
-      final response = await widget.server.sendPost(
-        '/api/calls/${room['id']}/token/',
-        {},
-        token: widget.auth.user!.token,
-      );
+      final callToken = await room.getToken(widget.server, widget.auth.user!.token);
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => CallRoomScreen(
-            token: response['token'] as String,
-            url: response['url'] as String,
-            roomName: response['room_name'] as String,
-            isHost: response['is_host'] as bool,
-            displayName: room['room_name'] as String,
+            token: callToken.token,
+            url: callToken.url,
+            roomName: callToken.roomName,
+            isHost: callToken.isHost,
+            displayName: room.roomName,
           ),
         ));
       }
@@ -79,7 +76,7 @@ class _CallsScreenState extends State<CallsScreen> {
     );
   }
 
-  void _showEditSheet(Map<String, dynamic> room) {
+  void _showEditSheet(CallRoom room) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -88,19 +85,19 @@ class _CallsScreenState extends State<CallsScreen> {
         token: widget.auth.user!.token,
         existing: room,
         onSaved: (updated) => setState(() {
-          final index = _rooms.indexWhere((r) => r['id'] == updated['id']);
+          final index = _rooms.indexWhere((r) => r.id == updated.id);
           if (index != -1) _rooms[index] = updated;
         }),
       ),
     );
   }
 
-  Future<void> _handleDelete(Map<String, dynamic> room) async {
+  Future<void> _handleDelete(CallRoom room) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Delete room'),
-        content: Text('Are you sure you want to delete "${room['room_name']}"?'),
+        content: Text('Are you sure you want to delete "${room.roomName}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -115,8 +112,8 @@ class _CallsScreenState extends State<CallsScreen> {
     );
     if (confirmed != true) return;
     try {
-      await widget.server.sendDelete('/api/calls/${room['id']}/', token: widget.auth.user!.token);
-      if (mounted) setState(() => _rooms.removeWhere((r) => r['id'] == room['id']));
+      await room.delete(widget.server, widget.auth.user!.token);
+      if (mounted) setState(() => _rooms.removeWhere((r) => r.id == room.id));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,14 +122,6 @@ class _CallsScreenState extends State<CallsScreen> {
       }
     }
   }
-
-  String _formatDate(String dateStr) {
-    final date = DateTime.parse(dateStr).toLocal();
-    return '${date.day}/${date.month}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  bool _isHost(Map<String, dynamic> room) =>
-      room['host'] == widget.auth.user!.userId;
 
   @override
   Widget build(BuildContext context) {
@@ -151,19 +140,19 @@ class _CallsScreenState extends State<CallsScreen> {
                         separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
                         itemBuilder: (context, index) {
                           final room = _rooms[index];
-                          final isHost = _isHost(room);
+                          final isHost = room.host == widget.auth.user!.userId;
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                               child: Icon(Icons.video_call_outlined, color: Theme.of(context).colorScheme.onPrimaryContainer),
                             ),
-                            title: Text(room['room_name'] as String),
+                            title: Text(room.roomName),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(_formatDate(room['meeting_date'] as String)),
+                                Text(room.formattedDate),
                                 Text(
-                                  'Host: ${room['host_username'] as String? ?? 'Unknown'}',
+                                  'Host: ${room.hostUsername ?? 'Unknown'}',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
@@ -206,8 +195,8 @@ class _CallsScreenState extends State<CallsScreen> {
 class _RoomFormSheet extends StatefulWidget {
   final Server server;
   final String token;
-  final Map<String, dynamic>? existing;
-  final void Function(Map<String, dynamic> room) onSaved;
+  final CallRoom? existing;
+  final void Function(CallRoom room) onSaved;
 
   const _RoomFormSheet({
     required this.server,
@@ -231,9 +220,9 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
   void initState() {
     super.initState();
     if (widget.existing != null) {
-      _nameController.text = widget.existing!['room_name'] as String? ?? '';
-      _descriptionController.text = widget.existing!['description'] as String? ?? '';
-      _meetingDate = DateTime.parse(widget.existing!['meeting_date'] as String).toLocal();
+      _nameController.text = widget.existing!.roomName;
+      _descriptionController.text = widget.existing!.description;
+      _meetingDate = DateTime.parse(widget.existing!.meetingDate).toLocal();
     }
   }
 
@@ -264,26 +253,29 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
       setState(() => _error = 'Meeting date is required.');
       return;
     }
-
     setState(() { _isLoading = true; _error = null; });
-
     try {
-      final body = {
-        'room_name': _nameController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'meeting_date': _meetingDate!.toUtc().toIso8601String(),
-      };
-
-      final Map<String, dynamic> response;
+      final CallRoom saved;
       if (widget.existing == null) {
-        response = await widget.server.sendPost('/api/calls/', body, token: widget.token);
+        saved = await CallRoom.create(
+          widget.server,
+          widget.token,
+          roomName: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          meetingDate: _meetingDate!,
+        );
       } else {
-        response = await widget.server.sendPut('/api/calls/${widget.existing!['id']}/', body, token: widget.token);
+        saved = await widget.existing!.update(
+          widget.server,
+          widget.token,
+          roomName: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          meetingDate: _meetingDate!,
+        );
       }
-
       if (mounted) {
         Navigator.of(context).pop();
-        widget.onSaved(response);
+        widget.onSaved(saved);
       }
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not save room.');
@@ -338,9 +330,7 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
               OutlinedButton.icon(
                 onPressed: _pickDate,
                 icon: const Icon(Icons.calendar_today_outlined),
-                label: Text(_meetingDate != null
-                    ? _formatDate(_meetingDate!)
-                    : 'Pick meeting date & time'),
+                label: Text(_meetingDate != null ? _formatDate(_meetingDate!) : 'Pick meeting date & time'),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
