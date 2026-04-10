@@ -105,3 +105,15 @@ class CallToken {
     );
   }
 }
+
+class CallMessage {
+  final String senderName;
+  final String content;
+  final DateTime sentAt;
+
+  const CallMessage({
+    required this.senderName,
+    required this.content,
+    required this.sentAt,
+  });
+}

@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import '../calls.dart';
 
 class CallRoomScreen extends StatefulWidget {
   final String token;
@@ -27,7 +29,9 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   String? _error;
   bool _isMicMuted = false;
   bool _isCamOff = false;
+  bool _hasUnreadMessages = false;
   List<Participant> _participants = [];
+  final List<CallMessage> _messages = [];
 
   @override
   void initState() {
@@ -45,9 +49,10 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
       await room.localParticipant?.setMicrophoneEnabled(true);
 
       room.addListener(_onRoomUpdate);
+      _room = room;
+      _setupDataReceiver();
 
       if (mounted) setState(() {
-        _room = room;
         _isConnecting = false;
         _participants = _getParticipants(room);
       });
@@ -57,6 +62,25 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
         _error = 'Could not connect to room.';
       });
     }
+  }
+
+  void _setupDataReceiver() {
+    _room?.events.listen((event) {
+      if (event is DataReceivedEvent) {
+        try {
+          final json = jsonDecode(utf8.decode(event.data)) as Map<String, dynamic>;
+          final message = CallMessage(
+            senderName: event.participant?.name ?? event.participant?.identity ?? 'Unknown',
+            content: json['content'] as String,
+            sentAt: DateTime.now(),
+          );
+          if (mounted) setState(() {
+            _messages.add(message);
+            _hasUnreadMessages = true;
+          });
+        } catch (_) {}
+      }
+    });
   }
 
   void _onRoomUpdate() {
@@ -80,6 +104,37 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   Future<void> _toggleCam() async {
     await _room?.localParticipant?.setCameraEnabled(_isCamOff);
     setState(() => _isCamOff = !_isCamOff);
+  }
+
+  Future<void> _sendMessage(String content) async {
+    if (content.trim().isEmpty) return;
+    final bytes = utf8.encode(jsonEncode({'content': content.trim()}));
+    await _room?.localParticipant?.publishData(bytes);
+    if (mounted) setState(() {
+      _messages.add(CallMessage(
+        senderName: widget.displayName,
+        content: content.trim(),
+        sentAt: DateTime.now(),
+      ));
+    });
+  }
+
+  void _openChat() {
+    setState(() => _hasUnreadMessages = false);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.grey[900],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ChatPanel(
+        messages: _messages,
+        displayName: widget.displayName,
+        onSend: _sendMessage,
+        room: _room!,
+      ),
+    );
   }
 
   Future<void> _leave() async {
@@ -202,6 +257,29 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
                             label: _isCamOff ? 'Cam on' : 'Cam off',
                             onPressed: _toggleCam,
                           ),
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              _ControlButton(
+                                icon: Icons.chat_outlined,
+                                label: 'Chat',
+                                onPressed: _openChat,
+                              ),
+                              if (_hasUnreadMessages)
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.blue,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                           _ControlButton(
                             icon: Icons.call_end,
                             label: 'Leave',
@@ -221,6 +299,201 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
     _room?.removeListener(_onRoomUpdate);
     _room?.disconnect();
     super.dispose();
+  }
+}
+
+class _ChatPanel extends StatefulWidget {
+  final List<CallMessage> messages;
+  final String displayName;
+  final Future<void> Function(String content) onSend;
+  final Room room;
+
+  const _ChatPanel({
+    required this.messages,
+    required this.displayName,
+    required this.onSend,
+    required this.room,
+  });
+
+  @override
+  State<_ChatPanel> createState() => _ChatPanelState();
+}
+
+class _ChatPanelState extends State<_ChatPanel> {
+  final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _isSending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.room.addListener(_onRoomUpdate);
+  }
+
+  void _onRoomUpdate() {
+    if (mounted) {
+      setState(() {});
+      _scrollToBottom();
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.room.removeListener(_onRoomUpdate);
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSend() async {
+    final content = _controller.text.trim();
+    if (content.isEmpty) return;
+    setState(() => _isSending = true);
+    _controller.clear();
+    await widget.onSend(content);
+    setState(() => _isSending = false);
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  String _formatTime(DateTime time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.chat_outlined, color: Colors.white),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'In-call chat',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white24),
+            Expanded(
+              child: widget.messages.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No messages yet.',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: widget.messages.length,
+                      itemBuilder: (context, index) {
+                        final message = widget.messages[index];
+                        final isOwn = message.senderName == widget.displayName;
+                        return Align(
+                          alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.of(context).size.width * 0.7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isOwn ? Colors.blue : Colors.grey[700],
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(12),
+                                topRight: const Radius.circular(12),
+                                bottomLeft: isOwn ? const Radius.circular(12) : const Radius.circular(4),
+                                bottomRight: isOwn ? const Radius.circular(4) : const Radius.circular(12),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: isOwn ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                if (!isOwn)
+                                  Text(
+                                    message.senderName,
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                Text(
+                                  message.content,
+                                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                                ),
+                                Text(
+                                  _formatTime(message.sentAt),
+                                  style: const TextStyle(color: Colors.white54, fontSize: 10),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            const Divider(color: Colors.white24),
+            Padding(
+              padding: EdgeInsets.only(
+                left: 16, right: 16, top: 8,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      style: const TextStyle(color: Colors.white),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _handleSend(),
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        filled: true,
+                        fillColor: Colors.grey[800],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _isSending
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          onPressed: _handleSend,
+                        ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
