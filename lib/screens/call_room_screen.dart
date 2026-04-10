@@ -30,8 +30,10 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   bool _isMicMuted = false;
   bool _isCamOff = false;
   bool _hasUnreadMessages = false;
+  bool _userLeaving = false;
   List<Participant> _participants = [];
   final List<CallMessage> _messages = [];
+  final List<Future<void> Function()> _unsubs = [];
 
   @override
   void initState() {
@@ -42,17 +44,29 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   Future<void> _connect() async {
     try {
       final room = Room();
-      await room.connect(widget.url, widget.token);
+
+      room.addListener(_onRoomUpdate);
+
+      _unsubs.add(room.events.on<DataReceivedEvent>((e) => _onData(e)));
+      _unsubs.add(room.events.on<RoomDisconnectedEvent>((e) {
+        if (mounted && !_userLeaving) Navigator.of(context).pop();
+      }));
+
+      await room.connect(
+        widget.url,
+        widget.token,
+        roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
+        ),
+      );
 
       // Enable camera and mic
       await room.localParticipant?.setCameraEnabled(true);
       await room.localParticipant?.setMicrophoneEnabled(true);
 
-      room.addListener(_onRoomUpdate);
-      _room = room;
-      _setupDataReceiver();
-
       if (mounted) setState(() {
+        _room = room;
         _isConnecting = false;
         _participants = _getParticipants(room);
       });
@@ -64,23 +78,19 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
     }
   }
 
-  void _setupDataReceiver() {
-    _room?.events.listen((event) {
-      if (event is DataReceivedEvent) {
-        try {
-          final json = jsonDecode(utf8.decode(event.data)) as Map<String, dynamic>;
-          final message = CallMessage(
-            senderName: event.participant?.name ?? event.participant?.identity ?? 'Unknown',
-            content: json['content'] as String,
-            sentAt: DateTime.now(),
-          );
-          if (mounted) setState(() {
-            _messages.add(message);
-            _hasUnreadMessages = true;
-          });
-        } catch (_) {}
-      }
-    });
+  void _onData(DataReceivedEvent e) {
+    try {
+      final json = jsonDecode(utf8.decode(e.data)) as Map<String, dynamic>;
+      final message = CallMessage(
+        senderName: e.participant?.name ?? e.participant?.identity ?? 'Unknown',
+        content: json['content'] as String,
+        sentAt: DateTime.now(),
+      );
+      if (mounted) setState(() {
+        _messages.add(message);
+        _hasUnreadMessages = true;
+      });
+    } catch (_) {}
   }
 
   void _onRoomUpdate() {
@@ -109,7 +119,7 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   Future<void> _sendMessage(String content) async {
     if (content.trim().isEmpty) return;
     final bytes = utf8.encode(jsonEncode({'content': content.trim()}));
-    await _room?.localParticipant?.publishData(bytes);
+    await _room?.localParticipant?.publishData(bytes, reliable: true);
     if (mounted) setState(() {
       _messages.add(CallMessage(
         senderName: widget.displayName,
@@ -138,6 +148,7 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   }
 
   Future<void> _leave() async {
+    setState(() => _userLeaving = true);
     await _room?.disconnect();
     if (mounted) Navigator.of(context).pop();
   }
@@ -296,6 +307,8 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
 
   @override
   void dispose() {
+    for (final cancel in _unsubs) { cancel(); }
+    _unsubs.clear();
     _room?.removeListener(_onRoomUpdate);
     _room?.disconnect();
     super.dispose();
