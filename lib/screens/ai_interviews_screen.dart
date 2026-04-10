@@ -243,7 +243,7 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
           auth: widget.auth,
           sessionId: session.id,
           sessionTitle: session.displayTitle,
-          messages: session.messages,
+          initialMessages: session.messages,
         ),
       ),
     );
