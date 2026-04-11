@@ -43,8 +43,14 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
 
   Future<void> _connect() async {
     try {
-      final room = Room();
+      final room = Room(
+        roomOptions: const RoomOptions(
+          adaptiveStream: true,
+          dynacast: true,
+        ),
+      );
 
+      _room = room;
       room.addListener(_onRoomUpdate);
 
       _unsubs.add(room.events.on<DataReceivedEvent>((e) => _onData(e)));
@@ -52,21 +58,13 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
         if (mounted && !_userLeaving) Navigator.of(context).pop();
       }));
 
-      await room.connect(
-        widget.url,
-        widget.token,
-        roomOptions: const RoomOptions(
-          adaptiveStream: true,
-          dynacast: true,
-        ),
-      );
+      await room.connect(widget.url, widget.token);
 
       // Enable camera and mic
       await room.localParticipant?.setCameraEnabled(true);
       await room.localParticipant?.setMicrophoneEnabled(true);
 
       if (mounted) setState(() {
-        _room = room;
         _isConnecting = false;
         _participants = _getParticipants(room);
       });
@@ -94,9 +92,8 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   }
 
   void _onRoomUpdate() {
-    if (mounted) setState(() {
-      _participants = _getParticipants(_room!);
-    });
+    if (_room == null || !mounted) return;
+    setState(() => _participants = _getParticipants(_room!));
   }
 
   List<Participant> _getParticipants(Room room) {
