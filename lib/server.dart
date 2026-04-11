@@ -156,7 +156,7 @@ class Server {
       filename: filename,
     ));
 
-    final streamed = await request.send().timeout(_timeout);
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamed);
     return _parseResponse(response);
   }
@@ -180,7 +180,7 @@ class Server {
       filename: filename,
     ));
 
-    final streamed = await request.send().timeout(_timeout);
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
     final response = await http.Response.fromStream(streamed);
     return _parseResponse(response);
   }
