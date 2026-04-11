@@ -1,34 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../server.dart';
 import '../auth.dart';
-
-class Message {
-  final int id;
-  final String role;
-  final String content;
-  final DateTime createdAt;
-
-  const Message({
-    required this.id,
-    required this.role,
-    required this.content,
-    required this.createdAt,
-  });
-
-  factory Message.fromJson(Map<String, dynamic> json) {
-    return Message(
-      id: json['id'] as int,
-      role: json['role'] as String,
-      content: json['content'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-    );
-  }
-
-  bool get isUser => role == 'user';
-}
+import '../ai_interview.dart';
 
 class AiChatScreen extends StatefulWidget {
   final Server server;
@@ -52,8 +26,8 @@ class AiChatScreen extends StatefulWidget {
 
 class _AiChatScreenState extends State<AiChatScreen> {
   late final List<Message> _messages;
-  late final WebSocketChannel _channel;
-  late final StreamSubscription _subscription;
+  late final ChatConnection _chat;
+  late final StreamSubscription<ChatEvent> _subscription;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -64,90 +38,62 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _messages = List.from(widget.initialMessages);
-    _connectWebSocket();
+    final service = InterviewService(server: widget.server, auth: widget.auth);
+    try {
+      _chat = service.openChat(widget.sessionId);
+      _subscription = _chat.events.listen(
+        _onEvent,
+        onError: (Object e) => _onEvent(ChatConnectionError(e)),
+        onDone: () => _onEvent(ChatConnectionClosed()),
+      );
+    } catch (e) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showError(e.toString()),
+      );
+    }
   }
 
-void _connectWebSocket() {
-  final httpUrl = widget.server.getServerUrl();
-  final token = widget.auth.user?.token;
-
-  if (httpUrl == null) {
-    _showError('Server not configured.');
-    return;
-  }
-  if (token == null) {
-    _showError('Not authenticated.');
-    return;
-  }
-
-  final base = Uri.parse(httpUrl);
-  final wsUrl = Uri(
-    scheme: base.scheme == 'https' ? 'wss' : 'ws',
-    host: base.host,
-    port: base.port,
-    path: '/ws/interview/${widget.sessionId}/',
-    queryParameters: {'token': token},
-  );
-
-  _channel = WebSocketChannel.connect(wsUrl);
-  _subscription = _channel.stream.listen(
-    _onMessage,
-    onError: _onError,
-    onDone: _onDone,
-  );
-}
-
-  void _onMessage(dynamic raw) {
-    final data = jsonDecode(raw as String) as Map<String, dynamic>;
-    final type = data['type'] as String;
-
-    switch (type) {
-      case 'user_message':
-        // Server-confirmed user message — already optimistically added,
-        // update the id/timestamp in place.
-        final confirmed = Message.fromJson(
-          data['message'] as Map<String, dynamic>,
-        );
+  void _onEvent(ChatEvent event) {
+    switch (event) {
+      case ChatUserMessageConfirmed(:final message):
+        // swap the optimistic placeholder with the real one from the server
         setState(() {
-          // Replace the last optimistic user message with the confirmed one
           final idx = _messages.lastIndexWhere((m) => m.isUser);
-          if (idx != -1) _messages[idx] = confirmed;
+          if (idx != -1) _messages[idx] = message;
           _isSending = false;
         });
 
-      case 'ai_message':
-        final aiMsg = Message.fromJson(
-          data['message'] as Map<String, dynamic>,
-        );
+      case ChatAiMessageReceived(:final message):
         setState(() {
-          _messages.add(aiMsg);
+          _messages.add(message);
           _isAiTyping = false;
         });
         _scrollToBottom();
 
-      case 'error':
+      case ChatErrorReceived(:final message):
         setState(() {
           _isAiTyping = false;
           _isSending = false;
         });
-        _showError(data['message'] as String? ?? 'An error occurred.');
+        _showError(message);
+
+      case ChatConnectionError():
+        setState(() {
+          _isAiTyping = false;
+          _isSending = false;
+        });
+        _showError('Connection error. Please restart the session.');
+
+      case ChatConnectionClosed():
+        _showError('Connection closed.');
     }
-  }
-
-  void _onError(Object error) {
-    setState(() { _isAiTyping = false; _isSending = false; });
-    _showError('Connection error. Please restart the session.');
-  }
-
-  void _onDone() {
-    _showError('Connection closed.');
   }
 
   Future<void> _sendMessage() async {
     final content = _controller.text.trim();
     if (content.isEmpty || _isSending || _isAiTyping) return;
 
-    // Optimistic message with a temporary id
+    // add it immediately so the UI feels instant
     final optimistic = Message(
       id: -1,
       role: 'user',
@@ -163,7 +109,7 @@ void _connectWebSocket() {
     _controller.clear();
     _scrollToBottom();
 
-    _channel.sink.add(jsonEncode({'content': content}));
+    _chat.sendMessage(content);
   }
 
   void _scrollToBottom() {
@@ -191,7 +137,7 @@ void _connectWebSocket() {
   @override
   void dispose() {
     _subscription.cancel();
-    _channel.sink.close();
+    _chat.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -217,10 +163,7 @@ void _connectWebSocket() {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: _messages.length + (_isAiTyping ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  // Typing indicator bubble
-                  return const _TypingIndicator();
-                }
+                if (index == _messages.length) return const _TypingIndicator();
                 return _MessageBubble(message: _messages[index]);
               },
             ),
@@ -235,8 +178,6 @@ void _connectWebSocket() {
     );
   }
 }
-
-// ── Widgets ────────────────────────────────────────────────────────────────
 
 class _MessageBubble extends StatelessWidget {
   final Message message;
@@ -331,7 +272,10 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
   }
 
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

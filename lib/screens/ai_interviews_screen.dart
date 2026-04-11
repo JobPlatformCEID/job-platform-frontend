@@ -1,71 +1,8 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
+import '../ai_interview.dart';
 import 'ai_chat_screen.dart';
-
-class InterviewSession {
-  final int id;
-  final String jobRole;
-  final String title;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final List<Message> messages;
-
-  const InterviewSession({
-    required this.id,
-    required this.jobRole,
-    required this.title,
-    required this.createdAt,
-    required this.updatedAt,
-    this.messages = const [],
-  });
-
-  String get displayTitle => title.isNotEmpty ? title : jobRole;
-
-  factory InterviewSession.fromJson(Map<String, dynamic> json) {
-    final msgs = json['messages'] as List<dynamic>? ?? [];
-    return InterviewSession(
-      id: json['id'] as int,
-      jobRole: json['job_role'] as String,
-      title: json['title'] as String? ?? '',
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-      messages: msgs.map((m) => Message.fromJson(m as Map<String, dynamic>)).toList(),
-    );
-  }
-
-  static Future<List<InterviewSession>> fetchSessions(Server server, String token) async {
-    final response = await server.sendGetList('/api/sessions/', token: token);
-    final List<dynamic> data = response as List<dynamic>;
-    return data.map((j) => InterviewSession.fromJson(j as Map<String, dynamic>)).toList();
-  }
-
-  static Future<InterviewSession> createSession(
-    Server server,
-    String token, {
-    required String jobRole,
-    String title = '',
-  }) async {
-    final response = await server.sendPost(
-      '/api/sessions/',
-      {'job_role': jobRole, 'title': title},
-      token: token,
-    );
-    return InterviewSession.fromJson(response as Map<String, dynamic>);
-  }
-
-  static Future<void> editTitle(Server server, String token, int id, String title) async {
-    await server.sendPut(
-      '/api/sessions/$id/',
-      {'title': title},
-      token: token,
-    );
-  }
-
-  static Future<void> deleteSession(Server server, String token, int id) async {
-    await server.sendDelete('/api/sessions/$id/', token: token);
-  }
-}
 
 class AiInterviewsScreen extends StatefulWidget {
   final Server server;
@@ -82,37 +19,27 @@ class AiInterviewsScreen extends StatefulWidget {
 }
 
 class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
+  late final InterviewService _service;
   List<InterviewSession> _sessions = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _service = InterviewService(server: widget.server, auth: widget.auth);
     _loadSessions();
   }
 
   Future<void> _loadSessions() async {
     try {
-      final token = widget.auth.user?.token;
-      if (token == null) {
-        setState(() => _loading = false);
-        return;
-      }
-      final sessions = await InterviewSession.fetchSessions(widget.server, token);
+      final sessions = await _service.fetchSessions();
       setState(() {
         _sessions = sessions;
         _loading = false;
       });
     } catch (e) {
       setState(() => _loading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load sessions: $e'),
-            behavior: SnackBarBehavior.fixed,
-          ),
-        );
-      }
+      _showError('Failed to load sessions: $e');
     }
   }
 
@@ -124,24 +51,14 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     if (result == null) return;
 
     try {
-      final token = widget.auth.user!.token;
-      final session = await InterviewSession.createSession(
-        widget.server,
-        token,
+      final session = await _service.createSession(
         jobRole: result['jobRole']!,
         title: result['title'] ?? '',
       );
       setState(() => _sessions.insert(0, session));
       _openChat(session);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create: $e'),
-            behavior: SnackBarBehavior.fixed,
-          ),
-        );
-      }
+      _showError('Failed to create: $e');
     }
   }
 
@@ -171,30 +88,18 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     if (result == null || result == session.title) return;
 
     try {
-      final token = widget.auth.user!.token;
-      await InterviewSession.editTitle(widget.server, token, session.id, result);
+      await _service.updateSessionTitle(session.id, result);
       setState(() {
         final idx = _sessions.indexWhere((s) => s.id == session.id);
         if (idx != -1) {
-          _sessions[idx] = InterviewSession(
-            id: session.id,
-            jobRole: session.jobRole,
+          _sessions[idx] = session.copyWith(
             title: result,
-            createdAt: session.createdAt,
             updatedAt: DateTime.now(),
-            messages: session.messages,
           );
         }
       });
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update: $e'),
-            behavior: SnackBarBehavior.fixed,
-          ),
-        );
-      }
+      _showError('Failed to update: $e');
     }
   }
 
@@ -219,55 +124,40 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     if (confirm != true) return;
 
     try {
-      final token = widget.auth.user!.token;
-      await InterviewSession.deleteSession(widget.server, token, session.id);
+      await _service.deleteSession(session.id);
       setState(() => _sessions.removeWhere((s) => s.id == session.id));
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete: $e'),
-            behavior: SnackBarBehavior.fixed,
-          ),
-        );
-      }
+      _showError('Failed to delete: $e');
     }
   }
 
-  void _openChat(InterviewSession session) async {
-    final token = widget.auth.user?.token;
-    if (token == null) return;
-
+  Future<void> _openChat(InterviewSession session) async {
     try {
-      final response = await widget.server.sendGet(
-        '/api/sessions/${session.id}/',
-        token: token,
-      );
-      final fullSession = InterviewSession.fromJson(response as Map<String, dynamic>);
-
+      // fetch the full session so we have all messages before entering chat
+      final fullSession = await _service.fetchSession(session.id);
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (ctx) => AiChatScreen(
+          builder: (ctx) => AiChatScreen(
             server: widget.server,
             auth: widget.auth,
             sessionId: fullSession.id,
             sessionTitle: fullSession.displayTitle,
             initialMessages: fullSession.messages,
-         ),
+          ),
         ),
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load session: $e'),
-            behavior: SnackBarBehavior.fixed,
-          ),
-        );
-      }
+      _showError('Failed to load session: $e');
     }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.fixed),
+    );
   }
 
   @override
@@ -286,7 +176,9 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _sessions.isEmpty
-              ? const Center(child: Text('No sessions yet. Tap + to create one.'))
+              ? const Center(
+                  child: Text('No sessions yet. Tap + to create one.'),
+                )
               : ListView.builder(
                   itemCount: _sessions.length,
                   itemBuilder: (ctx, i) {
@@ -296,11 +188,8 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
                       subtitle: Text(s.jobRole),
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) {
-                          if (value == 'edit') {
-                            _editTitle(s);
-                          } else if (value == 'delete') {
-                            _deleteSession(s);
-                          }
+                          if (value == 'edit') _editTitle(s);
+                          if (value == 'delete') _deleteSession(s);
                         },
                         itemBuilder: (ctx) => [
                           const PopupMenuItem(
@@ -319,7 +208,10 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
                               children: [
                                 Icon(Icons.delete, size: 18, color: Colors.red),
                                 SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
+                                Text(
+                                  'Delete',
+                                  style: TextStyle(color: Colors.red),
+                                ),
                               ],
                             ),
                           ),
