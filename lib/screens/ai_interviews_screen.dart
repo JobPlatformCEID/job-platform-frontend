@@ -234,19 +234,40 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     }
   }
 
-  void _openChat(InterviewSession session) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (ctx) => AiChatScreen(
-          server: widget.server,
-          auth: widget.auth,
-          sessionId: session.id,
-          sessionTitle: session.displayTitle,
-          initialMessages: session.messages,
+  void _openChat(InterviewSession session) async {
+    final token = widget.auth.user?.token;
+    if (token == null) return;
+
+    try {
+      final response = await widget.server.sendGet(
+        '/api/sessions/${session.id}/',
+        token: token,
+      );
+      final fullSession = InterviewSession.fromJson(response as Map<String, dynamic>);
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (ctx) => AiChatScreen(
+            server: widget.server,
+            auth: widget.auth,
+            sessionId: fullSession.id,
+            sessionTitle: fullSession.displayTitle,
+            initialMessages: fullSession.messages,
+         ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load session: $e'),
+            behavior: SnackBarBehavior.fixed,
+          ),
+        );
+      }
+    }
   }
 
   @override
