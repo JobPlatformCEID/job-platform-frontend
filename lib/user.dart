@@ -58,6 +58,11 @@ abstract class User {
     await fetchMe();
   }
 
+  static Future<List<Map<String, dynamic>>> searchUsers(Server server, String token, String q) async {
+    final list = await server.sendGetList('/api/users/?search=${Uri.encodeComponent(q)}', token: token);
+    return list.cast<Map<String, dynamic>>();
+  }
+
   Future<void> fetchProfile();
   Future<void> updateProfile();
 }

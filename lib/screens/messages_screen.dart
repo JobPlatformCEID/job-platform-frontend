@@ -150,7 +150,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(widget.conversation.otherUsername ?? 'User #${widget.conversation.otherUserId}'),
+        title: Text(widget.conversation.otherFullName ?? widget.conversation.otherUsername ?? 'User #${widget.conversation.otherUserId}'),
       ),
       body: Column(
         children: [
