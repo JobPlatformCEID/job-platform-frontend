@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../auth.dart';
 import '../server.dart';
+import '../user.dart';
 import '../conversation.dart';
 import 'messages_screen.dart';
 import '../widgets/user_avatar.dart';
+import 'user_profile_sheet.dart';
 
 class ConversationsScreen extends StatefulWidget {
   final Auth auth;
@@ -56,34 +58,12 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   }
 
   void _showNewConversationDialog() {
-    final controller = TextEditingController();
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('New conversation'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'User ID', // TODO: Make it full name when the server supports it
-            prefixIcon: Icon(Icons.person_outlined),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final userId = int.tryParse(controller.text.trim());
-              if (userId == null) return;
-              Navigator.of(context).pop();
-              await _startConversation(userId);
-            },
-            child: const Text('Start'),
-          ),
-        ],
+      isScrollControlled: true,
+      builder: (_) => _UserSearchSheet(
+        onSearch: (q) => User.searchUsers(widget.server, widget.auth.user!.token, q),
+        onSelected: (userId) => _startConversation(userId),
       ),
     );
   }
@@ -159,11 +139,22 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
                 return ListTile(
-                  leading: UserAvatar(
-                    avatarUrl: conversation.otherUserAvatar,
-                    displayName: conversation.otherUsername ?? '',
+                  leading: GestureDetector(
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => UserProfileSheet(
+                        userId: conversation.otherUserId!,
+                        server: widget.server,
+                        token: widget.auth.user!.token,
+                      ),
+                    ),
+                    child: UserAvatar(
+                      avatarUrl: conversation.otherUserAvatar,
+                      displayName: conversation.otherUsername ?? '',
+                    ),
                   ),
-                  title: Text(conversation.otherUsername ?? 'User #${conversation.otherUserId}'),
+                  title: Text(conversation.otherFullName ?? conversation.otherUsername ?? 'User #${conversation.otherUserId}'),
                   subtitle: conversation.lastMessage != null
                       ? Text(
                           conversation.lastMessage!.content,
@@ -188,5 +179,112 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         ),
       ],
     );
+  }
+}
+
+class _UserSearchSheet extends StatefulWidget {
+  final Future<List<Map<String, dynamic>>> Function(String q) onSearch;
+  final void Function(int userId) onSelected;
+
+  const _UserSearchSheet({
+    required this.onSearch,
+    required this.onSelected,
+  });
+
+  @override
+  State<_UserSearchSheet> createState() => _UserSearchSheetState();
+}
+
+class _UserSearchSheetState extends State<_UserSearchSheet> {
+  final _controller = TextEditingController();
+  List<Map<String, dynamic>> _results = [];
+  bool _isSearching = false;
+
+  Future<void> _search(String q) async {
+    if (q.trim().length < 2) {
+      setState(() => _results = []);
+      return;
+    }
+    setState(() => _isSearching = true);
+    try {
+      final results = await widget.onSearch(q.trim());
+      if (mounted) setState(() => _results = results);
+    } catch (_) {} finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.7,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                onChanged: _search,
+                decoration: const InputDecoration(
+                  hintText: 'Search by name or username...',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: _isSearching
+                  ? const Center(child: CircularProgressIndicator())
+                  : _results.isEmpty
+                      ? Center(
+                          child: Text(
+                            _controller.text.length < 2
+                                ? 'Type at least 2 characters'
+                                : 'No users found.',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                        )
+                      : ListView.builder(
+                          controller: scrollController,
+                          itemCount: _results.length,
+                          itemBuilder: (context, index) {
+                            final user = _results[index];
+                            final fullName = '${user['first_name'] ?? ''} ${user['last_name'] ?? ''}'.trim();
+                            final displayName = fullName.isNotEmpty ? fullName : user['username'] as String;
+                            return ListTile(
+                              leading: UserAvatar(
+                                avatarUrl: user['avatar'] as String?,
+                                displayName: displayName,
+                              ),
+                              title: Text(displayName),
+                              subtitle: Text('@${user['username']}'),
+                              trailing: Chip(
+                                label: Text(user['role'] as String),
+                                padding: EdgeInsets.zero,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                widget.onSelected(user['id'] as int);
+                              },
+                            );
+                          },
+                        ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }
