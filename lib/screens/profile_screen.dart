@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:typed_data';
 import '../auth.dart';
 import '../user.dart';
@@ -24,6 +26,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   XFile? _pendingAvatar;
   Uint8List? _pendingAvatarBytes;
+
+  // Pending CV (candidates only)
+  Uint8List? _pendingCvBytes;
+  String? _pendingCvFileName;
 
   // User controllers
   final _firstNameController = TextEditingController();
@@ -107,17 +113,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _syncUserFromControllers();
     setState(() => _isLoading = true);
     try {
+      final candidate = _isCandidate ? _user as Candidate : null;
+
       await Future.wait([
         _user.updateMe(),
-        _user.updateProfile(),
+        // CV upload must not run in parallel with updateProfile because
+        // uploadCV calls fetchProfile internally after the PATCH
+        if (!_isCandidate || _pendingCvBytes == null)
+          _user.updateProfile(),
         if (_pendingAvatar != null && _pendingAvatarBytes != null)
           _user.updateAvatar(_pendingAvatarBytes!, _pendingAvatar!.name),
       ]);
+
+      // For candidates with a pending CV: updateProfile first, then CV upload
+      if (candidate != null && _pendingCvBytes != null) {
+        await candidate.updateProfile();
+        await candidate.uploadCV(_pendingCvBytes!, _pendingCvFileName!);
+      }
+
       if (mounted) setState(() {
         _isEditing = false;
         _isLoading = false;
         _pendingAvatar = null;
         _pendingAvatarBytes = null;
+        _pendingCvBytes = null;
+        _pendingCvFileName = null;
       });
     } catch (e) {
       if (mounted) setState(() {
@@ -137,6 +157,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _pendingAvatar = image;
       _pendingAvatarBytes = bytes;
     });
+  }
+
+  Future<void> _pickCV() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.single.bytes == null) return;
+    setState(() {
+      _pendingCvBytes = result.files.single.bytes;
+      _pendingCvFileName = result.files.single.name;
+    });
+  }
+
+  void _removePendingCV() => setState(() {
+    _pendingCvBytes = null;
+    _pendingCvFileName = null;
+  });
+
+  Future<void> _downloadCV(String cvUrl) async {
+    final uri = Uri.parse(cvUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open CV.')),
+        );
+      }
+    }
   }
 
   @override
@@ -193,7 +244,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 right: 0,
                 child: GestureDetector(
                   onTap: _pickAvatar,
-                  // When editing: Show a small camera icon overlay on top of the avatar
                   child: CircleAvatar(
                     radius: 16,
                     backgroundColor: Theme.of(context).colorScheme.primary,
@@ -232,6 +282,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildCandidateFields() {
+    final candidate = _user as Candidate;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -268,13 +320,182 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: Icons.edit_outlined,
           maxLines: 5,
         ),
+        const SizedBox(height: 24),
+
+        // CV section
+        Text(
+          'CV / Resume',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        _buildCvWidget(candidate),
         const SizedBox(height: 16),
+
         _buildSectionCard(
           title: 'Candidate profile details',
           subtitle: 'Skills, Work experience',
           icon: Icons.work_outline,
         ),
       ],
+    );
+  }
+
+  Widget _buildCvWidget(Candidate candidate) {
+    // Editing mode: a new CV has been picked
+    if (_isEditing && _pendingCvBytes != null) {
+      return _buildCvPendingCard();
+    }
+
+    // Editing mode: no pending CV yet
+    if (_isEditing) {
+      return _buildCvUploadZone(candidate.cvUrl != null);
+    }
+
+    // View mode: CV exists on the server
+    if (candidate.cvUrl != null) {
+      return _buildCvDownloadCard(candidate.cvUrl!);
+    }
+
+    // View mode: no CV at all
+    return _buildCvEmptyCard();
+  }
+
+  Widget _buildCvPendingCard() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.picture_as_pdf, color: Theme.of(context).colorScheme.primary, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _pendingCvFileName!,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                Text(
+                  '${(_pendingCvBytes!.lengthInBytes / 1024).toStringAsFixed(1)} KB · Pending upload',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
+            tooltip: 'Remove',
+            onPressed: _removePendingCV,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCvUploadZone(bool hasExisting) {
+    return GestureDetector(
+      onTap: _pickCV,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.upload_file_outlined, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const SizedBox(height: 8),
+            Text(
+              hasExisting ? 'Tap to replace your CV (PDF)' : 'Tap to upload a CV (PDF)',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCvDownloadCard(String cvUrl) {
+    // Extract a display filename from the URL, fallback to generic label
+    final fileName = Uri.parse(cvUrl).pathSegments.lastWhere(
+      (s) => s.isNotEmpty,
+      orElse: () => 'curriculum_vitae.pdf',
+    );
+
+    return InkWell(
+      onTap: () => _downloadCV(cvUrl),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.picture_as_pdf, color: Theme.of(context).colorScheme.primary, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fileName,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    'Tap to download',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.download_outlined, color: Theme.of(context).colorScheme.primary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCvEmptyCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.picture_as_pdf, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
+          const SizedBox(width: 12),
+          Text(
+            'No CV uploaded',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 
@@ -358,7 +579,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          // TODO: Show skills/workexperience later
+          // TODO: Show skills/work experience later
         },
       ),
     );

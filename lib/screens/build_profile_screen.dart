@@ -67,7 +67,8 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
         candidate.phone = _phoneController.text.trim();
         candidate.location = _locationController.text.trim();
         candidate.bio = _bioController.text.trim();
-        // move update here cause if it was after cv cause updateProfile calls fetch profile
+        // move update here cause if it was after cv the vars would be blank
+        //cause uploadCv calls fetchprofile() and at the start the vars about bio etch are empty
         await widget.auth.user!.updateProfile();
         if (_cvBytes != null && _cvFileName != null) {
           await candidate.uploadCV(_cvBytes!, _cvFileName!);
