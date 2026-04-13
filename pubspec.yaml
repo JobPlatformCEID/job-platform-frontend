@@ -44,6 +44,8 @@ dependencies:
   livekit_client: ^2.7.0
   flutter_chat_core: ^2.0.0
   flutter_chat_ui: ^2.0.0
+  file_picker: ^8.0.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
