@@ -72,7 +72,7 @@ class Candidate extends User {
   String phone = '';
   String location = '';
   String bio = '';
-//  String? cv;
+  String? cvUrl;
 //  double score = 0;
 
   // Constructor
@@ -90,7 +90,7 @@ class Candidate extends User {
     phone = data['phone'] as String? ?? '';
     location = data['location'] as String? ?? '';
     bio = data['bio'] as String? ?? '';
-//  cv = data['cv'] as String?;
+    cvUrl = data['cv'] as String?;
 //  score = (data['score'] as num).toDouble();
   }
 
@@ -101,6 +101,19 @@ class Candidate extends User {
       'location': location,
       'bio': bio,
     }, token: token);
+  }
+
+  // Uploads a CV for the current candidate
+  Future<void> uploadCV(List<int> bytes, String filename) async {
+    await server.sendMultipartPatch(
+      '/api/candidates/me/',
+      'cv',
+      bytes,
+      filename,
+      token: token,
+    );
+    // Mostly for profile screen to see the new cv imideatly
+    await fetchProfile();
   }
 }
 

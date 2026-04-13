@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:typed_data';
 import '../server.dart';
 import '../auth.dart';
 import '../user.dart';
@@ -29,7 +31,29 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
   final _employerLocationController = TextEditingController();
   final _companyWebsiteController = TextEditingController();
 
+  // CV (candidates only)
+  Uint8List? _cvBytes;
+  String? _cvFileName;
+
   bool get _isCandidate => widget.auth.user is Candidate;
+
+  Future<void> _pickCV() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+      withData: true,
+    );
+    if (result == null || result.files.single.bytes == null) return;
+    setState(() {
+      _cvBytes = result.files.single.bytes;
+      _cvFileName = result.files.single.name;
+    });
+  }
+
+  void _removeCV() => setState(() {
+    _cvBytes = null;
+    _cvFileName = null;
+  });
 
   Future<void> _handleSubmit() async {
     setState(() {
@@ -43,14 +67,19 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
         candidate.phone = _phoneController.text.trim();
         candidate.location = _locationController.text.trim();
         candidate.bio = _bioController.text.trim();
+        // move update here cause if it was after cv cause updateProfile calls fetch profile
+        await widget.auth.user!.updateProfile();
+        if (_cvBytes != null && _cvFileName != null) {
+          await candidate.uploadCV(_cvBytes!, _cvFileName!);
+        }
       } else {
         final employer = widget.auth.user as Employer;
         employer.companyName = _companyNameController.text.trim();
         employer.description = _companyDescriptionController.text.trim();
         employer.location = _employerLocationController.text.trim();
         employer.website = _companyWebsiteController.text.trim();
+        await widget.auth.user!.updateProfile();
       }
-      await widget.auth.user!.updateProfile();
       if (mounted) _navigateToHome();
     } on ServerException catch (e) {
       setState(() => _error = _friendlyError(e));
@@ -112,11 +141,7 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
             FilledButton(
               onPressed: _isLoading ? null : _handleSubmit,
               child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('All done'),
             ),
           ],
@@ -133,7 +158,6 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
         textInputAction: TextInputAction.next,
         decoration: InputDecoration(
           labelText: 'Phone number',
-          // Renders +30 as a prefix inside the themed field, just like prefixIcon
           prefixIcon: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Text(
@@ -167,6 +191,74 @@ class _BuildProfileScreenState extends State<BuildProfileScreen> {
           labelText: 'Bio',
           alignLabelWithHint: true,
           prefixIcon: Icon(Icons.edit_outlined),
+        ),
+      ),
+      const SizedBox(height: 24),
+
+      // CV upload
+      Text('CV / Resume', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      const SizedBox(height: 8),
+      GestureDetector(
+        onTap: _cvBytes == null ? _pickCV : null,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _cvBytes != null
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceVariant,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _cvBytes != null
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outline,
+              width: _cvBytes != null ? 2 : 1,
+            ),
+          ),
+          child: _cvBytes != null
+              ? Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, color: Theme.of(context).colorScheme.primary, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _cvFileName!,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                          Text(
+                            '${(_cvBytes!.lengthInBytes / 1024).toStringAsFixed(1)} KB',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      onPressed: _removeCV,
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Icon(Icons.upload_file_outlined, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap to upload a PDF (optional)',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
+                  ],
+                ),
         ),
       ),
       const SizedBox(height: 24),
