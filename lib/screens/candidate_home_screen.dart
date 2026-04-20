@@ -5,6 +5,7 @@ import '../job.dart';
 import '../server.dart';
 import '../filtering.dart';
 import 'job_detail_sheet.dart';
+import 'candidate_applications_screen.dart';
 
 // Contract type options – keep in sync with your backend choices.
 const _kContractTypes = ['full_time', 'part_time', 'internship', 'freelance'];
@@ -79,7 +80,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
     }
   }
 
-  // ── filter helpers ──────────────────────────────────────────────────────────
+  // filter helpers 
 
   void _applyFilter(JobPostingFilter updated) {
     setState(() => _filter = updated);
@@ -251,6 +252,22 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
+              // Applications shortcut
+              ActionChip(
+                avatar: const Icon(Icons.assignment_outlined, size: 16),
+                label: const Text('My Applications'),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CandidateApplicationsScreen(
+                        auth: widget.auth,
+                        server: widget.server,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 8),
               // "All filters" clear button shown only when something is active
               if (activeFilterCount > 0) ...[
                 ActionChip(

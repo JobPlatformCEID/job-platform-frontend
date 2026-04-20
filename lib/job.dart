@@ -117,6 +117,7 @@ class JobPosting {
     int? salaryMin,
     int? salaryMax,
     bool isRemote = false,
+    bool? isActive,
   }) async {
     final data = await server.sendPut('/api/jobs/$id/', {
       'title': title,
@@ -127,8 +128,26 @@ class JobPosting {
       if (salaryMin != null) 'salary_min': salaryMin,
       if (salaryMax != null) 'salary_max': salaryMax,
       'is_remote': isRemote,
+      if (isActive != null) 'is_active': isActive,
     }, token: token);
     return JobPosting.fromJson(data);
+  }
+
+  // Toggles the active status of this job posting
+  Future<JobPosting> toggleActive(Server server, String token) async {
+    return update(
+      server,
+      token,
+      title: title,
+      description: description,
+      requirements: requirements,
+      contractType: contractType,
+      location: location,
+      salaryMin: salaryMin,
+      salaryMax: salaryMax,
+      isRemote: isRemote,
+      isActive: !isActive,
+    );
   }
 
   // Deletes this job posting (employer only)

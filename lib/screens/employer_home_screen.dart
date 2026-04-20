@@ -346,6 +346,16 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
+              leading: Icon(job.isActive
+                  ? Icons.toggle_off_outlined
+                  : Icons.toggle_on_outlined),
+              title: Text(job.isActive ? 'Deactivate' : 'Reactivate'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _handleToggleActive(job);
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.edit_outlined),
               title: const Text('Edit'),
               onTap: () {
@@ -368,6 +378,31 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleToggleActive(JobPosting job) async {
+    try {
+      final updated = await job.toggleActive(widget.server, _employer.token);
+      if (mounted) {
+        setState(() {
+          final index = _jobs.indexWhere((j) => j.id == job.id);
+          if (index != -1) _jobs[index] = updated;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(updated.isActive
+                ? '"${updated.title}" reactivated'
+                : '"${updated.title}" deactivated'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update job status.')),
+        );
+      }
+    }
   }
 
 
@@ -444,7 +479,34 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                                 itemBuilder: (context, index) {
                                   final job = _jobs[index];
                                   return ListTile(
-                                    title: Text(job.title),
+                                    title: Row(
+                                      children: [
+                                        Expanded(child: Text(job.title)),
+                                        if (!job.isActive)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .error
+                                                  .withOpacity(0.15),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Inactive',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                     subtitle: Text(
                                       [
                                         if (job.location.isNotEmpty)
