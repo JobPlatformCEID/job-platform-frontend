@@ -61,19 +61,11 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
   Future<void> _loadJobs() async {
     setState(() => _isLoading = true);
     try {
-      if (_employer.employerProfileId == null) {
-        await _employer.fetchProfile();
-      }
-      // Filtering now happens server-side via JobPostingFilter
       final jobs = await JobPosting.fetchFiltered(
           widget.server, _employer.token, _filter);
       if (mounted) {
         setState(() {
-          // Keep only this employer's postings (server already scopes by
-          // authenticated user, but guard just in case).
-          _jobs = jobs
-              .where((j) => j.employer == _employer.employerProfileId)
-              .toList();
+          _jobs = jobs;
           _isLoading = false;
         });
       }
@@ -191,6 +183,36 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
               _filter.copyWith(salaryMin: null, salaryMax: null))
           : null,
     );
+  }
+
+  Widget _activeChip() {
+    final active = _filter.isActive != null;
+    String label = active
+        ? (_filter.isActive == true ? 'Active' : 'Inactive')
+        : 'Status';
+    return FilterChip(
+      label: Text(label),
+      selected: active,
+      avatar: active ? null : const Icon(Icons.toggle_on_outlined, size: 16),
+      onSelected: (_) => _showActiveSheet(),
+      onDeleted: active
+          ? () => _applyFilter(_filter.copyWith(isActive: null))
+          : null,
+    );
+  }
+
+  void _showActiveSheet() async {
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => _ActiveSheet(current: _filter.isActive),
+    );
+    if (selected != null) {
+      _applyFilter(_filter.copyWith(
+        isActive: selected == '__clear__'
+            ? null
+            : selected == 'true',
+      ));
+    }
   }
 
 
@@ -356,6 +378,7 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       _filter.contractType != null,
       _filter.location?.isNotEmpty == true,
       _filter.salaryMin != null || _filter.salaryMax != null,
+      _filter.isActive != null,
     ].where((b) => b).length;
 
     return Stack(
@@ -384,6 +407,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                   _locationChip(),
                   const SizedBox(width: 8),
                   _salaryChip(),
+                  const SizedBox(width: 8),
+                  _activeChip(),
                 ],
               ),
             ),
@@ -635,6 +660,49 @@ class _SalarySheetState extends State<_SalarySheet> {
                   Navigator.of(context).pop((min: null, max: null)),
               child: const Text('Clear'),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// Active/Inactive picker
+
+class _ActiveSheet extends StatelessWidget {
+  final bool? current;
+  const _ActiveSheet({this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+            child: Text('Posting status',
+                style: Theme.of(context).textTheme.titleLarge),
+          ),
+          RadioListTile<String>(
+            title: const Text('Active'),
+            value: 'true',
+            groupValue: current == true ? 'true' : null,
+            onChanged: (v) => Navigator.of(context).pop(v),
+          ),
+          RadioListTile<String>(
+            title: const Text('Inactive'),
+            value: 'false',
+            groupValue: current == false ? 'false' : null,
+            onChanged: (v) => Navigator.of(context).pop(v),
+          ),
+          if (current != null)
+            ListTile(
+              leading: const Icon(Icons.clear),
+              title: const Text('Clear'),
+              onTap: () => Navigator.of(context).pop('__clear__'),
+            ),
+          const SizedBox(height: 8),
         ],
       ),
     );
