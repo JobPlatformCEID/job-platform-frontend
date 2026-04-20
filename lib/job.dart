@@ -1,4 +1,5 @@
 import 'server.dart';
+import 'filtering.dart';
 
 class JobPosting {
   final int id;
@@ -58,6 +59,15 @@ class JobPosting {
     return list.map((j) => JobPosting.fromJson(j)).toList();
   }
 
+  // Fetches job postings with server-side filtering
+  static Future<List<JobPosting>> fetchFiltered(Server server, String token, JobPostingFilter filter) async {
+    final params = filter.toQueryParams();
+    if (params.isEmpty) return fetchAll(server, token);
+    final queryString = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
+    final list = await server.sendGetList('/api/jobs/?$queryString', token: token);
+    return list.map((j) => JobPosting.fromJson(j)).toList();
+  }
+
   // Fetches a job posting by ID
   static Future<JobPosting> fetchById(Server server, String token, int jobId) async {
     final data = await server.sendGet('/api/jobs/$jobId/', token: token);
@@ -107,6 +117,7 @@ class JobPosting {
     int? salaryMin,
     int? salaryMax,
     bool isRemote = false,
+    bool? isActive,
   }) async {
     final data = await server.sendPut('/api/jobs/$id/', {
       'title': title,
@@ -117,8 +128,26 @@ class JobPosting {
       if (salaryMin != null) 'salary_min': salaryMin,
       if (salaryMax != null) 'salary_max': salaryMax,
       'is_remote': isRemote,
+      if (isActive != null) 'is_active': isActive,
     }, token: token);
     return JobPosting.fromJson(data);
+  }
+
+  // Toggles the active status of this job posting
+  Future<JobPosting> toggleActive(Server server, String token) async {
+    return update(
+      server,
+      token,
+      title: title,
+      description: description,
+      requirements: requirements,
+      contractType: contractType,
+      location: location,
+      salaryMin: salaryMin,
+      salaryMax: salaryMax,
+      isRemote: isRemote,
+      isActive: !isActive,
+    );
   }
 
   // Deletes this job posting (employer only)
@@ -176,6 +205,15 @@ class JobApplication {
   // Fetches all applications (employers: for all their job postings, candidates: all their applications)
   static Future<List<JobApplication>> fetchApplications(Server server, String token) async {
     final list = await server.sendGetList('/api/jobs/applications/', token: token);
+    return list.map((a) => JobApplication.fromJson(a)).toList();
+  }
+
+  // Fetches applications with server-side filtering
+  static Future<List<JobApplication>> fetchFiltered(Server server, String token, JobApplicationFilter filter) async {
+    final params = filter.toQueryParams();
+    if (params.isEmpty) return fetchApplications(server, token);
+    final queryString = params.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
+    final list = await server.sendGetList('/api/jobs/applications/?$queryString', token: token);
     return list.map((a) => JobApplication.fromJson(a)).toList();
   }
 
