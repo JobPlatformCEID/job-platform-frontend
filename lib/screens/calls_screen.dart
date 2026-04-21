@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../auth.dart';
 import '../server.dart';
 import '../user.dart';
 import '../calls.dart';
 import 'call_room_screen.dart';
+
+enum _CallsView { list, calendar }
 
 class CallsScreen extends StatefulWidget {
   final Auth auth;
@@ -20,9 +23,14 @@ class _CallsScreenState extends State<CallsScreen> {
   bool _isLoading = true;
   String? _error;
 
+  _CallsView _view = _CallsView.list;
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+
   @override
   void initState() {
     super.initState();
+    _selectedDay = DateTime(_focusedDay.year, _focusedDay.month, _focusedDay.day);
     _loadRooms();
   }
 
@@ -71,6 +79,7 @@ class _CallsScreenState extends State<CallsScreen> {
       builder: (_) => _RoomFormSheet(
         server: widget.server,
         token: widget.auth.user!.token,
+        initialDate: _view == _CallsView.calendar ? _selectedDay : null,
         onSaved: (room) => setState(() => _rooms.insert(0, room)),
       ),
     );
@@ -123,65 +132,55 @@ class _CallsScreenState extends State<CallsScreen> {
     }
   }
 
+  DateTime _dayKey(DateTime d) => DateTime.utc(d.year, d.month, d.day);
+
+  Map<DateTime, List<CallRoom>> get _eventsByDay {
+    final map = <DateTime, List<CallRoom>>{};
+    for (final room in _rooms) {
+      final local = DateTime.parse(room.meetingDate).toLocal();
+      final key = _dayKey(local);
+      (map[key] ??= []).add(room);
+    }
+    for (final list in map.values) {
+      list.sort((a, b) => a.meetingDate.compareTo(b.meetingDate));
+    }
+    return map;
+  }
+
+  List<CallRoom> _roomsForSelectedDay() {
+    if (_selectedDay == null) return const [];
+    return _eventsByDay[_dayKey(_selectedDay!)] ?? const [];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Calls')),
+      appBar: AppBar(
+        title: const Text('Calls'),
+        actions: [
+          IconButton(
+            tooltip: _view == _CallsView.list ? 'Calendar view' : 'List view',
+            icon: Icon(_view == _CallsView.list
+                ? Icons.calendar_month_outlined
+                : Icons.view_list_outlined),
+            onPressed: () => setState(() {
+              _view = _view == _CallsView.list
+                  ? _CallsView.calendar
+                  : _CallsView.list;
+            }),
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)))
-              : _rooms.isEmpty
-                  ? const Center(child: Text('No rooms available.'))
-                  : RefreshIndicator(
-                      onRefresh: _loadRooms,
-                      child: ListView.separated(
-                        itemCount: _rooms.length,
-                        separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
-                        itemBuilder: (context, index) {
-                          final room = _rooms[index];
-                          final isHost = room.host == widget.auth.user!.userId;
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                              child: Icon(Icons.video_call_outlined, color: Theme.of(context).colorScheme.onPrimaryContainer),
-                            ),
-                            title: Text(room.roomName),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(room.formattedDate),
-                                Text(
-                                  'Host: ${room.hostUsername ?? 'Unknown'}',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isHost) ...[
-                                  IconButton(
-                                    icon: const Icon(Icons.edit_outlined),
-                                    onPressed: () => _showEditSheet(room),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.delete_outlined, color: Theme.of(context).colorScheme.error),
-                                    onPressed: () => _handleDelete(room),
-                                  ),
-                                ],
-                                FilledButton.icon(
-                                  onPressed: () => _joinRoom(room),
-                                  icon: const Icon(Icons.call, size: 16),
-                                  label: const Text('Join'),
-                                ),
-                              ],
-                            ),
-                            isThreeLine: true,
-                          );
-                        },
-                      ),
-                    ),
+              ? Center(
+                  child: Text(_error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)))
+              : _view == _CallsView.list
+                  ? _buildListView()
+                  : _buildCalendarView(),
       floatingActionButton: widget.auth.user is Employer
           ? FloatingActionButton(
               onPressed: _showCreateSheet,
@@ -190,12 +189,152 @@ class _CallsScreenState extends State<CallsScreen> {
           : null,
     );
   }
+
+  Widget _buildListView() {
+    if (_rooms.isEmpty) {
+      return const Center(child: Text('No rooms available.'));
+    }
+    return RefreshIndicator(
+      onRefresh: _loadRooms,
+      child: ListView.separated(
+        itemCount: _rooms.length,
+        separatorBuilder: (_, _) => const Divider(indent: 16, endIndent: 16),
+        itemBuilder: (context, index) => _buildRoomTile(_rooms[index]),
+      ),
+    );
+  }
+
+  Widget _buildCalendarView() {
+    final dayRooms = _roomsForSelectedDay();
+    return RefreshIndicator(
+      onRefresh: _loadRooms,
+      child: ListView(
+        children: [
+          Card(
+            margin: const EdgeInsets.all(12),
+            child: TableCalendar<CallRoom>(
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2100, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (d) => isSameDay(d, _selectedDay),
+              eventLoader: (d) => _eventsByDay[_dayKey(d)] ?? const [],
+              calendarFormat: CalendarFormat.month,
+              availableCalendarFormats: const {
+                CalendarFormat.month: 'Month',
+              },
+              startingDayOfWeek: StartingDayOfWeek.monday,
+              onDaySelected: (selected, focused) {
+                setState(() {
+                  _selectedDay = selected;
+                  _focusedDay = focused;
+                });
+              },
+              onPageChanged: (focused) => _focusedDay = focused,
+              calendarStyle: CalendarStyle(
+                markerDecoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+                todayDecoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                todayTextStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+                selectedDecoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            child: Text(
+              _selectedDay == null
+                  ? 'Select a day'
+                  : _formatHeading(_selectedDay!),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          if (dayRooms.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Text('No rooms scheduled for this day.'),
+            )
+          else
+            ...dayRooms.map(_buildRoomTile),
+        ],
+      ),
+    );
+  }
+
+  String _formatHeading(DateTime d) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  Widget _buildRoomTile(CallRoom room) {
+    final isHost = room.host == widget.auth.user!.userId;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        child: Icon(Icons.video_call_outlined,
+            color: Theme.of(context).colorScheme.onPrimaryContainer),
+      ),
+      title: Text(room.roomName),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(room.formattedDate),
+          Text(
+            'Host: ${room.hostUsername ?? 'Unknown'}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isHost) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => _showEditSheet(room),
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outlined,
+                  color: Theme.of(context).colorScheme.error),
+              onPressed: () => _handleDelete(room),
+            ),
+          ],
+          FilledButton.icon(
+            onPressed: () => _joinRoom(room),
+            icon: const Icon(Icons.call, size: 16),
+            label: const Text('Join'),
+          ),
+        ],
+      ),
+      isThreeLine: true,
+    );
+  }
 }
 
 class _RoomFormSheet extends StatefulWidget {
   final Server server;
   final String token;
   final CallRoom? existing;
+  final DateTime? initialDate;
   final void Function(CallRoom room) onSaved;
 
   const _RoomFormSheet({
@@ -203,6 +342,7 @@ class _RoomFormSheet extends StatefulWidget {
     required this.token,
     required this.onSaved,
     this.existing,
+    this.initialDate,
   });
 
   @override
@@ -223,6 +363,10 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
       _nameController.text = widget.existing!.roomName;
       _descriptionController.text = widget.existing!.description;
       _meetingDate = DateTime.parse(widget.existing!.meetingDate).toLocal();
+    } else if (widget.initialDate != null) {
+      final now = DateTime.now();
+      final base = widget.initialDate!;
+      _meetingDate = DateTime(base.year, base.month, base.day, now.hour, now.minute);
     }
   }
 
