@@ -158,6 +158,18 @@ class _CallsScreenState extends State<CallsScreen> {
       appBar: AppBar(
         title: const Text('Calls'),
         actions: [
+          if (_view == _CallsView.calendar)
+            IconButton(
+              tooltip: 'Today',
+              icon: const Icon(Icons.today_outlined),
+              onPressed: () {
+                final today = DateTime.now();
+                setState(() {
+                  _focusedDay = today;
+                  _selectedDay = DateTime(today.year, today.month, today.day);
+                });
+              },
+            ),
           IconButton(
             tooltip: _view == _CallsView.list ? 'Calendar view' : 'List view',
             icon: Icon(_view == _CallsView.list
@@ -266,9 +278,21 @@ class _CallsScreenState extends State<CallsScreen> {
             ),
           ),
           if (dayRooms.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Text('No rooms scheduled for this day.'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Column(
+                children: [
+                  const Text('No rooms scheduled for this day.'),
+                  if (widget.auth.user is Employer && _selectedDay != null) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _showCreateSheet,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Schedule a call'),
+                    ),
+                  ],
+                ],
+              ),
             )
           else
             ...dayRooms.map(_buildRoomTile),
