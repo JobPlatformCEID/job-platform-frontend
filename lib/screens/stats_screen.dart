@@ -72,19 +72,19 @@ class _StatsScreenState extends State<StatsScreen>
           : '';
 
       final futures = <Future<List<dynamic>>>[
-        widget.server.sendGetList('/api/salary-range-distribution/$query'),
-        widget.server.sendGetList('/api/jobs-by-title/'),
-        widget.server.sendGetList('/api/top-skills/$query'),
-        widget.server.sendGetList('/api/top-companies/$query'),
-        widget.server.sendGetList('/api/avg-salary-by-title/'),
+        widget.server.sendGetList('/api/stats/salary-range-distribution/$query'),
+        widget.server.sendGetList('/api/stats/jobs-by-title/'),
+        widget.server.sendGetList('/api/stats/top-skills/$query'),
+        widget.server.sendGetList('/api/stats/top-companies/$query'),
+        widget.server.sendGetList('/api/stats/avg-salary-by-title/'),
         _activeFilter.isNotEmpty
-            ? widget.server.sendGetList('/api/jobs-over-time/$query')
+            ? widget.server.sendGetList('/api/stats/jobs-over-time/$query')
             : Future.value(<dynamic>[]),
-        widget.server.sendGetList('/api/remote-vs-onsite/$query'),
-        widget.server.sendGetList('/api/jobs-by-contract-type/$query'),
-        widget.server.sendGetList('/api/avg-salary-by-contract-type/$query'),
-        widget.server.sendGetList('/api/candidates-by-education/$query'),
-        widget.server.sendGetList('/api/most-competitive-jobs/'),
+        widget.server.sendGetList('/api/stats/remote-vs-onsite/$query'),
+        widget.server.sendGetList('/api/stats/jobs-by-contract-type/$query'),
+        widget.server.sendGetList('/api/stats/avg-salary-by-contract-type/$query'),
+        widget.server.sendGetList('/api/stats/candidates-by-education/$query'),
+        widget.server.sendGetList('/api/stats/most-competitive-jobs/'),
       ];
 
       final results = await Future.wait(futures);
