@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../server.dart';
+import '../auth.dart';
 
 class StatsScreen extends StatefulWidget {
   final Server server;
-  const StatsScreen({Key? key, required this.server}) : super(key: key);
+  final Auth auth;
+  const StatsScreen({Key? key, required this.auth ,required this.server}) : super(key: key);
 
   @override
   State<StatsScreen> createState() => _StatsScreenState();
@@ -70,21 +72,23 @@ class _StatsScreenState extends State<StatsScreen>
       final query = _activeFilter.isNotEmpty
           ? '?title=${Uri.encodeComponent(_activeFilter)}'
           : '';
+      
+      final token = widget.auth.user!.token;
 
       final futures = <Future<List<dynamic>>>[
-        widget.server.sendGetList('/api/stats/salary-range-distribution/$query'),
-        widget.server.sendGetList('/api/stats/jobs-by-title/'),
-        widget.server.sendGetList('/api/stats/top-skills/$query'),
-        widget.server.sendGetList('/api/stats/top-companies/$query'),
-        widget.server.sendGetList('/api/stats/avg-salary-by-title/'),
+        widget.server.sendGetList('/api/stats/salary-range-distribution/$query',token: token),
+        widget.server.sendGetList('/api/stats/jobs-by-title/',token: token),
+        widget.server.sendGetList('/api/stats/top-skills/$query',token: token),
+        widget.server.sendGetList('/api/stats/top-companies/$query',token: token),
+        widget.server.sendGetList('/api/stats/avg-salary-by-title/',token: token),
         _activeFilter.isNotEmpty
-            ? widget.server.sendGetList('/api/stats/jobs-over-time/$query')
+            ? widget.server.sendGetList('/api/stats/jobs-over-time/$query',token: token)
             : Future.value(<dynamic>[]),
-        widget.server.sendGetList('/api/stats/remote-vs-onsite/$query'),
-        widget.server.sendGetList('/api/stats/jobs-by-contract-type/$query'),
-        widget.server.sendGetList('/api/stats/avg-salary-by-contract-type/$query'),
-        widget.server.sendGetList('/api/stats/candidates-by-education/$query'),
-        widget.server.sendGetList('/api/stats/most-competitive-jobs/'),
+        widget.server.sendGetList('/api/stats/remote-vs-onsite/$query',token: token),
+        widget.server.sendGetList('/api/stats/jobs-by-contract-type/$query',token: token),
+        widget.server.sendGetList('/api/stats/avg-salary-by-contract-type/$query',token: token),
+        widget.server.sendGetList('/api/stats/candidates-by-education/$query',token: token),
+        widget.server.sendGetList('/api/stats/most-competitive-jobs/',token: token),
       ];
 
       final results = await Future.wait(futures);

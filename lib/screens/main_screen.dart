@@ -202,7 +202,7 @@ Future<void> _loadUserData() async {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => StatsScreen(server: widget.server),
+                    builder: (_) => StatsScreen(auth: widget.auth, server: widget.server),
                   ),
                 );
               },
