@@ -1,3 +1,5 @@
+enum CvTemplate { classic, modern, minimal }
+
 class CvEducation {
   String institution;
   String degree;
@@ -83,67 +85,117 @@ class CvExperience {
   }
 }
 
+class CvCertification {
+  String name;
+  String issuer;
+  String date;
+
+  CvCertification({
+    required this.name,
+    required this.issuer,
+    this.date = '',
+  });
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'issuer': issuer,
+        'date': date,
+      };
+
+  CvCertification copyWith({
+    String? name,
+    String? issuer,
+    String? date,
+  }) {
+    return CvCertification(
+      name: name ?? this.name,
+      issuer: issuer ?? this.issuer,
+      date: date ?? this.date,
+    );
+  }
+}
+
 class CvData {
   String fullName;
+  String jobTitle;
   String email;
   String phone;
   String location;
   String linkedin;
-  String github;
+  String website;
   String summary;
   List<String> skills;
+  List<String> languages;
   List<CvEducation> education;
   List<CvExperience> experience;
+  List<CvCertification> certifications;
+  CvTemplate template;
 
   CvData({
     this.fullName = '',
+    this.jobTitle = '',
     this.email = '',
     this.phone = '',
     this.location = '',
     this.linkedin = '',
-    this.github = '',
+    this.website = '',
     this.summary = '',
     this.skills = const [],
+    this.languages = const [],
     this.education = const [],
     this.experience = const [],
+    this.certifications = const [],
+    this.template = CvTemplate.classic,
   });
 
   Map<String, dynamic> toJson() => {
         'full_name': fullName,
+        'job_title': jobTitle,
         'email': email,
         'phone': phone,
         'location': location,
         'linkedin': linkedin,
-        'github': github,
+        'website': website,
         'summary': summary,
         'skills': skills,
+        'languages': languages,
         'education': education.map((e) => e.toJson()).toList(),
         'experience': experience.map((e) => e.toJson()).toList(),
+        'certifications': certifications.map((c) => c.toJson()).toList(),
+        'template': template.name,
       };
 
   CvData copyWith({
     String? fullName,
+    String? jobTitle,
     String? email,
     String? phone,
     String? location,
     String? linkedin,
-    String? github,
+    String? website,
     String? summary,
     List<String>? skills,
+    List<String>? languages,
     List<CvEducation>? education,
     List<CvExperience>? experience,
+    List<CvCertification>? certifications,
+    CvTemplate? template,
   }) {
     return CvData(
       fullName: fullName ?? this.fullName,
+      jobTitle: jobTitle ?? this.jobTitle,
       email: email ?? this.email,
       phone: phone ?? this.phone,
       location: location ?? this.location,
       linkedin: linkedin ?? this.linkedin,
-      github: github ?? this.github,
+      website: website ?? this.website,
       summary: summary ?? this.summary,
       skills: skills ?? this.skills,
+      languages: languages ?? this.languages,
       education: education ?? this.education,
       experience: experience ?? this.experience,
+      certifications: certifications ?? this.certifications,
+      template: template ?? this.template,
     );
   }
 }
