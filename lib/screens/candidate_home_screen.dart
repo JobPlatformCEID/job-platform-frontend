@@ -128,8 +128,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
     }
   }
 
-  // ── apply button ────────────────────────────────────────────────────────────
-
+  
   Future<void> _handleApply(JobPosting job) async {
     try {
       await job.apply(widget.server, _candidate.token);
@@ -161,8 +160,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
     );
   }
 
-  // ── chip builders ────────────────────────────────────────────────────────────
-
+  
   Widget _remoteChip() {
     final active = _filter.isRemote == true;
     return FilterChip(
@@ -232,8 +230,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
     );
   }
 
-  // ── build ────────────────────────────────────────────────────────────────────
-
+  
   @override
   Widget build(BuildContext context) {
     final activeFilterCount = [
@@ -245,7 +242,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
 
     return Column(
       children: [
-        // ── filter chip bar ──────────────────────────────────────────────────
+        
         Container(
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -293,7 +290,6 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
         ),
         const Divider(height: 1),
 
-        // ── job list ─────────────────────────────────────────────────────────
         Expanded(
           child: _isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -340,8 +336,6 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
     );
   }
 }
-
-// ── Contract type picker ─────────────────────────────────────────────────────
 
 class _ContractTypeSheet extends StatelessWidget {
   final String? current;

@@ -15,6 +15,7 @@ import 'candidate_applications_screen.dart';
 import 'ai_interviews_screen.dart';
 import '../widgets/user_avatar.dart';
 import 'calls_screen.dart';
+import 'stats_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -190,6 +191,19 @@ Future<void> _loadUserData() async {
                       auth: widget.auth,
                       server: widget.server,
                     ),
+                  ),
+                );
+              },
+            ),
+
+            ListTile(
+              leading: const Icon(Icons.bar_chart_rounded),
+              title: const Text('Market Stats'),
+              onTap: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => StatsScreen(auth: widget.auth, server: widget.server),
                   ),
                 );
               },
