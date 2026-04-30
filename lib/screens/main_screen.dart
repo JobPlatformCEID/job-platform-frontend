@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:job_platform_frontend/screens/cv_builder_screen.dart';
 import '../server.dart';
 import '../auth.dart';
 import '../user.dart';
@@ -222,6 +223,19 @@ Future<void> _loadUserData() async {
                   );
                 },
               ),
+
+              ListTile(
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('CV Builder'),
+                onTap: (){
+                  Navigator.of(context).pop();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => CvBuilderScreen(server: widget.server, auth: widget.auth)
+                    ),
+                  );
+                },
+              )
             ],
 
             // Spacer pushes logout to the bottom
