@@ -188,10 +188,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
         otherUserId: widget.conversation.otherUserId!,
         otherName: widget.conversation.otherFullName ?? widget.conversation.otherUsername ?? 'User',
         onCallCreated: (room) {
-          // Send call link as a chat message
-          final serverUrl = widget.server.getServerUrl() ?? '';
-          final callLink = '$serverUrl/calls/${room.id}/join';
-          _channel?.sink.add(jsonEncode({'content': callLink}));
+          _channel?.sink.add(jsonEncode({
+            'content': jsonEncode({
+              'type': 'call',
+              'room_id': room.id,
+              'room_name': room.roomName,
+            }),
+          }));
           if (mounted) setState(() => _otherUserLastRead = 0);
         },
       ),
@@ -347,15 +350,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 }
 
-// Parses a call link like "https://myserver.com/calls/5/join" → room id 5
-int? _parseCallRoomId(String content, String serverUrl) {
-  final base = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
-  final prefix = '$base/calls/';
-  const suffix = '/join';
-  if (content.startsWith(prefix) && content.endsWith(suffix)) {
-    final middle = content.substring(prefix.length, content.length - suffix.length);
-    return int.tryParse(middle);
-  }
+Map<String, dynamic>? _parseCallPayload(String content) {
+  try {
+    final decoded = jsonDecode(content) as Map<String, dynamic>;
+    if (decoded['type'] == 'call') return decoded;
+  } catch (_) {}
   return null;
 }
 
@@ -376,9 +375,10 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roomId = _parseCallRoomId(message.content, serverUrl);
+    final callPayload = _parseCallPayload(message.content);
 
-    if (roomId != null) {
+    if (callPayload != null) {
+      final roomId = callPayload['room_id'] as int;
       return Align(
         alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
         child: GestureDetector(
