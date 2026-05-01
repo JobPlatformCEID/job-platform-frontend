@@ -80,8 +80,12 @@ class CallRoom {
     return CallToken.fromJson(data);
   }
 
-  Future<void> addParticipant(Server server, String token) async {
-    await server.sendPost('/api/calls/$id/participants/', {}, token: token);
+  Future<void> addParticipant(Server server, String token, {int? userId}) async {
+    await server.sendPost(
+      '/api/calls/$id/participants/',
+      userId != null ? {'user_id': userId} : {},
+      token: token,
+    );
   }
 
   Future<void> removeParticipant(Server server, String token) async {

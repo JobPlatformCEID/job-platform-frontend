@@ -4,6 +4,9 @@ import 'dart:convert';
 import '../auth.dart';
 import '../server.dart';
 import '../conversation.dart';
+import '../calls.dart';
+import '../user.dart';
+import 'call_room_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   final Conversation conversation;
@@ -59,7 +62,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   void _connectWebSocket() {
     final serverUrl = widget.server.getServerUrl() ?? '';
-    // Replace http with ws
     final wsUrl = serverUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
@@ -86,19 +88,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
             if (mounted) setState(() => _messages.add(message));
             _scrollToBottom();
 
-            // Send read acknowledgment if message is from the other user
             if (message.sender != widget.auth.user!.userId) {
               _channel?.sink.add(jsonEncode({
                 'type': 'read',
                 'message_id': message.id,
               }));
             }
-          } else if (type == 'read') { 
+          } else if (type == 'read') {
             final readerId = json['reader_id'] as int?;
             final lastReadMessageId = json['last_read_message_id'] as int? ?? 0;
-            // If the other user read the messages, update last read message id
-            if (readerId != null &&
-                readerId == widget.conversation.otherUserId) {
+            if (readerId != null && readerId == widget.conversation.otherUserId) {
               if (mounted) setState(() => _otherUserLastRead = lastReadMessageId);
             }
           }
@@ -145,12 +144,99 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  void _showPlusSheet() {
+    final isEmployer = widget.auth.user is Employer;
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if(isEmployer)
+              ListTile(
+                leading: Icon(
+                  Icons.video_call_outlined,
+                  color: isEmployer ? null : Theme.of(context).disabledColor,
+                ),
+                title: const Text('Start a call'),
+                onTap: () {
+                      Navigator.of(context).pop();
+                      _showCreateCallSheet();
+                    },
+              ),
+            
+            ListTile(
+              leading: Icon(Icons.image_outlined, color: Theme.of(context).disabledColor),
+              title: Text('Image', style: TextStyle(color: Theme.of(context).disabledColor)),
+              subtitle: const Text('Coming soon'),
+              onTap: null,
+            ),
+
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateCallSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _CreateCallSheet(
+        server: widget.server,
+        token: _token,
+        otherUserId: widget.conversation.otherUserId!,
+        otherName: widget.conversation.otherFullName ?? widget.conversation.otherUsername ?? 'User',
+        onCallCreated: (room) {
+          // Send call link as a chat message
+          final serverUrl = widget.server.getServerUrl() ?? '';
+          final callLink = '$serverUrl/calls/${room.id}/join';
+          _channel?.sink.add(jsonEncode({'content': callLink}));
+          if (mounted) setState(() => _otherUserLastRead = 0);
+        },
+      ),
+    );
+  }
+
+  Future<void> _joinCall(int roomId) async {
+    try {
+      // Add ourselves as participant in case we're joining via link
+      final rooms = await CallRoom.fetchAll(widget.server, _token);
+      final room = rooms.firstWhere((r) => r.id == roomId);
+      if (!room.isParticipant) {
+        await room.addParticipant(widget.server, _token);
+      }
+      final callToken = await room.getToken(widget.server, _token);
+      if (mounted) {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => CallRoomScreen(
+            token: callToken.token,
+            url: callToken.url,
+            roomName: callToken.roomName,
+            isHost: callToken.isHost,
+            displayName: room.roomName,
+          ),
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not join call.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: Text(widget.conversation.otherFullName ?? widget.conversation.otherUsername ?? 'User #${widget.conversation.otherUserId}'),
+        title: Text(
+          widget.conversation.otherFullName ??
+              widget.conversation.otherUsername ??
+              'User #${widget.conversation.otherUserId}',
+        ),
       ),
       body: Column(
         children: [
@@ -180,7 +266,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               _MessageBubble(
                                 message: message,
                                 isOwn: isOwn,
+                                serverUrl: widget.server.getServerUrl() ?? '',
                                 onLongPress: () => _handleDeleteMessage(message),
+                                onJoinCall: _joinCall,
                               ),
                               if (isLast && isOwn && isSeen)
                                 Padding(
@@ -197,7 +285,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         },
                       ),
           ),
-          // Input bar
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -210,12 +297,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
                   children: [
-                    // + button placeholder
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline),
-                      onPressed: () {
-                        // TODO: attachments (images etc) are not supported by the server yet
-                      },
+                      onPressed: _showPlusSheet,
                     ),
                     Expanded(
                       child: TextField(
@@ -263,19 +347,97 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 }
 
+// Parses a call link like "https://myserver.com/calls/5/join" → room id 5
+int? _parseCallRoomId(String content, String serverUrl) {
+  final base = serverUrl.endsWith('/') ? serverUrl.substring(0, serverUrl.length - 1) : serverUrl;
+  final prefix = '$base/calls/';
+  const suffix = '/join';
+  if (content.startsWith(prefix) && content.endsWith(suffix)) {
+    final middle = content.substring(prefix.length, content.length - suffix.length);
+    return int.tryParse(middle);
+  }
+  return null;
+}
+
 class _MessageBubble extends StatelessWidget {
   final Message message;
   final bool isOwn;
+  final String serverUrl;
   final VoidCallback onLongPress;
+  final void Function(int roomId) onJoinCall;
 
   const _MessageBubble({
     required this.message,
     required this.isOwn,
+    required this.serverUrl,
     required this.onLongPress,
+    required this.onJoinCall,
   });
 
   @override
   Widget build(BuildContext context) {
+    final roomId = _parseCallRoomId(message.content, serverUrl);
+
+    if (roomId != null) {
+      return Align(
+        alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
+        child: GestureDetector(
+          onLongPress: onLongPress,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
+            decoration: BoxDecoration(
+              color: isOwn
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    child: const Icon(Icons.video_call, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Video call',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        FilledButton.tonal(
+                          onPressed: () => onJoinCall(roomId),
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('Join'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Regular text bubble
     return Align(
       alignment: isOwn ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
@@ -283,9 +445,7 @@ class _MessageBubble extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.7,
-          ),
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
           decoration: BoxDecoration(
             color: isOwn
                 ? Theme.of(context).colorScheme.primary
@@ -308,5 +468,187 @@ class _MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CreateCallSheet extends StatefulWidget {
+  final Server server;
+  final String token;
+  final int otherUserId;
+  final String otherName;
+  final void Function(CallRoom room) onCallCreated;
+
+  const _CreateCallSheet({
+    required this.server,
+    required this.token,
+    required this.otherUserId,
+    required this.otherName,
+    required this.onCallCreated,
+  });
+
+  @override
+  State<_CreateCallSheet> createState() => _CreateCallSheetState();
+}
+
+class _CreateCallSheetState extends State<_CreateCallSheet> {
+  late final TextEditingController _nameController;
+  DateTime? _pickedDate;
+  TimeOfDay? _pickedTime;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: 'Call with ${widget.otherName}');
+  }
+
+  Future<void> _pickDate() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (date != null) setState(() => _pickedDate = date);
+  }
+
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time != null) setState(() => _pickedTime = time);
+  }
+
+  DateTime _resolvedDateTime() {
+    final now = DateTime.now();
+    final date = _pickedDate ?? now;
+    final time = _pickedTime ?? TimeOfDay(hour: now.hour, minute: now.minute);
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  String _formatResolved() {
+    final dt = _resolvedDateTime();
+    final timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    if (_pickedDate == null && _pickedTime == null) return 'Now';
+    return '${dt.day}/${dt.month}/${dt.year} $timeStr';
+  }
+
+Future<void> _handleCreate() async {
+  if (_nameController.text.trim().isEmpty) {
+    setState(() => _error = 'Room name is required.');
+    return;
+  }
+  setState(() { _isLoading = true; _error = null; });
+  try {
+    // host will be added as participant during create
+    final room = await CallRoom.create(
+      widget.server,
+      widget.token,
+      roomName: _nameController.text.trim(),
+      description: '',
+      meetingDate: _resolvedDateTime(),
+    );
+
+    // we add the user were chatting with as a participant
+    await room.addParticipant(widget.server, widget.token, userId: widget.otherUserId);
+    if (mounted) {
+      Navigator.of(context).pop();
+      widget.onCallCreated(room);
+    }
+  } catch (e) {
+    if (mounted) setState(() => _error = 'Could not create call.');
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollController) {
+        return SingleChildScrollView(
+          controller: scrollController,
+          padding: EdgeInsets.only(
+            left: 24, right: 24, top: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Start a call', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 24),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Call name',
+                  prefixIcon: Icon(Icons.meeting_room_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Date and time as two separate buttons in a row
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickDate,
+                      icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                      label: Text(
+                        _pickedDate != null
+                            ? '${_pickedDate!.day}/${_pickedDate!.month}/${_pickedDate!.year}'
+                            : 'Pick Date',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _pickTime,
+                      icon: const Icon(Icons.access_time_outlined, size: 16),
+                      label: Text(
+                        _pickedTime != null
+                            ? '${_pickedTime!.hour.toString().padLeft(2, '0')}:${_pickedTime!.minute.toString().padLeft(2, '0')}'
+                            : 'Pick Time',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Show resolved time so user knows what they're getting
+              Text(
+                'Scheduled for: ${_formatResolved()}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ],
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: _isLoading ? null : _handleCreate,
+                child: _isLoading
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Start call'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 }
