@@ -158,19 +158,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   Icons.video_call_outlined,
                   color: isEmployer ? null : Theme.of(context).disabledColor,
                 ),
-                title: const Text('Start a call'),
+                title: const Text('Schedule a meeting'),
                 onTap: () {
                       Navigator.of(context).pop();
                       _showCreateCallSheet();
                     },
               ),
-            
-            ListTile(
-              leading: Icon(Icons.image_outlined, color: Theme.of(context).disabledColor),
-              title: Text('Image', style: TextStyle(color: Theme.of(context).disabledColor)),
-              subtitle: const Text('Coming soon'),
-              onTap: null,
-            ),
 
           ],
         ),
@@ -581,7 +574,7 @@ Future<void> _handleCreate() async {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Start a call', style: Theme.of(context).textTheme.headlineSmall),
+              Text('Schedule a meeting', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 24),
               TextField(
                 controller: _nameController,
@@ -637,7 +630,7 @@ Future<void> _handleCreate() async {
                 onPressed: _isLoading ? null : _handleCreate,
                 child: _isLoading
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Start call'),
+                    : const Text('Schedule meeting'),
               ),
             ],
           ),

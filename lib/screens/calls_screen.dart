@@ -369,7 +369,7 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.existing == null ? 'Schedule a call' : 'Edit room',
+                widget.existing == null ? 'Schedule a meeting' : 'Edit room',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 24),
