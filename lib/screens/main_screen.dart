@@ -14,7 +14,6 @@ import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
 import 'ai_interviews_screen.dart';
 import '../widgets/user_avatar.dart';
-import 'calls_screen.dart';
 import 'stats_screen.dart';
 import 'calendar.dart';
 
