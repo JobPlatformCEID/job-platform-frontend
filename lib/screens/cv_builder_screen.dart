@@ -1,10 +1,8 @@
 // cv_builder_screen.dart
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
+import 'package:file_saver/file_saver.dart';
 import '../server.dart';
 import '../auth.dart';
 import 'cv_data.dart';
@@ -86,34 +84,17 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
       final name = _cv.fullName.isNotEmpty
           ? _cv.fullName.trim().replaceAll(' ', '_')
           : 'cv';
-      final fileName = '${name}_cv.pdf';
 
-      Directory dir;
-      if (!kIsWeb && Platform.isAndroid) {
-        // Android: save to Downloads folder (visible in Files app)
-        dir = Directory('/storage/emulated/0/Download');
-        if (!await dir.exists()) {
-          dir = (await getExternalStorageDirectory()) ??
-              await getApplicationDocumentsDirectory();
-        }
-      } else if (!kIsWeb && Platform.isIOS) {
-        // iOS: save to app's Documents folder (accessible via Files app)
-        dir = await getApplicationDocumentsDirectory();
-      } else {
-        // Desktop / other: save to Downloads folder
-        dir = (await getDownloadsDirectory()) ??
-            await getApplicationDocumentsDirectory();
-      }
-
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
+      await FileSaver.instance.saveFile(
+        name: '${name}_cv',
+        bytes: bytes,
+        ext: 'pdf',
+        mimeType: MimeType.pdf,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saved to ${file.path}'),
-            duration: const Duration(seconds: 4),
-          ),
+          const SnackBar(content: Text('PDF saved to Downloads')),
         );
       }
     } catch (e) {
@@ -492,7 +473,6 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
                 _buildNavButtons(),
               ],
             )
-          // Wide / desktop layout
           : Row(
               children: [
                 // Left: step-nav + form
