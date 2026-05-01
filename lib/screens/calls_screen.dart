@@ -1,3 +1,5 @@
+//honestly this hole file is probably getting the boot 
+//messages will fully be integrated with messages 
 import 'package:flutter/material.dart';
 import '../auth.dart';
 import '../server.dart';
@@ -43,6 +45,11 @@ class _CallsScreenState extends State<CallsScreen> {
 
   Future<void> _joinRoom(CallRoom room) async {
     try {
+      // If not a participant, register ourselves first
+      if (!room.isParticipant) {
+        await room.addParticipant(widget.server, widget.auth.user!.token);
+      }
+
       final callToken = await room.getToken(widget.server, widget.auth.user!.token);
       if (mounted) {
         Navigator.of(context).push(MaterialPageRoute(
@@ -59,6 +66,27 @@ class _CallsScreenState extends State<CallsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not join room.')),
+        );
+      }
+    }
+  }
+
+  // Instant room — no form, just create and immediately join
+  Future<void> _createInstantRoom() async {
+    try {
+      final room = await CallRoom.create(
+        widget.server,
+        widget.auth.user!.token,
+        roomName: 'Call ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
+        description: '',
+        meetingDate: null,
+      );
+      if (mounted) setState(() => _rooms.insert(0, room));
+      await _joinRoom(room);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not start call.')),
         );
       }
     }
@@ -123,6 +151,38 @@ class _CallsScreenState extends State<CallsScreen> {
     }
   }
 
+  // FAB shows two options: instant call or scheduled
+  void _showCallOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.video_call_outlined),
+              title: const Text('Start instant call'),
+              subtitle: const Text('Jump in now'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _createInstantRoom();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_today_outlined),
+              title: const Text('Schedule a call'),
+              subtitle: const Text('Pick a date and time'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showCreateSheet();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,7 +210,11 @@ class _CallsScreenState extends State<CallsScreen> {
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(room.formattedDate),
+                                // Instant rooms have no date
+                                if (room.meetingDate != null)
+                                  Text(room.formattedDate)
+                                else
+                                  Text('Instant call', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
                                 Text(
                                   'Host: ${room.hostUsername ?? 'Unknown'}',
                                   style: Theme.of(context).textTheme.bodySmall,
@@ -184,7 +248,7 @@ class _CallsScreenState extends State<CallsScreen> {
                     ),
       floatingActionButton: widget.auth.user is Employer
           ? FloatingActionButton(
-              onPressed: _showCreateSheet,
+              onPressed: _showCallOptions, // ← was _showCreateSheet
               child: const Icon(Icons.add),
             )
           : null,
@@ -222,7 +286,10 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
     if (widget.existing != null) {
       _nameController.text = widget.existing!.roomName;
       _descriptionController.text = widget.existing!.description;
-      _meetingDate = DateTime.parse(widget.existing!.meetingDate).toLocal();
+      // meetingDate may be null for instant rooms
+      _meetingDate = widget.existing!.meetingDate != null
+          ? DateTime.parse(widget.existing!.meetingDate!).toLocal()
+          : null;
     }
   }
 
@@ -249,10 +316,7 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
       setState(() => _error = 'Room name is required.');
       return;
     }
-    if (_meetingDate == null) {
-      setState(() => _error = 'Meeting date is required.');
-      return;
-    }
+    // meetingDate is now optional for scheduled form too
     setState(() { _isLoading = true; _error = null; });
     try {
       final CallRoom saved;
@@ -262,7 +326,7 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
           widget.token,
           roomName: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
-          meetingDate: _meetingDate!,
+          meetingDate: _meetingDate, // nullable
         );
       } else {
         saved = await widget.existing!.update(
@@ -270,7 +334,7 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
           widget.token,
           roomName: _nameController.text.trim(),
           description: _descriptionController.text.trim(),
-          meetingDate: _meetingDate!,
+          meetingDate: _meetingDate, // nullable
         );
       }
       if (mounted) {
@@ -305,7 +369,7 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.existing == null ? 'Create room' : 'Edit room',
+                widget.existing == null ? 'Schedule a call' : 'Edit room',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 24),
@@ -330,7 +394,8 @@ class _RoomFormSheetState extends State<_RoomFormSheet> {
               OutlinedButton.icon(
                 onPressed: _pickDate,
                 icon: const Icon(Icons.calendar_today_outlined),
-                label: Text(_meetingDate != null ? _formatDate(_meetingDate!) : 'Pick meeting date & time'),
+                // Date is now optional
+                label: Text(_meetingDate != null ? _formatDate(_meetingDate!) : 'Pick date & time (optional)'),
               ),
               if (_error != null) ...[
                 const SizedBox(height: 16),
