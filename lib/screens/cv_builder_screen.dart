@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:file_saver/file_saver.dart';
 import '../server.dart';
 import '../auth.dart';
@@ -61,10 +62,23 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
     setState(() => _isGenerating = true);
 
     try {
+      // Load Noto Sans — full Unicode coverage including Greek
+      final fontRegular = await PdfGoogleFonts.notoSansRegular();
+      final fontBold    = await PdfGoogleFonts.notoSansBold();
+      final fontItalic  = await PdfGoogleFonts.notoSansItalic();
+
+      // Build a theme so every pw.Text in every template inherits the font
+      final theme = pw.ThemeData.withFont(
+        base:   fontRegular,
+        bold:   fontBold,
+        italic: fontItalic,
+      );
+
       final pdf = pw.Document();
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
+          theme: theme,
           build: (pw.Context context) {
             switch (_cv.template) {
               case CvTemplate.modern:
@@ -977,7 +991,6 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
     );
   }
 }
-
 
 // Full-screen preview page (used on narrow / phone screens)
 class _FullScreenPreview extends StatelessWidget {
