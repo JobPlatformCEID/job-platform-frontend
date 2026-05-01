@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../server.dart';
-import '../auth.dart';
+import 'server.dart';
+import 'auth.dart';
 
 class Message {
   final int id;
@@ -31,7 +31,8 @@ class Message {
 
 class InterviewSession {
   final int id;
-  final String jobRole;
+  final int jobPosting;
+  final String jobTitle;
   final String title;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -39,21 +40,23 @@ class InterviewSession {
 
   const InterviewSession({
     required this.id,
-    required this.jobRole,
+    required this.jobPosting,
+    required this.jobTitle,
     required this.title,
     required this.createdAt,
     required this.updatedAt,
     this.messages = const [],
   });
 
-  // falls back to job role when no title has been set
-  String get displayTitle => title.isNotEmpty ? title : jobRole;
+  // falls back to the posting title when no custom title has been set
+  String get displayTitle => title.isNotEmpty ? title : jobTitle;
 
   factory InterviewSession.fromJson(Map<String, dynamic> json) {
     final msgs = json['messages'] as List<dynamic>? ?? [];
     return InterviewSession(
       id: json['id'] as int,
-      jobRole: json['job_role'] as String,
+      jobPosting: json['job_posting'] as int,
+      jobTitle: json['job_title'] as String? ?? 'Job Posting #${json['job_posting']}',
       title: json['title'] as String? ?? '',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -66,7 +69,8 @@ class InterviewSession {
   InterviewSession copyWith({String? title, DateTime? updatedAt}) {
     return InterviewSession(
       id: id,
-      jobRole: jobRole,
+      jobPosting: jobPosting,
+      jobTitle: jobTitle,
       title: title ?? this.title,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -110,8 +114,7 @@ class InterviewService {
   Future<List<InterviewSession>> fetchSessions() async {
     final token = _token;
     if (token == null) throw Exception('Not authenticated.');
-    final data =
-        await server.sendGetList('/api/sessions/', token: token) as List<dynamic>;
+    final data = await server.sendGetList('/api/sessions/', token: token);
     return data
         .map((j) => InterviewSession.fromJson(j as Map<String, dynamic>))
         .toList();
@@ -121,21 +124,21 @@ class InterviewService {
     final token = _token;
     if (token == null) throw Exception('Not authenticated.');
     final data = await server.sendGet('/api/sessions/$id/', token: token);
-    return InterviewSession.fromJson(data as Map<String, dynamic>);
+    return InterviewSession.fromJson(data);
   }
 
   Future<InterviewSession> createSession({
-    required String jobRole,
+    required int jobPostingId,
     String title = '',
   }) async {
     final token = _token;
     if (token == null) throw Exception('Not authenticated.');
     final data = await server.sendPost(
       '/api/sessions/',
-      {'job_role': jobRole, 'title': title},
+      {'job_posting_id': jobPostingId, 'title': title},
       token: token,
     );
-    return InterviewSession.fromJson(data as Map<String, dynamic>);
+    return InterviewSession.fromJson(data);
   }
 
   Future<void> updateSessionTitle(int id, String title) async {

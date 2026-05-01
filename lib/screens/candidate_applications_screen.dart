@@ -3,6 +3,8 @@ import '../auth.dart';
 import '../server.dart';
 import '../job.dart';
 import '../filtering.dart';
+import '../ai_interview.dart';
+import 'ai_chat_screen.dart';
 import 'job_detail_sheet.dart';
 import 'company_profile_sheet.dart';
 
@@ -186,7 +188,7 @@ class _CandidateApplicationsScreenState
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _statusOptions.length,
-                        separatorBuilder: (_, __) =>
+                        separatorBuilder: (_, _) =>
                             const SizedBox(width: 8),
                         itemBuilder: (context, index) {
                           final status = _statusOptions[index];
@@ -236,7 +238,7 @@ class _CandidateApplicationsScreenState
                               onRefresh: _loadApplications,
                               child: ListView.separated(
                                 itemCount: _applications.length,
-                                separatorBuilder: (_, __) =>
+                                separatorBuilder: (_, _) =>
                                     const Divider(
                                         indent: 16, endIndent: 16),
                                 itemBuilder: (context, index) {
@@ -282,6 +284,7 @@ class _CandidateApplicationsScreenState
                                         builder: (_) =>
                                             _ApplicationDetailScreen(
                                           application: application,
+                                          auth: widget.auth,
                                           server: widget.server,
                                           token:
                                               widget.auth.user!.token,
@@ -462,11 +465,13 @@ class _ApplicationFiltersSheetState
 
 class _ApplicationDetailScreen extends StatefulWidget {
   final JobApplication application;
+  final Auth auth;
   final Server server;
   final String token;
 
   const _ApplicationDetailScreen({
     required this.application,
+    required this.auth,
     required this.server,
     required this.token,
   });
@@ -480,6 +485,7 @@ class _ApplicationDetailScreenState
     extends State<_ApplicationDetailScreen> {
   JobPosting? _job;
   bool _isLoading = true;
+  bool _isStartingInterview = false;
 
   @override
   void initState() {
@@ -524,6 +530,43 @@ class _ApplicationDetailScreenState
     );
   }
 
+  Future<void> _startMockInterview() async {
+    if (_isStartingInterview) return;
+
+    setState(() => _isStartingInterview = true);
+    try {
+      final service = InterviewService(
+        server: widget.server,
+        auth: widget.auth,
+      );
+      final session = await service.createSession(
+        jobPostingId: widget.application.job,
+        title: widget.application.jobTitle ?? _job?.title ?? '',
+      );
+      final fullSession = await service.fetchSession(session.id);
+
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AiChatScreen(
+            server: widget.server,
+            auth: widget.auth,
+            sessionId: fullSession.id,
+            sessionTitle: fullSession.displayTitle,
+            initialMessages: fullSession.messages,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to start mock interview: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isStartingInterview = false);
+    }
+  }
+
   Color _statusColor(BuildContext context, String status) {
     switch (status) {
       case 'accepted':
@@ -553,7 +596,7 @@ class _ApplicationDetailScreenState
                       horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color:
-                        _statusColor(context, status).withOpacity(0.1),
+                        _statusColor(context, status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: _statusColor(context, status)),
@@ -596,11 +639,11 @@ class _ApplicationDetailScreenState
                         Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.7),
+                            .withValues(alpha: 0.7),
                         Theme.of(context)
                             .colorScheme
                             .tertiary
-                            .withOpacity(0.7),
+                            .withValues(alpha: 0.7),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -609,7 +652,7 @@ class _ApplicationDetailScreenState
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: null,
+                      onTap: _isStartingInterview ? null : _startMockInterview,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
@@ -619,28 +662,27 @@ class _ApplicationDetailScreenState
                             const Icon(Icons.psychology_outlined,
                                 color: Colors.white),
                             const SizedBox(width: 12),
-                            const Text(
-                              'Mock AI Interview',
-                              style: TextStyle(
+                            Text(
+                              _isStartingInterview
+                                  ? 'Starting interview...'
+                                  : 'Mock AI Interview',
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(12),
+                            if (_isStartingInterview) ...[
+                              const SizedBox(width: 12),
+                              const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               ),
-                              child: const Text(
-                                'Soon',
-                                style: TextStyle(
-                                    color: Colors.white, fontSize: 12),
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
