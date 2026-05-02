@@ -14,11 +14,14 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('UserAvatar: avatarUrl=$avatarUrl, displayName=$displayName');
     if (avatarUrl != null) {
       return CircleAvatar(
         radius: radius,
         backgroundImage: NetworkImage(avatarUrl!),
-        onBackgroundImageError: (_, __) {},
+        onBackgroundImageError: (e, stack) {
+          debugPrint('UserAvatar image error: $e');
+        },
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       );
     }

@@ -124,7 +124,7 @@ class _MainScreenState extends State<MainScreen> {
                   child: InkWell(
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => ProfileScreen(auth: widget.auth)),
-                    ),
+                    ).then((_) => setState(() {})),
                     borderRadius: BorderRadius.circular(12),
                     child: Padding(
                       padding: const EdgeInsets.all(8),
@@ -328,7 +328,7 @@ class _MainScreenState extends State<MainScreen> {
             child: GestureDetector(
               onTap: () => Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => ProfileScreen(auth: widget.auth)),
-              ),
+              ).then((_) => setState(() {})),
               child: UserAvatar(
                 avatarUrl: user.avatarUrl,
                 displayName: user.fullName,

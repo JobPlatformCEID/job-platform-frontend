@@ -34,7 +34,16 @@ abstract class User {
     firstName = data['first_name'] as String? ?? '';
     lastName = data['last_name'] as String? ?? '';
     email = data['email'] as String? ?? '';
-    avatarUrl = data['avatar'] as String?;
+  
+    // Replace localhost with the actual server URL
+    final rawAvatar = data['avatar'] as String?;
+    if (rawAvatar != null) {
+      final serverHost = Uri.parse(server.getServerUrl()!).host;
+      //this is only for dev in prod localhost wont appear
+      avatarUrl = rawAvatar.replaceFirst('localhost', serverHost);
+    } else {
+      avatarUrl = null;
+    }
   }
 
   // Updates user info
