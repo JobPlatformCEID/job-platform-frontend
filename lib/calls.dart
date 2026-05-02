@@ -4,19 +4,21 @@ class CallRoom {
   final int id;
   final String roomName;
   final String description;
-  final String meetingDate;
+  final String? meetingDate;  // nullable , instant rooms have no date
   final int host;
   final String? hostUsername;
   final String createdAt;
+  final bool isParticipant;
 
   const CallRoom({
     required this.id,
     required this.roomName,
     required this.description,
-    required this.meetingDate,
+    this.meetingDate,
     required this.host,
     required this.hostUsername,
     required this.createdAt,
+    required this.isParticipant,
   });
 
   factory CallRoom.fromJson(Map<String, dynamic> json) {
@@ -24,10 +26,11 @@ class CallRoom {
       id: json['id'] as int,
       roomName: json['room_name'] as String,
       description: json['description'] as String? ?? '',
-      meetingDate: json['meeting_date'] as String,
+      meetingDate: json['meeting_date'] as String?,
       host: json['host'] as int,
       hostUsername: json['host_username'] as String?,
       createdAt: json['created_at'] as String,
+      isParticipant: json['is_participant'] as bool? ?? false,
     );
   }
 
@@ -41,12 +44,13 @@ class CallRoom {
     String token, {
     required String roomName,
     required String description,
-    required DateTime meetingDate,
+    DateTime? meetingDate,
   }) async {
     final data = await server.sendPost('/api/calls/', {
       'room_name': roomName,
       'description': description,
-      'meeting_date': meetingDate.toUtc().toIso8601String(),
+      if (meetingDate != null)
+        'meeting_date': meetingDate.toUtc().toIso8601String(),
     }, token: token);
     return CallRoom.fromJson(data);
   }
@@ -56,12 +60,13 @@ class CallRoom {
     String token, {
     required String roomName,
     required String description,
-    required DateTime meetingDate,
+    DateTime? meetingDate,  // nullable
   }) async {
     final data = await server.sendPut('/api/calls/$id/', {
       'room_name': roomName,
       'description': description,
-      'meeting_date': meetingDate.toUtc().toIso8601String(),
+      if (meetingDate != null)
+        'meeting_date': meetingDate.toUtc().toIso8601String(),
     }, token: token);
     return CallRoom.fromJson(data);
   }
@@ -75,8 +80,21 @@ class CallRoom {
     return CallToken.fromJson(data);
   }
 
+  Future<void> addParticipant(Server server, String token, {int? userId}) async {
+    await server.sendPost(
+      '/api/calls/$id/participants/',
+      userId != null ? {'user_id': userId} : {},
+      token: token,
+    );
+  }
+
+  Future<void> removeParticipant(Server server, String token) async {
+    await server.sendDelete('/api/calls/$id/participants/', token: token);
+  }
+
   String get formattedDate {
-    final date = DateTime.parse(meetingDate).toLocal();
+    if (meetingDate == null) return 'Instant call';
+    final date = DateTime.parse(meetingDate!).toLocal();
     return '${date.day}/${date.month}/${date.year} '
         '${date.hour.toString().padLeft(2, '0')}:'
         '${date.minute.toString().padLeft(2, '0')}';

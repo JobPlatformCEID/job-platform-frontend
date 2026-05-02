@@ -33,7 +33,7 @@ class _CallRoomScreenState extends State<CallRoomScreen> {
   bool _userLeaving = false;
   List<Participant> _participants = [];
   final List<CallMessage> _messages = [];
-  final List<Future<void> Function()> _unsubs = [];
+  final List<void Function()> _unsubs = [];
 
   @override
   void initState() {
@@ -556,7 +556,7 @@ class _ParticipantTile extends StatefulWidget {
 
 class _ParticipantTileState extends State<_ParticipantTile> {
   late ConnectionQuality _quality;
-  late final List<Future<void> Function()> _unsubs;
+  late final List<void Function()> _unsubs;
   bool _isSpeaking = false;
 
   @override

@@ -14,8 +14,8 @@ import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
 import 'ai_interviews_screen.dart';
 import '../widgets/user_avatar.dart';
-import 'calls_screen.dart';
 import 'stats_screen.dart';
+import 'calendar.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
@@ -181,13 +181,13 @@ Future<void> _loadUserData() async {
             ),
 
             ListTile(
-              leading: const Icon(Icons.video_call_outlined),
-              title: const Text('Calls'),
+              leading: const Icon(Icons.calendar_month_outlined),
+              title: const Text('Calendar'),
               onTap: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => CallsScreen(
+                    builder: (_) => CalendarScreen(
                       auth: widget.auth,
                       server: widget.server,
                     ),
