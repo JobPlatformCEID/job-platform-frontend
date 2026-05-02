@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:file_saver/file_saver.dart';
 import '../server.dart';
 import '../auth.dart';
 import 'cv_data.dart';
@@ -99,16 +98,10 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
           ? _cv.fullName.trim().replaceAll(' ', '_')
           : 'cv';
 
-      await FileSaver.instance.saveFile(
-        name: '${name}_cv',
-        bytes: bytes,
-        ext: 'pdf',
-        mimeType: MimeType.pdf,
-      );
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PDF saved to Downloads')),
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes,
+          name: '${name}_cv.pdf',
         );
       }
     } catch (e) {
@@ -433,7 +426,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
       );
 
 
-  // Opens a full-screen live preview (used on narrow screens).
+  /// Opens a full-screen live preview (used on narrow screens).
   void _openPreview() {
     Navigator.of(context).push(
       MaterialPageRoute(
