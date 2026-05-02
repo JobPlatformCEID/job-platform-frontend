@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import '../auth.dart';
 import '../server.dart';
 import '../post.dart';
+import '../theme/app_theme.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';
 
@@ -155,8 +156,8 @@ class _SocialScreenState extends State<SocialScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)));
+    if (_isLoading) return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppTheme.error)));
 
     final posts = _filteredPosts;
 

@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 import '../server.dart';
 import '../auth.dart';
+import '../theme/app_theme.dart';
 import 'build_profile_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -155,16 +156,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Text(
               'Set a username and password',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 32),
 
             TextField(
               controller: _usernameController,
               textInputAction: TextInputAction.next,
+              style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Username',
-                prefixIcon: Icon(Icons.person_outlined),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.person_outlined, color: AppTheme.textSecondary),
               ),
             ),
             const SizedBox(height: 16),
@@ -173,9 +179,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               controller: _passwordController,
               obscureText: true,
               textInputAction: TextInputAction.done,
+              style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Password',
-                prefixIcon: Icon(Icons.lock_outlined),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.lock_outlined, color: AppTheme.textSecondary),
               ),
             ),
             const SizedBox(height: 24),
@@ -203,8 +211,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (_error != null)
               Text(
                 _error!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
+                style: const TextStyle(
+                  color: AppTheme.error,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -212,7 +220,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             FilledButton(
               onPressed: _handleContinue,
-              child: const Text('Continue'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              child: const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -232,7 +246,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             Text(
               'Tell us your name and email',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -246,13 +263,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             radius: 48,
                             backgroundImage: MemoryImage(_avatarBytes!),
                           )
-                        : CircleAvatar(
-                            radius: 48,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            child: Icon(
+                        : Container(
+                            width: 96,
+                            height: 96,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
                               Icons.person_outline,
                               size: 48,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                              color: Colors.white,
                             ),
                           ),
                     Positioned(
@@ -260,8 +281,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       right: 0,
                       child: CircleAvatar(
                         radius: 16,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: Icon(Icons.camera_alt_outlined, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                        backgroundColor: AppTheme.primary,
+                        child: const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.white),
                       ),
                     ),
                   ],
@@ -273,9 +294,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextField(
               controller: _firstNameController,
               textInputAction: TextInputAction.next,
+              style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'First name',
-                prefixIcon: Icon(Icons.badge_outlined),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.badge_outlined, color: AppTheme.textSecondary),
               ),
             ),
             const SizedBox(height: 16),
@@ -283,9 +306,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
             TextField(
               controller: _lastNameController,
               textInputAction: TextInputAction.next,
+              style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Last name',
-                prefixIcon: Icon(Icons.badge_outlined),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.badge_outlined, color: AppTheme.textSecondary),
               ),
             ),
             const SizedBox(height: 16),
@@ -294,9 +319,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               controller: _emailController,
               textInputAction: TextInputAction.done,
               keyboardType: TextInputType.emailAddress,
+              style: const TextStyle(color: AppTheme.textPrimary),
               decoration: const InputDecoration(
                 labelText: 'Email',
-                prefixIcon: Icon(Icons.email_outlined),
+                labelStyle: TextStyle(color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.email_outlined, color: AppTheme.textSecondary),
               ),
             ),
             const SizedBox(height: 16),
@@ -304,8 +331,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             if (_error != null)
               Text(
                 _error!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
+                style: const TextStyle(
+                  color: AppTheme.error,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -313,13 +340,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             FilledButton(
               onPressed: _isLoading ? null : _handleCreateAccount,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
               child: _isLoading
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Create account'),
+                  : const Text('Create account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ],
         ),

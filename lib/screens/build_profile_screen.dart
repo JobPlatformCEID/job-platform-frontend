@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import '../server.dart';
 import '../auth.dart';
 import '../user.dart';
+import '../theme/app_theme.dart';
 import 'main_screen.dart';
 
 class BuildProfileScreen extends StatefulWidget {

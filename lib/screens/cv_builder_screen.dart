@@ -5,6 +5,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../server.dart';
 import '../auth.dart';
+import '../theme/app_theme.dart';
 import 'cv_data.dart';
 import 'cv_preview.dart';
 

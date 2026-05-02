@@ -4,6 +4,7 @@ import '../user.dart';
 import '../job.dart';
 import '../server.dart';
 import '../filtering.dart';
+import '../theme/app_theme.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';
 
@@ -85,6 +86,11 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     _loadJobs();
   }
 
+  void _clearFilter(JobPostingFilter updated) {
+    setState(() => _filter = updated);
+    _loadJobs();
+  }
+
   void _showContractTypeSheet() async {
     final selected = await showModalBottomSheet<String>(
       context: context,
@@ -121,15 +127,17 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     }
   }
 
-
   Widget _remoteChip() {
     final active = _filter.isRemote == true;
     return FilterChip(
-      label: const Text('Remote'),
+      label: const Text('Remote', style: TextStyle(fontSize: 13)),
       selected: active,
       avatar: active ? null : const Icon(Icons.wifi_outlined, size: 16),
-      onSelected: (_) =>
-          _applyFilter(_filter.copyWith(isRemote: active ? null : true)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
+      onSelected: (_) {
+        _applyFilter(_filter.copyWith(isRemote: active ? null : true));
+      },
     );
   }
 
@@ -137,12 +145,16 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     final active = _filter.contractType != null;
     return FilterChip(
       label: Text(
-          active ? _contractTypeLabel(_filter.contractType!) : 'Job type'),
+        active ? _contractTypeLabel(_filter.contractType!) : 'Job type',
+        style: const TextStyle(fontSize: 13),
+      ),
       selected: active,
       avatar: active ? null : const Icon(Icons.work_outline, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) => _showContractTypeSheet(),
       onDeleted: active
-          ? () => _applyFilter(_filter.copyWith(contractType: null))
+          ? () => _clearFilter(_filter.copyWith(contractType: null))
           : null,
     );
   }
@@ -151,13 +163,18 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     final active =
         _filter.location != null && _filter.location!.isNotEmpty;
     return FilterChip(
-      label: Text(active ? _filter.location! : 'Location'),
+      label: Text(
+        active ? _filter.location! : 'Location',
+        style: const TextStyle(fontSize: 13),
+      ),
       selected: active,
-      avatar:
-          active ? null : const Icon(Icons.location_on_outlined, size: 16),
+      avatar: active ? null : const Icon(Icons.location_on_outlined, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) => _showLocationSheet(),
-      onDeleted:
-          active ? () => _applyFilter(_filter.copyWith(location: null)) : null,
+      onDeleted: active
+          ? () => _clearFilter(_filter.copyWith(location: null))
+          : null,
     );
   }
 
@@ -174,13 +191,14 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       label = '≤ €${_filter.salaryMax}';
     }
     return FilterChip(
-      label: Text(label),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
       selected: active,
       avatar: active ? null : const Icon(Icons.euro_outlined, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) => _showSalarySheet(),
       onDeleted: active
-          ? () => _applyFilter(
-              _filter.copyWith(salaryMin: null, salaryMax: null))
+          ? () => _clearFilter(_filter.copyWith(salaryMin: null, salaryMax: null))
           : null,
     );
   }
@@ -191,13 +209,21 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
         ? (_filter.isActive == true ? 'Active' : 'Inactive')
         : 'Status';
     return FilterChip(
-      label: Text(label),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
       selected: active,
       avatar: active ? null : const Icon(Icons.toggle_on_outlined, size: 16),
-      onSelected: (_) => _showActiveSheet(),
-      onDeleted: active
-          ? () => _applyFilter(_filter.copyWith(isActive: null))
-          : null,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
+      onSelected: (_) {
+        if (!active) {
+          _applyFilter(_filter.copyWith(isActive: true));
+        } else if (_filter.isActive == true) {
+          _applyFilter(_filter.copyWith(isActive: false));
+        } else {
+          _clearFilter(_filter.copyWith(isActive: null));
+        }
+      },
+      onDeleted: active ? () => _clearFilter(_filter.copyWith(isActive: null)) : null,
     );
   }
 
@@ -447,19 +473,15 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: AppTheme.divider),
 
-            // job list
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
                   : _error != null
                       ? Center(
                           child: Text(_error!,
-                              style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .error)))
+                              style: const TextStyle(color: AppTheme.error)))
                       : _jobs.isEmpty
                           ? Center(
                               child: Text(
@@ -467,40 +489,41 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                                         _filter.isEmpty
                                     ? 'No job postings yet. Tap + to create one.'
                                     : 'No results for your current filters.',
+                                style: const TextStyle(color: AppTheme.textSecondary),
                               ),
                             )
                           : RefreshIndicator(
+                              color: AppTheme.primary,
                               onRefresh: _loadJobs,
                               child: ListView.separated(
-                                separatorBuilder: (_, __) =>
-                                    const Divider(
-                                        indent: 16, endIndent: 16),
+                                separatorBuilder: (_, __) => const Divider(
+                                    color: AppTheme.divider, indent: 16, endIndent: 16),
                                 itemCount: _jobs.length,
                                 itemBuilder: (context, index) {
                                   final job = _jobs[index];
                                   return ListTile(
                                     title: Row(
                                       children: [
-                                        Expanded(child: Text(job.title)),
+                                        Expanded(
+                                          child: Text(job.title,
+                                              style: const TextStyle(
+                                                  color: AppTheme.textPrimary,
+                                                  fontWeight: FontWeight.w600)),
+                                        ),
                                         if (!job.isActive)
                                           Container(
                                             padding: const EdgeInsets.symmetric(
                                                 horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error
-                                                  .withOpacity(0.15),
+                                              color: AppTheme.error.withValues(alpha: 0.15),
                                               borderRadius:
-                                                  BorderRadius.circular(4),
+                                                  BorderRadius.circular(AppTheme.radiusSmall),
                                             ),
-                                            child: Text(
+                                            child: const Text(
                                               'Inactive',
                                               style: TextStyle(
                                                 fontSize: 10,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .error,
+                                                color: AppTheme.error,
                                                 fontWeight: FontWeight.w600,
                                               ),
                                             ),
@@ -513,9 +536,9 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                                           job.location,
                                         if (job.isRemote) 'Remote',
                                       ].join(' · '),
+                                      style: const TextStyle(color: AppTheme.textSecondary),
                                     ),
-                                    trailing: const Icon(
-                                        Icons.chevron_right),
+                                    trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
                                     onTap: () =>
                                         _showApplicationsSheet(job),
                                     onLongPress: () =>
@@ -532,6 +555,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
           right: 16,
           child: FloatingActionButton(
             onPressed: _showCreateSheet,
+            backgroundColor: AppTheme.primary,
+            foregroundColor: Colors.white,
             child: const Icon(Icons.add),
           ),
         ),

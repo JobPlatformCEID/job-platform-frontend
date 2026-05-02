@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
 import '../ai_interview.dart';
+import '../theme/app_theme.dart';
 
 class AiChatScreen extends StatefulWidget {
   final Server server;
@@ -56,7 +57,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void _onEvent(ChatEvent event) {
     switch (event) {
       case ChatUserMessageConfirmed(:final message):
-        // swap the optimistic placeholder with the real one from the server
         setState(() {
           final idx = _messages.lastIndexWhere((m) => m.isUser);
           if (idx != -1) _messages[idx] = message;
@@ -93,7 +93,6 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final content = _controller.text.trim();
     if (content.isEmpty || _isSending || _isAiTyping) return;
 
-    // add it immediately so the UI feels instant
     final optimistic = Message(
       id: -1,
       role: 'user',
@@ -129,7 +128,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: const Color(0xFFda3633),
+        backgroundColor: AppTheme.error,
       ),
     );
   }
@@ -145,33 +144,81 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = screenWidth > 1024
+        ? ((screenWidth - 860) / 2).clamp(24.0, 120.0)
+        : 16.0;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0d1117),
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF161b22),
-        title: Text(
-          widget.sessionTitle,
-          style: const TextStyle(color: Color(0xFFc9d1d9)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 16)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'AI Assistant',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Online',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.success,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        iconTheme: const IconThemeData(color: Color(0xFFc9d1d9)),
+        centerTitle: true,
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: _messages.length + (_isAiTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) return const _TypingIndicator();
-                return _MessageBubble(message: _messages[index]);
-              },
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 860),
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 12),
+                  itemCount: _messages.length + (_isAiTyping ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _messages.length) return const _TypingIndicator();
+                    return _MessageBubble(message: _messages[index]);
+                  },
+                ),
+              ),
             ),
           ),
-          _InputBar(
-            controller: _controller,
-            onSend: _sendMessage,
-            enabled: !_isSending && !_isAiTyping,
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 860),
+              child: _InputBar(
+                controller: _controller,
+                onSend: _sendMessage,
+                enabled: !_isSending && !_isAiTyping,
+                isThinking: _isAiTyping,
+              ),
+            ),
           ),
         ],
       ),
@@ -195,7 +242,9 @@ class _MessageBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.78,
         ),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF1f6feb) : const Color(0xFF21262d),
+          color: isUser
+              ? AppTheme.primary.withValues(alpha: 0.2)
+              : AppTheme.surfaceAlt,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -203,9 +252,34 @@ class _MessageBubble extends StatelessWidget {
             bottomRight: Radius.circular(isUser ? 4 : 16),
           ),
         ),
-        child: Text(
-          message.content,
-          style: const TextStyle(color: Color(0xFFc9d1d9), fontSize: 15),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!isUser) ...[
+              Container(
+                width: 24,
+                height: 24,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 12)),
+                ),
+              ),
+            ],
+            Flexible(
+              child: Text(
+                message.content,
+                style: TextStyle(
+                  color: isUser ? AppTheme.primary : AppTheme.textPrimary,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -222,23 +296,35 @@ class _TypingIndicator extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: const BoxDecoration(
-          color: Color(0xFF21262d),
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceAlt,
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
             bottomRight: Radius.circular(16),
             bottomLeft: Radius.circular(4),
           ),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _Dot(delay: 0),
-            SizedBox(width: 4),
-            _Dot(delay: 200),
-            SizedBox(width: 4),
-            _Dot(delay: 400),
+            Container(
+              width: 24,
+              height: 24,
+              margin: const EdgeInsets.only(right: 8),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text('✦', style: TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+            ),
+            const _Dot(delay: 0),
+            const SizedBox(width: 4),
+            const _Dot(delay: 200),
+            const SizedBox(width: 4),
+            const _Dot(delay: 400),
           ],
         ),
       ),
@@ -281,68 +367,129 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _anim,
-      child: const CircleAvatar(radius: 4, backgroundColor: Color(0xFF58a6ff)),
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: const BoxDecoration(
+          color: AppTheme.primary,
+          shape: BoxShape.circle,
+        ),
+      ),
     );
   }
 }
 
-class _InputBar extends StatelessWidget {
+class _InputBar extends StatefulWidget {
   final TextEditingController controller;
   final VoidCallback onSend;
   final bool enabled;
+  final bool isThinking;
 
   const _InputBar({
     required this.controller,
     required this.onSend,
     required this.enabled,
+    required this.isThinking,
   });
 
   @override
+  State<_InputBar> createState() => _InputBarState();
+}
+
+class _InputBarState extends State<_InputBar> with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerCtrl;
+  late final Animation<double> _shimmerAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _shimmerAnim = Tween(begin: 0.0, end: 1.0).animate(_shimmerCtrl);
+  }
+
+  @override
+  void didUpdateWidget(covariant _InputBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isThinking && !oldWidget.isThinking) {
+      _shimmerCtrl.repeat(reverse: true);
+    } else if (!widget.isThinking && oldWidget.isThinking) {
+      _shimmerCtrl.stop();
+      _shimmerCtrl.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _shimmerCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF161b22),
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                enabled: enabled,
-                style: const TextStyle(color: Color(0xFFc9d1d9)),
-                maxLines: null,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  hintText: 'Type your answer…',
-                  hintStyle: const TextStyle(color: Color(0xFF6e7681)),
-                  filled: true,
-                  fillColor: const Color(0xFF0d1117),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
+    final borderColor = widget.isThinking
+        ? Color.lerp(AppTheme.primary, AppTheme.accent, _shimmerAnim.value) ?? AppTheme.cardBorder
+        : AppTheme.cardBorder;
+
+    return AnimatedBuilder(
+      animation: _shimmerAnim,
+      builder: (context, child) {
+        return Container(
+          color: AppTheme.surface,
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
+          child: SafeArea(
+            top: false,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: widget.controller,
+                    enabled: widget.enabled,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    maxLines: null,
+                    textInputAction: TextInputAction.newline,
+                    decoration: InputDecoration(
+                      hintText: 'Type your answer…',
+                      hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                      filled: true,
+                      fillColor: AppTheme.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: borderColor),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: AppTheme.primary, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: widget.enabled ? widget.onSend : null,
+                  icon: const Icon(Icons.send_rounded),
+                  color: AppTheme.primary,
+                  disabledColor: AppTheme.divider,
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppTheme.surfaceAlt,
+                    padding: const EdgeInsets.all(12),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: enabled ? onSend : null,
-              icon: const Icon(Icons.send_rounded),
-              color: const Color(0xFF58a6ff),
-              disabledColor: const Color(0xFF30363d),
-              style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFF21262d),
-                padding: const EdgeInsets.all(12),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

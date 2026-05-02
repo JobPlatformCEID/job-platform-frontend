@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/app_theme.dart';
 import 'cv_data.dart';
 
 class CvPreview extends StatelessWidget {

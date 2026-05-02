@@ -3,6 +3,7 @@ import '../server.dart';
 import '../auth.dart';
 import '../user.dart';
 import '../review.dart';
+import '../theme/app_theme.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';
 

@@ -4,6 +4,8 @@ import '../user.dart';
 import '../job.dart';
 import '../server.dart';
 import '../filtering.dart';
+import '../theme/app_theme.dart';
+import '../widgets/responsive_layout.dart';
 import 'job_detail_sheet.dart';
 import 'candidate_applications_screen.dart';
 
@@ -164,9 +166,11 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
   Widget _remoteChip() {
     final active = _filter.isRemote == true;
     return FilterChip(
-      label: const Text('Remote'),
+      label: const Text('Remote', style: TextStyle(fontSize: 13)),
       selected: active,
       avatar: active ? null : const Icon(Icons.wifi_outlined, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) {
         _applyFilter(_filter.copyWith(isRemote: active ? null : true));
       },
@@ -176,29 +180,32 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
   Widget _contractTypeChip() {
     final active = _filter.contractType != null;
     return FilterChip(
-      label:
-          Text(active ? _contractTypeLabel(_filter.contractType!) : 'Job type'),
+      label: Text(
+        active ? _contractTypeLabel(_filter.contractType!) : 'Job type',
+        style: const TextStyle(fontSize: 13),
+      ),
       selected: active,
-      avatar: active
-          ? null
-          : const Icon(Icons.work_outline, size: 16),
+      avatar: active ? null : const Icon(Icons.work_outline, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) => _showContractTypeSheet(),
       onDeleted: active
-          ? () => _clearFilter(
-              _filter.copyWith(contractType: null))
+          ? () => _clearFilter(_filter.copyWith(contractType: null))
           : null,
     );
   }
 
   Widget _locationChip() {
-    final active =
-        _filter.location != null && _filter.location!.isNotEmpty;
+    final active = _filter.location != null && _filter.location!.isNotEmpty;
     return FilterChip(
-      label: Text(active ? _filter.location! : 'Location'),
+      label: Text(
+        active ? _filter.location! : 'Location',
+        style: const TextStyle(fontSize: 13),
+      ),
       selected: active,
-      avatar: active
-          ? null
-          : const Icon(Icons.location_on_outlined, size: 16),
+      avatar: active ? null : const Icon(Icons.location_on_outlined, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) => _showLocationSheet(),
       onDeleted: active
           ? () => _clearFilter(_filter.copyWith(location: null))
@@ -219,13 +226,14 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
       label = '≤ €${_filter.salaryMax}';
     }
     return FilterChip(
-      label: Text(label),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
       selected: active,
       avatar: active ? null : const Icon(Icons.euro_outlined, size: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      visualDensity: VisualDensity.compact,
       onSelected: (_) => _showSalarySheet(),
       onDeleted: active
-          ? () => _clearFilter(
-              _filter.copyWith(salaryMin: null, salaryMax: null))
+          ? () => _clearFilter(_filter.copyWith(salaryMin: null, salaryMax: null))
           : null,
     );
   }
@@ -242,14 +250,12 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
 
     return Column(
       children: [
-        
         Container(
           height: 52,
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              // Applications shortcut
               ActionChip(
                 avatar: const Icon(Icons.assignment_outlined, size: 16),
                 label: const Text('My Applications'),
@@ -265,14 +271,13 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
                 },
               ),
               const SizedBox(width: 8),
-              // "All filters" clear button shown only when something is active
               if (activeFilterCount > 0) ...[
                 ActionChip(
                   avatar: const Icon(Icons.close, size: 16),
                   label: Text('Clear ($activeFilterCount)'),
                   onPressed: () {
                     _applyFilter(JobPostingFilter(
-                      title: _filter.title, // keep the search query
+                      title: _filter.title,
                     ));
                   },
                 ),
@@ -288,45 +293,37 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
             ],
           ),
         ),
-        const Divider(height: 1),
+        const Divider(height: 1, color: AppTheme.divider),
 
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
               : _error != null
                   ? Center(
                       child: Text(_error!,
-                          style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.error)))
+                          style: const TextStyle(color: AppTheme.error)))
                   : _jobs.isEmpty
                       ? Center(
                           child: Text(
                             widget.searchQuery.isEmpty && _filter.isEmpty
                                 ? 'No job postings available.'
                                 : 'No results for your current filters.',
+                            style: const TextStyle(color: AppTheme.textSecondary),
                           ),
                         )
                       : RefreshIndicator(
+                          color: AppTheme.primary,
                           onRefresh: _loadJobs,
                           child: ListView.separated(
-                            separatorBuilder: (_, __) =>
-                                const Divider(indent: 16, endIndent: 16),
+                            padding: const EdgeInsets.all(12),
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
                             itemCount: _jobs.length,
                             itemBuilder: (context, index) {
                               final job = _jobs[index];
-                              return ListTile(
-                                title: Text(job.title),
-                                subtitle: Text(
-                                  [
-                                    if (job.location.isNotEmpty)
-                                      job.location,
-                                    if (job.isRemote) 'Remote',
-                                  ].join(' · '),
-                                ),
-                                trailing:
-                                    const Icon(Icons.chevron_right),
+                              return _JobCard(
+                                job: job,
                                 onTap: () => _showJobDetails(job),
+                                onApply: () => _handleApply(job),
                               );
                             },
                           ),
@@ -527,6 +524,142 @@ class _SalarySheetState extends State<_SalarySheet> {
                   Navigator.of(context).pop((min: null, max: null)),
               child: const Text('Clear'),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+class _JobCard extends StatelessWidget {
+  final JobPosting job;
+  final VoidCallback onTap;
+  final VoidCallback onApply;
+
+  const _JobCard({required this.job, required this.onTap, required this.onApply});
+
+  String get _salaryText {
+    if (job.salaryMin == null && job.salaryMax == null) return '';
+    if (job.salaryMin != null && job.salaryMax != null) return '€${job.salaryMin}–€${job.salaryMax}';
+    if (job.salaryMin != null) return '≥€${job.salaryMin}';
+    return '≤€${job.salaryMax}';
+  }
+
+  String get _contractLabel => _contractTypeLabel(job.contractType);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: AppTheme.cardDecoration(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // TOP ROW: avatar + company name + timestamp
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: AppTheme.primary,
+                  child: Text(
+                    job.title.isNotEmpty ? job.title[0].toUpperCase() : '?',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Company #${job.employer}',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
+                  job.createdAt.substring(0, 10).split('-').reversed.join('/'),
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            // Job title
+            Text(
+              job.title,
+              style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 8),
+            // Pill tags
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                if (job.location.isNotEmpty)
+                  _PillTag(icon: Icons.location_on_outlined, text: job.location),
+                if (job.isRemote)
+                  const _PillTag(icon: Icons.wifi_outlined, text: 'Remote'),
+                _PillTag(icon: Icons.work_outline, text: _contractLabel),
+                if (_salaryText.isNotEmpty)
+                  _PillTag(icon: Icons.euro_outlined, text: _salaryText),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // BOTTOM ROW: Save + Apply
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.bookmark_outline, color: AppTheme.textSecondary, size: 20),
+                  onPressed: () {},
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 36,
+                  child: FilledButton(
+                    onPressed: onApply,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Apply', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PillTag extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _PillTag({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: AppTheme.pillTagDecoration(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppTheme.textSecondary),
+          const SizedBox(width: 4),
+          Text(text, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
         ],
       ),
     );

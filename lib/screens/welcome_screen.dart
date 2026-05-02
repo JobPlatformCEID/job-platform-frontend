@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
+import '../theme/app_theme.dart';
 import 'server_settings_screen.dart';
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -24,7 +25,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
             tooltip: 'Server Settings',
           ),
         ],
@@ -35,17 +36,30 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.work_outline,
-                size: 96,
-                color: Theme.of(context).colorScheme.primary,
+              Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.accent]),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+                ),
+                child: const Icon(Icons.work_outline, color: Colors.white, size: 48),
               ),
               const SizedBox(height: 24),
 
               Text(
                 'Welcome to the platform',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Find your dream job or hire top talent',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
               ),
               const SizedBox(height: 48),
 
@@ -62,7 +76,13 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  child: const Text('Login with username'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Login with username', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 12),
@@ -80,7 +100,13 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                     );
                   },
-                  child: const Text('Register a new account'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: const BorderSide(color: AppTheme.primary),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Register a new account', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],

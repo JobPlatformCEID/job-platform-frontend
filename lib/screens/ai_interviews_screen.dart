@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
 import '../ai_interview.dart';
+import '../theme/app_theme.dart';
 import 'ai_chat_screen.dart';
 
 class AiInterviewsScreen extends StatefulWidget {

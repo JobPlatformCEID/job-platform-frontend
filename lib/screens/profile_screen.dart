@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import '../auth.dart';
 import '../server.dart';
 import '../user.dart';
+import '../theme/app_theme.dart';
 import '../widgets/user_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -260,12 +261,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: _isEditing
                   ? _handleSave
                   : () => setState(() => _isEditing = true),
+              backgroundColor: _isEditing ? AppTheme.success : AppTheme.primary,
+              foregroundColor: Colors.white,
               child: Icon(_isEditing ? Icons.check : Icons.edit_outlined),
             ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : _error != null
-              ? Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)))
+              ? Center(child: Text(_error!, style: const TextStyle(color: AppTheme.error)))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
@@ -283,7 +286,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildHeader() {
     return Column(
       children: [
-        // Avatar
         Stack(
           children: [
             _pendingAvatarBytes != null
@@ -304,17 +306,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: _pickAvatar,
                   child: CircleAvatar(
                     radius: 16,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    child: Icon(Icons.camera_alt_outlined, size: 16, color: Theme.of(context).colorScheme.onPrimary),
+                    backgroundColor: AppTheme.primary,
+                    child: const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.white),
                   ),
                 ),
               ),
           ],
         ),
         const SizedBox(height: 16),
-        Chip(
-          label: Text(_isCandidate ? 'Candidate' : 'Employer'),
-          avatar: Icon(_isCandidate ? Icons.person_outline : Icons.business_outlined, size: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: AppTheme.pillTagDecoration(),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(_isCandidate ? Icons.person_outline : Icons.business_outlined, size: 14, color: AppTheme.textSecondary),
+              const SizedBox(width: 4),
+              Text(_isCandidate ? 'Candidate' : 'Employer', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         _buildInfoField(label: 'Username', value: _user.username),
@@ -326,7 +336,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _buildEditableField(label: 'Last name', controller: _lastNameController, icon: Icons.person_outline),
         const SizedBox(height: 8),
         _buildEditableField(label: 'Email', controller: _emailController, icon: Icons.email_outlined),
-        const Divider(height: 32),
+        const Divider(height: 32, color: AppTheme.divider),
       ],
     );
   }
@@ -661,9 +671,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       readOnly: true,
       maxLines: maxLines,
       controller: TextEditingController(text: value),
+      style: const TextStyle(color: AppTheme.textPrimary),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: icon != null ? Icon(icon) : null,
+        labelStyle: const TextStyle(color: AppTheme.textSecondary),
+        prefixIcon: icon != null ? Icon(icon, color: AppTheme.textSecondary) : null,
       ),
     );
   }
@@ -679,9 +691,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       readOnly: !_isEditing,
       maxLines: maxLines,
       controller: controller,
+      style: const TextStyle(color: AppTheme.textPrimary),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: icon != null ? Icon(icon) : null,
+        labelStyle: const TextStyle(color: AppTheme.textSecondary),
+        prefixIcon: icon != null ? Icon(icon, color: AppTheme.textSecondary) : null,
       ),
     );
   }

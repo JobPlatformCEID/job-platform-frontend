@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../auth.dart';
 import '../server.dart';
+import '../theme/app_theme.dart';
 import 'server_settings_screen.dart';
 import 'main_screen.dart';
 
@@ -77,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               );
             },
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, color: AppTheme.textSecondary),
             tooltip: 'Server Settings',
           ),
         ],
@@ -92,16 +93,21 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 'Log in with username',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineSmall,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 48),
 
               TextField(
                 controller: _usernameController,
                 textInputAction: TextInputAction.next,
+                style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
                   labelText: 'Username',
-                  prefixIcon: Icon(Icons.person_outlined),
+                  labelStyle: TextStyle(color: AppTheme.textSecondary),
+                  prefixIcon: Icon(Icons.person_outlined, color: AppTheme.textSecondary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -111,9 +117,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: true,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _handleLogin(),
+                style: const TextStyle(color: AppTheme.textPrimary),
                 decoration: const InputDecoration(
                   labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock_outlined),
+                  labelStyle: TextStyle(color: AppTheme.textSecondary),
+                  prefixIcon: Icon(Icons.lock_outlined, color: AppTheme.textSecondary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -121,8 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_error != null)
                 Text(
                   _error!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
+                  style: const TextStyle(
+                    color: AppTheme.error,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -130,13 +138,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
               FilledButton(
                 onPressed: _isLoading ? null : _handleLogin,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
                 child: _isLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Text('Log In'),
+                    : const Text('Log In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ],
           ),

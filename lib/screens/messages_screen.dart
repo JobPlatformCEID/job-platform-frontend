@@ -6,6 +6,7 @@ import '../server.dart';
 import '../conversation.dart';
 import '../calls.dart';
 import '../user.dart';
+import '../theme/app_theme.dart';
 import 'call_room_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -226,27 +227,50 @@ class _MessagesScreenState extends State<MessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.background,
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
+        backgroundColor: AppTheme.surface,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
         title: Text(
           widget.conversation.otherFullName ??
               widget.conversation.otherUsername ??
               'User #${widget.conversation.otherUserId}',
+          style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
         ),
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
       ),
       body: Column(
         children: [
           if (_error != null)
             Container(
-              color: Theme.of(context).colorScheme.errorContainer,
-              padding: const EdgeInsets.all(8),
-              child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              color: AppTheme.error.withAlpha(38),
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppTheme.error.withAlpha(38),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.error.withAlpha(77)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: AppTheme.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_error!, style: const TextStyle(color: AppTheme.error, fontSize: 13))),
+                ],
+              ),
             ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
                 : _messages.isEmpty
-                    ? const Center(child: Text('No messages yet. Say hello!'))
+                    ? Center(
+                        child: Text(
+                          'No messages yet. Say hello!',
+                          style: TextStyle(color: AppTheme.textSecondary),
+                        ),
+                      )
                     : ListView.builder(
                         controller: _scrollController,
                         padding: const EdgeInsets.all(16),
@@ -271,8 +295,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                   padding: const EdgeInsets.only(right: 8, bottom: 4),
                                   child: Text(
                                     'Seen',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 11,
                                     ),
                                   ),
                                 ),
@@ -282,11 +307,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       ),
           ),
           Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              border: Border(
-                top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-              ),
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              border: Border(top: BorderSide(color: AppTheme.divider)),
             ),
             child: SafeArea(
               child: Padding(
@@ -294,7 +317,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
+                      icon: const Icon(Icons.add_circle_outline, color: AppTheme.textSecondary),
                       onPressed: _showPlusSheet,
                     ),
                     Expanded(
@@ -302,26 +325,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         controller: _messageController,
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _sendMessage(),
+                        style: const TextStyle(color: AppTheme.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Type here',
+                          hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                          filled: true,
+                          fillColor: AppTheme.surfaceAlt,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                            borderSide: BorderSide.none,
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.send),
+                      icon: const Icon(Icons.send, color: AppTheme.primary),
                       onPressed: _sendMessage,
                     ),
                   ],
@@ -380,13 +399,9 @@ class _MessageBubble extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 4),
             constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
             decoration: BoxDecoration(
-              color: isOwn
-                  ? Theme.of(context).colorScheme.primaryContainer
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: AppTheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
-              ),
+              border: Border.all(color: AppTheme.cardBorder),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -395,7 +410,7 @@ class _MessageBubble extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 20,
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: AppTheme.primary,
                     child: const Icon(Icons.video_call, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 12),
@@ -407,15 +422,19 @@ class _MessageBubble extends StatelessWidget {
                           'Video call',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
-                        FilledButton.tonal(
+                        FilledButton(
                           onPressed: () => onJoinCall(roomId),
                           style: FilledButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
                           ),
                           child: const Text('Join'),
                         ),
@@ -441,8 +460,8 @@ class _MessageBubble extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
           decoration: BoxDecoration(
             color: isOwn
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.surfaceContainerHighest,
+                ? AppTheme.primary.withValues(alpha: 0.2)
+                : AppTheme.surfaceAlt,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
@@ -453,9 +472,7 @@ class _MessageBubble extends StatelessWidget {
           child: Text(
             message.content,
             style: TextStyle(
-              color: isOwn
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurface,
+              color: isOwn ? AppTheme.primary : AppTheme.textPrimary,
             ),
           ),
         ),

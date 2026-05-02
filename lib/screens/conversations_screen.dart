@@ -3,6 +3,7 @@ import '../auth.dart';
 import '../server.dart';
 import '../user.dart';
 import '../conversation.dart';
+import '../theme/app_theme.dart';
 import 'messages_screen.dart';
 import '../widgets/user_avatar.dart';
 import 'user_profile_sheet.dart';
@@ -76,7 +77,6 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         userId,
       );
       if (mounted) {
-        // Add to list if not already there
         final exists = _conversations.any((c) => c.id == conversation.id);
         if (!exists) setState(() => _conversations.insert(0, conversation));
         _openChat(conversation);
@@ -118,7 +118,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)));
+    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppTheme.error)));
 
     final conversations = _filteredConversations;
 
@@ -128,42 +128,99 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           Center(
             child: Text(
               widget.searchQuery.isEmpty ? 'No conversations yet.' : 'No results for "${widget.searchQuery}".',
+              style: const TextStyle(color: AppTheme.textSecondary),
             ),
           )
         else
           RefreshIndicator(
             onRefresh: _loadConversations,
+            color: AppTheme.primary,
             child: ListView.separated(
+              padding: const EdgeInsets.only(top: 8, bottom: 80),
               itemCount: conversations.length,
-              separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
+              separatorBuilder: (_, __) => const Divider(
+                color: AppTheme.divider,
+                indent: 76,
+                endIndent: 16,
+                height: 1,
+              ),
               itemBuilder: (context, index) {
                 final conversation = conversations[index];
-                return ListTile(
-                  leading: GestureDetector(
-                    onTap: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => UserProfileSheet(
-                        userId: conversation.otherUserId!,
-                        server: widget.server,
-                        token: widget.auth.user!.token,
-                      ),
-                    ),
-                    child: UserAvatar(
-                      avatarUrl: conversation.otherUserAvatar,
-                      displayName: conversation.otherUsername ?? '',
-                    ),
-                  ),
-                  title: Text(conversation.otherFullName ?? conversation.otherUsername ?? 'User #${conversation.otherUserId}'),
-                  subtitle: conversation.lastMessage != null
-                      ? Text(
-                          conversation.lastMessage!.content,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        )
-                      : const Text('No messages yet.'),
+                final name = conversation.otherFullName ?? conversation.otherUsername ?? 'User #${conversation.otherUserId}';
+                return InkWell(
                   onTap: () => _openChat(conversation),
                   onLongPress: () => _handleDelete(conversation),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            builder: (_) => UserProfileSheet(
+                              userId: conversation.otherUserId!,
+                              server: widget.server,
+                              token: widget.auth.user!.token,
+                            ),
+                          ),
+                          child: UserAvatar(
+                            avatarUrl: conversation.otherUserAvatar,
+                            displayName: conversation.otherUsername ?? '',
+                            radius: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      name,
+                                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: AppTheme.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (conversation.lastMessage != null)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.accent.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                                      ),
+                                      child: Text(
+                                        _formatTimestamp(conversation.lastMessage!.createdAt),
+                                        style: const TextStyle(
+                                          color: AppTheme.accent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                conversation.lastMessage?.content ?? 'No messages yet.',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 );
               },
             ),
@@ -174,11 +231,27 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
           child: FloatingActionButton(
             heroTag: 'new_conversation',
             onPressed: _showNewConversationDialog,
+            backgroundColor: AppTheme.primary,
+            foregroundColor: Colors.white,
             child: const Icon(Icons.add),
           ),
         ),
       ],
     );
+  }
+
+  String _formatTimestamp(String? iso) {
+    if (iso == null) return '';
+    try {
+      final dt = DateTime.parse(iso);
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inDays == 0) return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      if (diff.inDays < 7) return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][dt.weekday - 1];
+      return '${dt.day}/${dt.month}';
+    } catch (_) {
+      return '';
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import '../auth.dart';
 import '../server.dart';
 import '../job.dart';
 import '../filtering.dart';
+import '../theme/app_theme.dart';
 import 'job_detail_sheet.dart';
 import 'company_profile_sheet.dart';
 

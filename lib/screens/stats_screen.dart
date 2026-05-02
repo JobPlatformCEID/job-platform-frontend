@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../server.dart';
 import '../auth.dart';
+import '../theme/app_theme.dart';
 
 class StatsScreen extends StatefulWidget {
   final Server server;

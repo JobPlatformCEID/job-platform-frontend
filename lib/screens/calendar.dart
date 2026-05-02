@@ -3,24 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../auth.dart';
 import '../server.dart';
+import '../theme/app_theme.dart';
 import '../calls.dart';
 import 'call_room_screen.dart';
-
-const _ghBg = Color(0xFF0D1117);
-const _ghSurface = Color(0xFF161B22);
-const _ghSurfaceAlt = Color(0xFF21262D);
-const _ghBorder = Color(0xFF30363D);
-const _ghBorderMuted = Color(0xFF21262D);
-const _ghAccent = Color(0xFF58A6FF);
-const _ghAccentMuted = Color(0xFF1F3A5F);
-const _ghTextPrimary = Color(0xFFE6EDF3);
-const _ghTextSecondary = Color(0xFF8B949E);
-const _ghTextMuted = Color(0xFF484F58);
-const _ghPurple = Color(0xFFBC8CFF);
-const _ghPurpleMuted = Color(0xFF2D1F6E);
-const _ghGreen = Color(0xFF3FB950);
-const _ghRed = Color(0xFFF85149);
-const _ghShadow = Color(0xFF010409);
 
 int _getHashCode(DateTime key) =>
     key.day * 1000000 + key.month * 10000 + key.year;
@@ -125,10 +110,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Could not join call.', style: TextStyle(color: _ghTextPrimary)),
-            backgroundColor: _ghSurfaceAlt,
+            content: Text('Could not join call.', style: TextStyle(color: AppTheme.textPrimary)),
+            backgroundColor: AppTheme.surfaceAlt,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: _ghBorder)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppTheme.divider)),
           ),
         );
       }
@@ -138,18 +123,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _ghBg,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: _ghSurface,
+        backgroundColor: AppTheme.surface,
         surfaceTintColor: Colors.transparent,
-        foregroundColor: _ghTextPrimary,
-        iconTheme: const IconThemeData(color: _ghTextPrimary),
-        title: const Text('Meetings', style: TextStyle(color: _ghTextPrimary, fontWeight: FontWeight.w600)),
+        foregroundColor: AppTheme.textPrimary,
+        iconTheme: IconThemeData(color: AppTheme.textPrimary),
+        title: Text('Meetings', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
         centerTitle: true,
         elevation: 0,
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _ghBorder),
+          preferredSize: Size.fromHeight(1),
+          child: Container(height: 1, color: AppTheme.divider),
         ),
       ),
       body: _isLoading
@@ -158,8 +143,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ? _buildErrorState()
               : RefreshIndicator(
                   onRefresh: _loadRooms,
-                  color: _ghAccent,
-                  backgroundColor: _ghSurfaceAlt,
+                  color: AppTheme.primary,
+                  backgroundColor: AppTheme.surfaceAlt,
                   child: CustomScrollView(
                     slivers: [
                       SliverToBoxAdapter(
@@ -169,7 +154,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ),
                       ),
                       SliverToBoxAdapter(
-                        child: Container(height: 1, color: _ghBorder),
+                        child: Container(height: 1, color: AppTheme.divider),
                       ),
                       SliverPadding(
                         padding: const EdgeInsets.all(16),
@@ -186,13 +171,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(color: _ghAccent, strokeWidth: 2),
+          CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2),
           SizedBox(height: 16),
-          Text('Loading meetings...', style: TextStyle(color: _ghTextSecondary, fontSize: 14)),
+          Text('Loading meetings...', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
         ],
       ),
     );
@@ -201,25 +186,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildErrorState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, size: 48, color: _ghRed),
-            const SizedBox(height: 16),
+            Icon(Icons.error_outline, size: 48, color: AppTheme.error),
+            SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(color: _ghRed, fontSize: 16),
+              style: TextStyle(color: AppTheme.error, fontSize: 16),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: _loadRooms,
-              icon: const Icon(Icons.refresh, size: 18, color: _ghAccent),
-              label: const Text('Retry', style: TextStyle(color: _ghAccent)),
+              icon: Icon(Icons.refresh, size: 18, color: AppTheme.primary),
+              label: Text('Retry', style: TextStyle(color: AppTheme.primary)),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: _ghBorder),
-                backgroundColor: _ghSurfaceAlt,
+                side: BorderSide(color: AppTheme.divider),
+                backgroundColor: AppTheme.surfaceAlt,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
@@ -232,9 +217,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildCalendar() {
     return Container(
       decoration: BoxDecoration(
-        color: _ghSurface,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _ghBorder),
+        border: Border.all(color: AppTheme.divider),
       ),
       clipBehavior: Clip.antiAlias,
       child: TableCalendar<CallRoom>(
@@ -248,43 +233,43 @@ class _CalendarScreenState extends State<CalendarScreen> {
         onFormatChanged: (format) => setState(() => _calendarFormat = format),
         onPageChanged: (focusedDay) => _focusedDay = focusedDay,
         onDaySelected: _onDaySelected,
-        headerStyle: const HeaderStyle(
+        headerStyle: HeaderStyle(
           titleCentered: true,
-          titleTextStyle: TextStyle(color: _ghTextPrimary, fontWeight: FontWeight.w600, fontSize: 15),
+          titleTextStyle: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
           formatButtonVisible: true,
           formatButtonDecoration: BoxDecoration(
-            border: Border.fromBorderSide(BorderSide(color: _ghBorder)),
+            border: Border.fromBorderSide(BorderSide(color: AppTheme.divider)),
             borderRadius: BorderRadius.all(Radius.circular(6)),
-            color: _ghSurfaceAlt,
+            color: AppTheme.surfaceAlt,
           ),
-          formatButtonTextStyle: TextStyle(color: _ghTextSecondary, fontSize: 12),
-          leftChevronIcon: Icon(Icons.chevron_left, color: _ghTextSecondary),
-          rightChevronIcon: Icon(Icons.chevron_right, color: _ghTextSecondary),
+          formatButtonTextStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          leftChevronIcon: Icon(Icons.chevron_left, color: AppTheme.textSecondary),
+          rightChevronIcon: Icon(Icons.chevron_right, color: AppTheme.textSecondary),
           headerPadding: EdgeInsets.symmetric(vertical: 12),
         ),
         calendarStyle: CalendarStyle(
           todayDecoration: BoxDecoration(
-            color: _ghAccentMuted,
+            color: AppTheme.primaryDark.withValues(alpha: 0.3),
             shape: BoxShape.circle,
-            border: Border.all(color: _ghAccent, width: 1.5),
+            border: Border.all(color: AppTheme.primary, width: 1.5),
           ),
-          todayTextStyle: const TextStyle(color: _ghAccent, fontWeight: FontWeight.w600, fontSize: 13),
-          selectedDecoration: const BoxDecoration(color: _ghAccent, shape: BoxShape.circle),
-          selectedTextStyle: const TextStyle(color: Color(0xFF0D1117), fontWeight: FontWeight.w700, fontSize: 13),
-          markerDecoration: const BoxDecoration(color: _ghGreen, shape: BoxShape.circle),
+          todayTextStyle: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600, fontSize: 13),
+          selectedDecoration: BoxDecoration(color: AppTheme.primary, shape: BoxShape.circle),
+          selectedTextStyle: TextStyle(color: AppTheme.background, fontWeight: FontWeight.w700, fontSize: 13),
+          markerDecoration: BoxDecoration(color: AppTheme.success, shape: BoxShape.circle),
           markerSize: 6,
           markersMaxCount: 3,
           markersAnchor: 0.85,
           outsideDaysVisible: true,
-          outsideTextStyle: const TextStyle(color: _ghTextMuted, fontSize: 13),
-          defaultTextStyle: const TextStyle(color: _ghTextPrimary, fontSize: 13),
-          weekendTextStyle: const TextStyle(color: _ghTextPrimary, fontSize: 13),
-          cellMargin: const EdgeInsets.all(6),
+          outsideTextStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          defaultTextStyle: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+          weekendTextStyle: TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+          cellMargin: EdgeInsets.all(6),
         ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(color: _ghTextSecondary, fontWeight: FontWeight.w500, fontSize: 12),
-          weekendStyle: TextStyle(color: _ghTextSecondary, fontWeight: FontWeight.w500, fontSize: 12),
-          decoration: BoxDecoration(color: _ghSurfaceAlt),
+        daysOfWeekStyle: DaysOfWeekStyle(
+          weekdayStyle: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500, fontSize: 12),
+          weekendStyle: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500, fontSize: 12),
+          decoration: BoxDecoration(color: AppTheme.surfaceAlt),
         ),
       ),
     );
@@ -298,16 +283,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: _ghSurfaceAlt, shape: BoxShape.circle, border: Border.all(color: _ghBorder)),
-              child: const Icon(Icons.calendar_today_rounded, size: 36, color: _ghAccent),
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(color: AppTheme.surfaceAlt, shape: BoxShape.circle, border: Border.all(color: AppTheme.divider)),
+              child: Icon(Icons.calendar_today_rounded, size: 36, color: AppTheme.primary),
             ),
-            const SizedBox(height: 20),
-            const Text('Select a date', style: TextStyle(color: _ghTextPrimary, fontWeight: FontWeight.w600, fontSize: 18)),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 20),
+            Text('Select a date', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 18)),
+            SizedBox(height: 8),
+            Text(
               'Tap any day on the calendar to view\nscheduled meetings',
-              style: TextStyle(color: _ghTextSecondary, fontSize: 14),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -324,16 +309,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: _ghSurfaceAlt, shape: BoxShape.circle, border: Border.all(color: _ghBorder)),
-              child: const Icon(Icons.event_busy_rounded, size: 36, color: _ghTextSecondary),
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(color: AppTheme.surfaceAlt, shape: BoxShape.circle, border: Border.all(color: AppTheme.divider)),
+              child: Icon(Icons.event_busy_rounded, size: 36, color: AppTheme.textSecondary),
             ),
-            const SizedBox(height: 20),
-            const Text('No meetings scheduled', style: TextStyle(color: _ghTextPrimary, fontWeight: FontWeight.w600, fontSize: 18)),
-            const SizedBox(height: 8),
+            SizedBox(height: 20),
+            Text('No meetings scheduled', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 18)),
+            SizedBox(height: 8),
             Text(
               'There are no meetings on ${_selectedDay!.day}/${_selectedDay!.month}/${_selectedDay!.year}',
-              style: const TextStyle(color: _ghTextSecondary, fontSize: 14),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -374,20 +359,20 @@ class _MeetingCard extends StatelessWidget {
     final timeStr = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: _ghSurface,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _ghBorder),
-        boxShadow: const [BoxShadow(color: _ghShadow, blurRadius: 8, offset: Offset(0, 4))],
+        border: Border.all(color: AppTheme.divider),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 8, offset: Offset(0, 4))],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onJoin,
           borderRadius: BorderRadius.circular(12),
-          splashColor: _ghAccent.withOpacity(0.05),
-          highlightColor: _ghAccent.withOpacity(0.03),
+          splashColor: AppTheme.primary.withValues(alpha: 0.05),
+          highlightColor: AppTheme.primary.withValues(alpha: 0.03),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -398,11 +383,11 @@ class _MeetingCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: _ghAccentMuted,
+                        color: AppTheme.primaryDark.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _ghAccent.withOpacity(0.3)),
+                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
                       ),
-                      child: const Icon(Icons.video_call_rounded, color: _ghAccent, size: 20),
+                      child: Icon(Icons.video_call_rounded, color: AppTheme.primary, size: 20),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -411,24 +396,24 @@ class _MeetingCard extends StatelessWidget {
                         children: [
                           Text(
                             room.roomName,
-                            style: const TextStyle(color: _ghTextPrimary, fontWeight: FontWeight.w600, fontSize: 15),
+                            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 15),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.access_time_rounded, size: 13, color: _ghTextSecondary),
-                              const SizedBox(width: 4),
-                              Text(timeStr, style: const TextStyle(color: _ghTextSecondary, fontSize: 12)),
+                              Icon(Icons.access_time_rounded, size: 13, color: AppTheme.textSecondary),
+                              SizedBox(width: 4),
+                              Text(timeStr, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                               if (room.hostUsername != null) ...[
                                 const SizedBox(width: 10),
-                                const Icon(Icons.person_rounded, size: 13, color: _ghTextSecondary),
-                                const SizedBox(width: 4),
+                                Icon(Icons.person_rounded, size: 13, color: AppTheme.textSecondary),
+                                SizedBox(width: 4),
                                 Flexible(
                                   child: Text(
                                     'Host: ${room.hostUsername!}',
-                                    style: const TextStyle(color: _ghTextSecondary, fontSize: 12),
+                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -439,16 +424,16 @@ class _MeetingCard extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isHost ? _ghPurpleMuted : _ghSurfaceAlt,
+                        color: isHost ? AppTheme.accent.withValues(alpha: 0.15) : AppTheme.surfaceAlt,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: isHost ? _ghPurple.withOpacity(0.4) : _ghBorder),
+                        border: Border.all(color: isHost ? AppTheme.accent.withValues(alpha: 0.4) : AppTheme.divider),
                       ),
                       child: Text(
                         isHost ? 'Host' : 'You',
                         style: TextStyle(
-                          color: isHost ? _ghPurple : _ghTextSecondary,
+                          color: isHost ? AppTheme.accent : AppTheme.textSecondary,
                           fontWeight: FontWeight.w500,
                           fontSize: 11,
                         ),
@@ -459,15 +444,15 @@ class _MeetingCard extends StatelessWidget {
                 if (room.description.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: _ghBg,
+                      color: AppTheme.background,
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _ghBorderMuted),
+                      border: Border.all(color: AppTheme.cardBorder),
                     ),
                     child: Text(
                       room.description,
-                      style: const TextStyle(color: _ghTextSecondary, height: 1.5, fontSize: 13),
+                      style: TextStyle(color: AppTheme.textSecondary, height: 1.5, fontSize: 13),
                     ),
                   ),
                 ],
@@ -479,13 +464,13 @@ class _MeetingCard extends StatelessWidget {
                     icon: const Icon(Icons.play_arrow_rounded, size: 18, color: Color(0xFF0D1117)),
                     label: const Text(
                       'Join Meeting',
-                      style: TextStyle(color: Color(0xFF0D1117), fontWeight: FontWeight.w600, fontSize: 14),
+                      style: TextStyle(color: AppTheme.background, fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _ghAccent,
-                      foregroundColor: const Color(0xFF0D1117),
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: AppTheme.background,
                       elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      padding: EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   ),
