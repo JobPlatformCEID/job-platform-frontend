@@ -1,14 +1,15 @@
 // cv_builder_screen.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:path_provider/path_provider.dart';
 import '../server.dart';
 import '../auth.dart';
 import 'cv_data.dart';
 import 'cv_preview.dart';
+
+// Breakpoint below which the live preview panel is hidden
+const double _kPreviewBreakpoint = 700.0;
 
 class CvBuilderScreen extends StatefulWidget {
   final Server server;
@@ -54,16 +55,29 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
     }
   }
 
-  // PDF generation
+  // PDF generation & direct download (no share sheet)
   Future<void> _generateAndDownloadPdf() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isGenerating = true);
 
     try {
+      // Load Noto Sans — full Unicode coverage including Greek
+      final fontRegular = await PdfGoogleFonts.notoSansRegular();
+      final fontBold    = await PdfGoogleFonts.notoSansBold();
+      final fontItalic  = await PdfGoogleFonts.notoSansItalic();
+
+      // Build a theme so every pw.Text in every template inherits the font
+      final theme = pw.ThemeData.withFont(
+        base:   fontRegular,
+        bold:   fontBold,
+        italic: fontItalic,
+      );
+
       final pdf = pw.Document();
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
+          theme: theme,
           build: (pw.Context context) {
             switch (_cv.template) {
               case CvTemplate.modern:
@@ -80,27 +94,23 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
 
       final bytes = await pdf.save();
 
-      // Save to device
       final name = _cv.fullName.isNotEmpty
-        ? _cv.fullName.trim().replaceAll(' ', '_')
-        : 'cv';
-      final Directory dir = Platform.isAndroid
-        ? (await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory())
-        : await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/${name}_cv.pdf');
-      await file.writeAsBytes(bytes);
+          ? _cv.fullName.trim().replaceAll(' ', '_')
+          : 'cv';
 
-      // Share
       if (mounted) {
-        await Printing.sharePdf(bytes: bytes, filename: '${name}_cv.pdf');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saved to ${file.path}')),
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes,
+          name: '${name}_cv.pdf',
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate PDF: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Failed to generate PDF: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -416,17 +426,40 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
       );
 
 
+  /// Opens a full-screen live preview (used on narrow screens).
+  void _openPreview() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _FullScreenPreview(cv: _cv),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < _kPreviewBreakpoint;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text('CV Builder'),
         elevation: 0,
         actions: [
+          // On narrow screens show a "Preview" button
+          if (isNarrow)
+            TextButton.icon(
+              icon: const Icon(Icons.visibility_outlined, size: 18),
+              label: const Text('Preview'),
+              onPressed: _openPreview,
+            ),
           TextButton.icon(
             icon: _isGenerating
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.download_rounded, size: 18),
             label: const Text('Export PDF'),
             onPressed: _isGenerating ? null : _generateAndDownloadPdf,
@@ -434,12 +467,8 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Row(
-        children: [
-          // Left step-nav + form
-          SizedBox(
-            width: MediaQuery.of(context).size.width * 0.55,
-            child: Column(
+      body: isNarrow
+          ? Column(
               children: [
                 _buildStepBar(),
                 Expanded(
@@ -450,32 +479,62 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
                 ),
                 _buildNavButtons(),
               ],
-            ),
-          ),
-          // Live preview
-          Expanded(
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 12, offset: Offset(-4, 0))],
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    width: double.infinity,
-                    color: const Color(0xFFEEEEEE),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    child: const Center(
-                      child: Text('Live Preview', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF555555))),
+            )
+          : Row(
+              children: [
+                // Left: step-nav + form
+                SizedBox(
+                  width: screenWidth * 0.55,
+                  child: Column(
+                    children: [
+                      _buildStepBar(),
+                      Expanded(
+                        child: Form(
+                          key: _formKey,
+                          child: _buildCurrentStep(),
+                        ),
+                      ),
+                      _buildNavButtons(),
+                    ],
+                  ),
+                ),
+                // Right: live preview panel
+                Expanded(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x18000000),
+                          blurRadius: 12,
+                          offset: Offset(-4, 0),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          color: const Color(0xFFEEEEEE),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: const Center(
+                            child: Text(
+                              'Live Preview',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF555555),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(child: CvPreview(cv: _cv)),
+                      ],
                     ),
                   ),
-                  Expanded(child: CvPreview(cv: _cv)),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -922,6 +981,26 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
           ]),
         ]),
       ),
+    );
+  }
+}
+
+// Full-screen preview page (used on narrow / phone screens)
+class _FullScreenPreview extends StatelessWidget {
+  final CvData cv;
+  const _FullScreenPreview({required this.cv});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFEEEEEE),
+      appBar: AppBar(
+        title: const Text('Preview'),
+        elevation: 0,
+        // The default back button returns to the exact scroll position in the
+        // builder because the builder is still alive in the navigation stack.
+      ),
+      body: CvPreview(cv: cv),
     );
   }
 }
