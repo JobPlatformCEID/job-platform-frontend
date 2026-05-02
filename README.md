@@ -22,7 +22,7 @@ samples, guidance on mobile development, and a full API reference.
 - improve messages screen design (vortex3964)
 - improve ai_interview screen design (vortex3964)
 - improve ai session managment design screen (vortex3964)
-- fix layout for mobile and desktop (vortex3964)
+- profile imgs dont show up on phones(vortex3964)
 - optionaly improve how reviews appear (Vortex3964)
 - add the ability to delete a review (Vortex3964)
 - improve socials ui and posts ui (vortex3964)
