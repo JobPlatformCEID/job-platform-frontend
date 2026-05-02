@@ -7,7 +7,8 @@ class Server {
   final _log = Logger('Server');
   static const _storage = FlutterSecureStorage();
   static const _urlKey = 'server_url';
-  static const _timeout = Duration(seconds: 3);
+  static const _connectionTimeout = Duration(seconds: 3);
+  static const _requestTimeout = Duration(seconds: 30);
 
   String? _serverUrl;
 
@@ -47,7 +48,7 @@ class Server {
     try {
       final response = await http
           .get(Uri.parse('$_serverUrl/api/auth/login/'))
-          .timeout(_timeout);
+          .timeout(_connectionTimeout);
       return response.statusCode == 405;
     } catch (e) {
       _log.warning(e);
@@ -70,7 +71,7 @@ class Server {
 
     final response = await http
         .get(url, headers: _buildHeaders(token: token))
-        .timeout(_timeout);
+        .timeout(_requestTimeout);
     return _parseResponse(response);
   }
 
@@ -81,7 +82,7 @@ class Server {
 
     final response = await http
         .get(url, headers: _buildHeaders(token: token))
-        .timeout(_timeout);
+        .timeout(_requestTimeout);
 
     if (response.statusCode >= 400) {
       _log.warning('HTTP ${response.statusCode} on ${response.request?.url}');
@@ -98,7 +99,7 @@ class Server {
 
     final response = await http
         .post(url, headers: _buildHeaders(token: token), body: jsonEncode(body))
-        .timeout(_timeout);
+        .timeout(_requestTimeout);
     return _parseResponse(response);
   }
 
@@ -109,7 +110,7 @@ class Server {
 
     final response = await http
         .put(url, headers: _buildHeaders(token: token), body: jsonEncode(body))
-        .timeout(_timeout);
+        .timeout(_requestTimeout);
     return _parseResponse(response);
   }
 
@@ -120,7 +121,7 @@ class Server {
 
     final response = await http
         .patch(url, headers: _buildHeaders(token: token), body: jsonEncode(body))
-        .timeout(_timeout);
+        .timeout(_requestTimeout);
     return _parseResponse(response);
   }
 
@@ -131,7 +132,7 @@ class Server {
 
     final response = await http
         .delete(url, headers: _buildHeaders(token: token))
-        .timeout(_timeout);
+        .timeout(_requestTimeout);
     if (response.statusCode >= 400) {
       throw ServerException(response.statusCode, response.body);
     }

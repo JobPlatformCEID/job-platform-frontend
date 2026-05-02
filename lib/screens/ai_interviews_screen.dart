@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../server.dart';
 import '../auth.dart';
 import '../ai_interview.dart';
+import '../job.dart';
 import 'ai_chat_screen.dart';
 
 class AiInterviewsScreen extends StatefulWidget {
@@ -44,16 +45,19 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
   }
 
   Future<void> _createSession() async {
-    final result = await showDialog<Map<String, String>>(
+    final result = await showDialog<Map<String, Object?>>(
       context: context,
-      builder: (ctx) => const _CreateSessionDialog(),
+      builder: (ctx) => _CreateSessionDialog(
+        server: widget.server,
+        auth: widget.auth,
+      ),
     );
     if (result == null) return;
 
     try {
       final session = await _service.createSession(
-        jobRole: result['jobRole']!,
-        title: result['title'] ?? '',
+        jobPostingId: result['jobPostingId']! as int,
+        title: result['title'] as String? ?? '',
       );
       setState(() => _sessions.insert(0, session));
       _openChat(session);
@@ -185,7 +189,7 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
                     final s = _sessions[i];
                     return ListTile(
                       title: Text(s.displayTitle),
-                      subtitle: Text(s.jobRole),
+                      subtitle: Text(s.jobTitle),
                       trailing: PopupMenuButton<String>(
                         onSelected: (value) {
                           if (value == 'edit') _editTitle(s);
@@ -226,40 +230,133 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
 }
 
 class _CreateSessionDialog extends StatefulWidget {
-  const _CreateSessionDialog();
+  final Server server;
+  final Auth auth;
+
+  const _CreateSessionDialog({
+    required this.server,
+    required this.auth,
+  });
 
   @override
   State<_CreateSessionDialog> createState() => _CreateSessionDialogState();
 }
 
 class _CreateSessionDialogState extends State<_CreateSessionDialog> {
-  final _roleCtrl = TextEditingController();
+  final _jobIdCtrl = TextEditingController();
   final _titleCtrl = TextEditingController();
+  JobPosting? _preview;
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _loadPreview() async {
+    final id = int.tryParse(_jobIdCtrl.text.trim());
+    if (id == null) {
+      setState(() {
+        _preview = null;
+        _error = 'Enter a valid numeric job posting id.';
+      });
+      return;
+    }
+
+    final token = widget.auth.user?.token;
+    if (token == null) {
+      setState(() {
+        _preview = null;
+        _error = 'Not authenticated.';
+      });
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _preview = null;
+    });
+
+    try {
+      final posting = await JobPosting.fetchById(widget.server, token, id);
+      if (!mounted) return;
+      setState(() => _preview = posting);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Could not find job posting: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('New Session'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _roleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Job Role *',
-              hintText: 'e.g. Software Engineer',
-            ),
-            autofocus: true,
+      content: SizedBox(
+        width: 460,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _jobIdCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Job Posting ID *',
+                        hintText: 'e.g. 12',
+                      ),
+                      autofocus: true,
+                      onChanged: (_) {
+                        if (_preview != null || _error != null) {
+                          setState(() {
+                            _preview = null;
+                            _error = null;
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    onPressed: _loading ? null : _loadPreview,
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search),
+                    tooltip: 'Preview posting',
+                  ),
+                ],
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                ),
+              ],
+              if (_preview != null) ...[
+                const SizedBox(height: 12),
+                _JobPostingPreview(posting: _preview!),
+              ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: _titleCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Title (optional)',
+                  hintText: 'e.g. Senior Position',
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Title (optional)',
-              hintText: 'e.g. Senior Position',
-            ),
-          ),
-        ],
+        ),
       ),
       actions: [
         TextButton(
@@ -267,14 +364,14 @@ class _CreateSessionDialogState extends State<_CreateSessionDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () {
-            final role = _roleCtrl.text.trim();
-            if (role.isEmpty) return;
-            Navigator.pop(context, {
-              'jobRole': role,
-              'title': _titleCtrl.text.trim(),
-            });
-          },
+          onPressed: _preview == null
+              ? null
+              : () {
+                  Navigator.pop(context, {
+                    'jobPostingId': _preview!.id,
+                    'title': _titleCtrl.text.trim(),
+                  });
+                },
           child: const Text('Create'),
         ),
       ],
@@ -283,8 +380,50 @@ class _CreateSessionDialogState extends State<_CreateSessionDialog> {
 
   @override
   void dispose() {
-    _roleCtrl.dispose();
+    _jobIdCtrl.dispose();
     _titleCtrl.dispose();
     super.dispose();
+  }
+}
+
+class _JobPostingPreview extends StatelessWidget {
+  final JobPosting posting;
+
+  const _JobPostingPreview({required this.posting});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.dividerColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            posting.title,
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            posting.description,
+            maxLines: 4,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (posting.requirements.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              posting.requirements,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }
