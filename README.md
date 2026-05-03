@@ -34,5 +34,6 @@ samples, guidance on mobile development, and a full API reference.
 - improve job postings ui (Dimitris34)
 - improve job applications ui (Dimitris34)
 - improve company jobs ui (Dimitris34)
-- cv and stats and calendar i think its fine maybe change colors not sure (Dimitris34)
+- configure stats for phone screen now they get clumped (Dimitris34)
+- in stats in dark mode the icons get lost fix that (Dimitris34)
 - investigate redirection for logic from application to an ai session it did a few weird things but now its ok (Dimitris34)
