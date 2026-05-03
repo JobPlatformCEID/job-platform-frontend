@@ -114,20 +114,153 @@ class _CandidateApplicationsScreenState
     }
   }
 
-  IconData _statusIcon(String status) {
-    switch (status) {
-      case 'accepted':
-        return Icons.check_circle_outline;
-      case 'rejected':
-        return Icons.cancel_outlined;
-      default:
-        return Icons.hourglass_empty_outlined;
-    }
-  }
-
   String _selectedStatus() {
     if (_filter.status == null) return 'All';
     return _filter.status![0].toUpperCase() + _filter.status!.substring(1);
+  }
+
+  static String? _relativeTime(String iso) {
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return null;
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo';
+    return '${(diff.inDays / 365).floor()}y';
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final filtered = _filter.status != null || _extraFilterCount > 0;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              filtered ? Icons.search_off_outlined : Icons.inbox_outlined,
+              size: 64,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              filtered ? 'No matching applications' : 'No applications yet',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              filtered
+                  ? 'Try widening your filters.'
+                  : 'Apply to a job posting to see it here.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildApplicationCard(BuildContext context, JobApplication application) {
+    final cs = Theme.of(context).colorScheme;
+    final status = application.status;
+    final statusColor = _statusColor(context, status);
+    final statusLabel = status[0].toUpperCase() + status.substring(1);
+    final applied = _relativeTime(application.createdAt);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => _ApplicationDetailScreen(
+              application: application,
+              auth: widget.auth,
+              server: widget.server,
+              token: widget.auth.user!.token,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: cs.primary.withValues(alpha: 0.12),
+                child: Icon(Icons.assignment_outlined,
+                    color: cs.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            application.jobTitle ?? 'Job #${application.job}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            statusLabel,
+                            style: TextStyle(
+                              color: statusColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    DefaultTextStyle(
+                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        children: [
+                          if (application.companyName != null)
+                            _InlineMeta(
+                              icon: Icons.business_outlined,
+                              text: application.companyName!,
+                            ),
+                          if (applied != null)
+                            _InlineMeta(
+                              icon: Icons.schedule_outlined,
+                              text: 'Applied $applied ago',
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -232,67 +365,15 @@ class _CandidateApplicationsScreenState
 
                     Expanded(
                       child: _applications.isEmpty
-                          ? const Center(
-                              child: Text('No applications found.'))
+                          ? _buildEmptyState(context)
                           : RefreshIndicator(
                               onRefresh: _loadApplications,
-                              child: ListView.separated(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
                                 itemCount: _applications.length,
-                                separatorBuilder: (_, _) =>
-                                    const Divider(
-                                        indent: 16, endIndent: 16),
-                                itemBuilder: (context, index) {
-                                  final application =
-                                      _applications[index];
-                                  final status = application.status;
-                                  return ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer,
-                                      child: Icon(Icons.work_outline,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onPrimaryContainer),
-                                    ),
-                                    title: Text(application.jobTitle ??
-                                        'Job #${application.job}'),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (application.companyName !=
-                                            null)
-                                          Text(application.companyName!),
-                                        Text(
-                                          status[0].toUpperCase() +
-                                              status.substring(1),
-                                          style: TextStyle(
-                                              color: _statusColor(
-                                                  context, status)),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: Icon(
-                                      _statusIcon(status),
-                                      color:
-                                          _statusColor(context, status),
-                                    ),
-                                    onTap: () =>
-                                        Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            _ApplicationDetailScreen(
-                                          application: application,
-                                          auth: widget.auth,
-                                          server: widget.server,
-                                          token:
-                                              widget.auth.user!.token,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
+                                itemBuilder: (context, index) =>
+                                    _buildApplicationCard(
+                                        context, _applications[index]),
                               ),
                             ),
                     ),
@@ -461,7 +542,26 @@ class _ApplicationFiltersSheetState
   }
 }
 
-//Application detail screen 
+class _InlineMeta extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InlineMeta({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 3),
+        Text(text, style: TextStyle(fontSize: 12, color: color)),
+      ],
+    );
+  }
+}
+
+//Application detail screen
 
 class _ApplicationDetailScreen extends StatefulWidget {
   final JobApplication application;

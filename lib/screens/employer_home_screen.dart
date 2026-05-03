@@ -249,6 +249,174 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     );
   }
 
+  static String? _formatSalary(int? min, int? max) {
+    if (min == null && max == null) return null;
+    String fmt(int n) => '€${n.toString().replaceAllMapped(
+          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+          (m) => '${m[1]},',
+        )}';
+    if (min != null && max != null) return '${fmt(min)} – ${fmt(max)}';
+    if (min != null) return '≥ ${fmt(min)}';
+    return '≤ ${fmt(max!)}';
+  }
+
+  static String? _relativeTime(String iso) {
+    final dt = DateTime.tryParse(iso);
+    if (dt == null) return null;
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w';
+    if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo';
+    return '${(diff.inDays / 365).floor()}y';
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final filtered = !(widget.searchQuery.isEmpty && _filter.isEmpty);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              filtered ? Icons.search_off_outlined : Icons.work_off_outlined,
+              size: 64,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              filtered ? 'No matching postings' : 'No job postings yet',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              filtered
+                  ? 'Try widening your filters or search.'
+                  : 'Tap the + button to create your first posting.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJobCard(BuildContext context, JobPosting job) {
+    final cs = Theme.of(context).colorScheme;
+    final salaryLabel = _formatSalary(job.salaryMin, job.salaryMax);
+    final posted = _relativeTime(job.createdAt);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _showApplicationsSheet(job),
+        onLongPress: () => _showLongPressMenu(job),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: cs.primary.withValues(alpha: 0.12),
+                child: Icon(Icons.work_outline, color: cs.primary, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.only(right: 6, top: 2),
+                          decoration: BoxDecoration(
+                            color: job.isActive ? Colors.green : cs.onSurfaceVariant.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            job.title,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (posted != null)
+                          Text(
+                            posted,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    DefaultTextStyle(
+                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                      child: Wrap(
+                        spacing: 10,
+                        runSpacing: 4,
+                        children: [
+                          if (job.location.isNotEmpty)
+                            _InlineMeta(
+                              icon: Icons.location_on_outlined,
+                              text: job.location,
+                            ),
+                          if (job.isRemote)
+                            const _InlineMeta(
+                              icon: Icons.wifi_outlined,
+                              text: 'Remote',
+                            ),
+                          _InlineMeta(
+                            icon: Icons.work_history_outlined,
+                            text: _contractTypeLabel(job.contractType),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (salaryLabel != null) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          salaryLabel,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: cs.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _handleCreate(Map<String, dynamic> fields) async {
     try {
       final newJob = await JobPosting.create(
@@ -461,67 +629,15 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                                       .colorScheme
                                       .error)))
                       : _jobs.isEmpty
-                          ? Center(
-                              child: Text(
-                                widget.searchQuery.isEmpty &&
-                                        _filter.isEmpty
-                                    ? 'No job postings yet. Tap + to create one.'
-                                    : 'No results for your current filters.',
-                              ),
-                            )
+                          ? _buildEmptyState(context)
                           : RefreshIndicator(
                               onRefresh: _loadJobs,
-                              child: ListView.separated(
-                                separatorBuilder: (_, __) =>
-                                    const Divider(
-                                        indent: 16, endIndent: 16),
+                              child: ListView.builder(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                                 itemCount: _jobs.length,
-                                itemBuilder: (context, index) {
-                                  final job = _jobs[index];
-                                  return ListTile(
-                                    title: Row(
-                                      children: [
-                                        Expanded(child: Text(job.title)),
-                                        if (!job.isActive)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error
-                                                  .withOpacity(0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              'Inactive',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .error,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    subtitle: Text(
-                                      [
-                                        if (job.location.isNotEmpty)
-                                          job.location,
-                                        if (job.isRemote) 'Remote',
-                                      ].join(' · '),
-                                    ),
-                                    trailing: const Icon(
-                                        Icons.chevron_right),
-                                    onTap: () =>
-                                        _showApplicationsSheet(job),
-                                    onLongPress: () =>
-                                        _showLongPressMenu(job),
-                                  );
-                                },
+                                itemBuilder: (context, index) =>
+                                    _buildJobCard(context, _jobs[index]),
                               ),
                             ),
             ),
@@ -540,6 +656,25 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
   }
 }
 
+
+class _InlineMeta extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _InlineMeta({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 3),
+        Text(text, style: TextStyle(fontSize: 12, color: color)),
+      ],
+    );
+  }
+}
 
 class _ContractTypeSheet extends StatelessWidget {
   final String? current;
