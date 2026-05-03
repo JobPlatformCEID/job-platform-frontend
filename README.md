@@ -18,11 +18,6 @@ samples, guidance on mobile development, and a full API reference.
 
 ## TODO 
 
-### vortex3964
-- bug : in socials images wont display again probably same issue with profiles (vortex3964)
-- Curently there is no way to delete a call from the db (vortex3964)
-- sometimes words get cutoff on filters (vortex3964)
-
 ### Dimitris34
 - improve job postings ui (Dimitris34)
 - improve job applications ui (Dimitris34)
