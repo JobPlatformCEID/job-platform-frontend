@@ -130,9 +130,10 @@ class _StatsScreenState extends State<StatsScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: Theme.of(context).primaryColor,
-          unselectedLabelColor: Colors.grey.shade600,
-          indicatorColor: Theme.of(context).primaryColor,
+          // Use green so icons/labels are visible in both light and dark mode
+          labelColor: Colors.green,
+          unselectedLabelColor: Colors.green.shade300,
+          indicatorColor: Colors.green,
           tabs: const [
             Tab(icon: Icon(Icons.attach_money), text: 'Compensation'),
             Tab(icon: Icon(Icons.work), text: 'Job Market'),
@@ -221,7 +222,11 @@ class _StatsScreenState extends State<StatsScreen>
   Widget _buildCompensationTab() {
     return RefreshIndicator(
       onRefresh: _loadStats,
+      // primary: true ensures the scroll view is treated as the primary
+      // scrollable so vertical overscroll / pull-to-refresh works correctly
+      // on small screens.
       child: ListView(
+        primary: true,
         padding: const EdgeInsets.all(16),
         children: [
           if (_shouldShowChart('salaryDistribution'))
@@ -236,6 +241,7 @@ class _StatsScreenState extends State<StatsScreen>
               ),
               data: _salaryDistribution,
               height: 320,
+              minChartWidth: _salaryDistribution.length * 70.0,
             ),
           if (_shouldShowChart('avgSalaryByTitle'))
             _buildChartCard(
@@ -273,6 +279,7 @@ class _StatsScreenState extends State<StatsScreen>
     return RefreshIndicator(
       onRefresh: _loadStats,
       child: ListView(
+        primary: true,
         padding: const EdgeInsets.all(16),
         children: [
           if (_shouldShowChart('jobsByTitle'))
@@ -287,6 +294,7 @@ class _StatsScreenState extends State<StatsScreen>
               ),
               data: _jobsByTitle,
               height: 340,
+              minChartWidth: _jobsByTitle.take(8).length * 80.0,
             ),
           if (_shouldShowChart('topCompanies'))
             _buildChartCard(
@@ -300,6 +308,7 @@ class _StatsScreenState extends State<StatsScreen>
               ),
               data: _topCompanies,
               height: 340,
+              minChartWidth: _topCompanies.take(8).length * 80.0,
             ),
           if (_shouldShowChart('mostCompetitive'))
             _buildSimpleListCard(
@@ -317,6 +326,7 @@ class _StatsScreenState extends State<StatsScreen>
     return RefreshIndicator(
       onRefresh: _loadStats,
       child: ListView(
+        primary: true,
         padding: const EdgeInsets.all(16),
         children: [
           if (_shouldShowChart('topSkills'))
@@ -331,6 +341,7 @@ class _StatsScreenState extends State<StatsScreen>
               ),
               data: _topSkills,
               height: 340,
+              minChartWidth: _topSkills.take(8).length * 80.0,
             ),
           if (_shouldShowChart('candidatesByEducation'))
             _buildChartCard(
@@ -354,42 +365,33 @@ class _StatsScreenState extends State<StatsScreen>
     return RefreshIndicator(
       onRefresh: _loadStats,
       child: ListView(
+        primary: true,
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              if (_shouldShowChart('remoteVsOnsite'))
-                Expanded(
-                  child: _buildChartCard(
-                    title: 'Remote vs On-site',
-                    subtitle: 'Work location distribution',
-                    chart: () => _buildDonutChartWithLegend(
-                      _remoteVsOnsite,
-                      'type',
-                      [Colors.green, Colors.orange],
-                    ),
-                    data: _remoteVsOnsite,
-                    height: 280,
-                  ),
-                ),
-              if (_shouldShowChart('jobsByContract')) ...[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildChartCard(
-                    title: 'Contract Types',
-                    subtitle: 'Employment agreement breakdown',
-                    chart: () => _buildDonutChartWithLegend(
-                      _jobsByContract,
-                      'contract_type',
-                      [Colors.indigo, Colors.amber, Colors.red, Colors.teal],
-                    ),
-                    data: _jobsByContract,
-                    height: 280,
-                  ),
-                ),
-              ],
-            ],
-          ),
+          if (_shouldShowChart('remoteVsOnsite'))
+            _buildChartCard(
+              title: 'Remote vs On-site',
+              subtitle: 'Work location distribution',
+              chart: () => _buildDonutChartWithLegend(
+                _remoteVsOnsite,
+                'type',
+                [Colors.green, Colors.orange],
+              ),
+              data: _remoteVsOnsite,
+              height: 280,
+            ),
+          if (_shouldShowChart('jobsByContract'))
+            _buildChartCard(
+              title: 'Contract Types',
+              subtitle: 'Employment agreement breakdown',
+              chart: () => _buildDonutChartWithLegend(
+                _jobsByContract,
+                'contract_type',
+                [Colors.indigo, Colors.amber, Colors.red, Colors.teal],
+              ),
+              data: _jobsByContract,
+              height: 280,
+            ),
           const SizedBox(height: 16),
         ],
       ),
@@ -400,6 +402,7 @@ class _StatsScreenState extends State<StatsScreen>
     return RefreshIndicator(
       onRefresh: _loadStats,
       child: ListView(
+        primary: true,
         padding: const EdgeInsets.all(16),
         children: [
           if (_activeFilter.isEmpty)
@@ -428,6 +431,7 @@ class _StatsScreenState extends State<StatsScreen>
               chart: _buildLineChart,
               data: _jobsOverTime,
               height: 300,
+              minChartWidth: _jobsOverTime.length * 50.0,
             ),
           const SizedBox(height: 16),
         ],
@@ -472,6 +476,7 @@ class _StatsScreenState extends State<StatsScreen>
     required Widget Function() chart,
     required List<dynamic> data,
     required double height,
+    double? minChartWidth,
   }) {
     if (data.isEmpty) {
       return Card(
@@ -526,7 +531,26 @@ class _StatsScreenState extends State<StatsScreen>
               ),
             ],
             const SizedBox(height: 12),
-            SizedBox(height: height, child: chart()),
+            SizedBox(
+              height: height,
+              child: minChartWidth != null
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        final available = constraints.maxWidth;
+                        if (available < minChartWidth) {
+                          return SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: minChartWidth,
+                              child: chart(),
+                            ),
+                          );
+                        }
+                        return chart();
+                      },
+                    )
+                  : chart(),
+            ),
           ],
         ),
       ),
@@ -628,6 +652,14 @@ class _StatsScreenState extends State<StatsScreen>
     );
   }
 
+  String _wrapWords(String label, {int maxChars = 10}) {
+    // If already short enough, return as-is
+    if (label.length <= maxChars) return label;
+    // Split on whitespace and join with newlines
+    final words = label.split(RegExp(r'\s+'));
+    return words.join('\n');
+  }
+
   Widget _buildHorizontalBarChartWithBottomLabels(
     List<dynamic> data,
     String labelKey,
@@ -639,7 +671,7 @@ class _StatsScreenState extends State<StatsScreen>
     final values =
         items.map((e) => (e[valueKey] as num).toDouble()).toList();
     final maxValue = values.isEmpty ? 1 : values.reduce((a, b) => a > b ? a : b);
-    final safeMax = (maxValue > 0 ? maxValue * 1.15 : 10.0).toDouble();
+    final safeMax = (maxValue > 0 ? maxValue * 1.25 : 10.0).toDouble();
 
     return BarChart(
       BarChartData(
@@ -657,6 +689,7 @@ class _StatsScreenState extends State<StatsScreen>
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             tooltipPadding: const EdgeInsets.all(10),
+            fitInsideVertically: true,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               final idx = group.x.toInt();
               if (idx < 0 || idx >= items.length) return null;
@@ -675,20 +708,23 @@ class _StatsScreenState extends State<StatsScreen>
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 50,
+              //Increase reservedSize to accommodate multi-line labels
+              reservedSize: 64,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 if (index < 0 || index >= items.length) return const SizedBox();
                 final item = items[index];
                 final label = item[labelKey]?.toString() ?? '';
-                final displayLabel =
-                    label.length > 12 ? '${label.substring(0, 12)}...' : label;
+                //Use word-wrapped multi-line label
+                final displayLabel = _wrapWords(label);
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   child: Text(
                     displayLabel,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
                     textAlign: TextAlign.center,
+                    // Allow natural multi-line wrapping
+                    softWrap: true,
                   ),
                 );
               },
@@ -729,7 +765,7 @@ class _StatsScreenState extends State<StatsScreen>
     final counts =
         data.map((e) => (e[valueKey] as num).toDouble()).toList();
     final maxValue = counts.isEmpty ? 1 : counts.reduce((a, b) => a > b ? a : b);
-    final safeMax = (maxValue > 0 ? maxValue * 1.15 : 10.0).toDouble();
+    final safeMax = (maxValue > 0 ? maxValue * 1.25 : 10.0).toDouble();
 
     return BarChart(
       BarChartData(
@@ -753,6 +789,7 @@ class _StatsScreenState extends State<StatsScreen>
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             tooltipPadding: const EdgeInsets.all(10),
+            fitInsideVertically: true,
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               final idx = group.x.toInt();
               if (idx < 0 || idx >= data.length) return null;
@@ -768,16 +805,13 @@ class _StatsScreenState extends State<StatsScreen>
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 60,
+              reservedSize: 72,
               getTitlesWidget: (value, meta) {
                 final index = value.toInt();
                 if (index < 0 || index >= data.length) return const SizedBox();
                 final item = data[index];
                 final label = item[labelKey]?.toString() ?? '';
-                final parts = label.split(RegExp(r'[-\s]'));
-                final displayLabel = parts.length > 2
-                    ? '${parts[0]}\n${parts.skip(1).join(' ')}'
-                    : label;
+                final displayLabel = _formatRangeLabel(label);
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   space: 6,
@@ -785,6 +819,7 @@ class _StatsScreenState extends State<StatsScreen>
                     displayLabel,
                     style: const TextStyle(fontSize: 10),
                     textAlign: TextAlign.center,
+                    softWrap: true,
                   ),
                 );
               },
@@ -831,6 +866,24 @@ class _StatsScreenState extends State<StatsScreen>
         }).toList(),
       ),
     );
+  }
+
+  // FIX: Formats a label for the salary range axis.
+  // "1000-2000"  →  "1000\nto\n2000"
+  // "30000-50000" →  "30000\nto\n50000"
+  // Plain words  →  one word per line via _wrapWords
+  String _formatRangeLabel(String label) {
+    // Match patterns like "1000-2000" or "1,000 - 2,000"
+    final rangeRegex = RegExp(r'^([\d,]+)\s*[-–]\s*([\d,]+)(.*)$');
+    final match = rangeRegex.firstMatch(label);
+    if (match != null) {
+      final low = match.group(1) ?? '';
+      final high = match.group(2) ?? '';
+      final suffix = match.group(3)?.trim() ?? '';
+      return suffix.isNotEmpty ? '$low\nto\n$high\n$suffix' : '$low\nto\n$high';
+    }
+    // For non-range labels, wrap words
+    return _wrapWords(label);
   }
 
   Widget _buildDonutChartWithLegend(
@@ -1043,22 +1096,51 @@ class _StatsScreenState extends State<StatsScreen>
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Text(
                       label,
                       style: const TextStyle(
                           fontWeight: FontWeight.w500, fontSize: 13),
-                      overflow: TextOverflow.ellipsis,
+                      // FIX: Allow multi-line wrap instead of ellipsis
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
-                  Text(
-                    '€${avgMin.toInt()} - €${avgMax.toInt()}',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
-                    ),
+                  const SizedBox(width: 8),
+                  // FIX: Display salary range as stacked lines to prevent
+                  // long numbers overflowing on narrow screens:
+                  //   €1000
+                  //   to
+                  //   €2000
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '€${avgMin.toInt()}',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        'to',
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 11,
+                        ),
+                      ),
+                      Text(
+                        '€${avgMax.toInt()}',
+                        style: TextStyle(
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
