@@ -164,34 +164,36 @@ class _SocialScreenState extends State<SocialScreen> {
       children: [
         RefreshIndicator(
           onRefresh: _loadPosts,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: ListView.builder(
-                padding: const EdgeInsets.only(top: 8, bottom: 88),
-                itemCount: posts.length + 1,
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    return _PostComposerStub(
-                      user: widget.auth.user!,
-                      onTap: _showCreateSheet,
-                    );
-                  }
-                  if (posts.isEmpty) {
-                    return _buildEmptyState(context);
-                  }
-                  final post = posts[index - 1];
-                  return _PostCard(
-                    post: post,
-                    server: widget.server,
-                    token: widget.auth.user!.token,
-                    onTap: () => _showPostDetail(post),
-                    onLike: () => _toggleLike(post),
-                    onComment: () => _showComments(post),
-                  );
-                },
-              ),
-            ),
+          child: ListView.builder(
+            padding: const EdgeInsets.only(top: 8, bottom: 88),
+            itemCount: posts.length + 1,
+            itemBuilder: (context, index) {
+              Widget child;
+              if (index == 0) {
+                child = _PostComposerStub(
+                  user: widget.auth.user!,
+                  onTap: _showCreateSheet,
+                );
+              } else if (posts.isEmpty) {
+                child = _buildEmptyState(context);
+              } else {
+                final post = posts[index - 1];
+                child = _PostCard(
+                  post: post,
+                  server: widget.server,
+                  token: widget.auth.user!.token,
+                  onTap: () => _showPostDetail(post),
+                  onLike: () => _toggleLike(post),
+                  onComment: () => _showComments(post),
+                );
+              }
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: child,
+                ),
+              );
+            },
           ),
         ),
         if (posts.isEmpty)
