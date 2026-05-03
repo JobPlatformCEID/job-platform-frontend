@@ -19,10 +19,6 @@ samples, guidance on mobile development, and a full API reference.
 ## TODO 
 
 ### vortex3964
-- improve messages screen design (vortex3964)
-- improve ai_interview screen design (vortex3964)
-- improve ai session managment design screen (vortex3964)
-- optionaly improve how reviews appears (dont know if its worth it) (Vortex3964)
 - improve socials ui and posts ui (vortex3964)
 - improve profile ui (vortex3964)
 - improve company profile ui (vortex3964)
