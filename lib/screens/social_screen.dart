@@ -497,7 +497,7 @@ class _PostImages extends StatelessWidget {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: AspectRatio(
-          aspectRatio: 16 / 9,
+          aspectRatio: 16 / 6,
           child: _img(context, images[0].imageUrl),
         ),
       );
@@ -506,7 +506,7 @@ class _PostImages extends StatelessWidget {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: AspectRatio(
-          aspectRatio: 16 / 9,
+          aspectRatio: 16 / 6,
           child: Row(
             children: [
               Expanded(child: _img(context, images[0].imageUrl)),
@@ -522,7 +522,7 @@ class _PostImages extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: AspectRatio(
-        aspectRatio: 16 / 9,
+        aspectRatio: 16 / 6,
         child: Row(
           children: [
             Expanded(flex: 2, child: _img(context, images[0].imageUrl)),
