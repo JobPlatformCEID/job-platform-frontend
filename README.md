@@ -15,12 +15,3 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
-
-## TODO 
-
-### Dimitris34
-- improve job postings ui (Dimitris34)
-- improve job applications ui (Dimitris34)
-- improve company jobs ui (Dimitris34)
-- investigate redirection for logic from application to an ai session it did a few weird things but now its ok (Dimitris34)
-- improve socials ui and posts ui (Dimitris34)
