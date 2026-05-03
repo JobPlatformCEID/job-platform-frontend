@@ -496,9 +496,18 @@ class _PostImages extends StatelessWidget {
     if (images.length == 1) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: AspectRatio(
-          aspectRatio: 16 / 6,
-          child: _img(context, images[0].imageUrl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 600),
+          child: Image.network(
+            images[0].imageUrl,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              height: 200,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Icon(Icons.broken_image_outlined),
+            ),
+          ),
         ),
       );
     }
@@ -506,7 +515,7 @@ class _PostImages extends StatelessWidget {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: AspectRatio(
-          aspectRatio: 16 / 6,
+          aspectRatio: 1,
           child: Row(
             children: [
               Expanded(child: _img(context, images[0].imageUrl)),
@@ -522,7 +531,7 @@ class _PostImages extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: AspectRatio(
-        aspectRatio: 16 / 6,
+        aspectRatio: 1,
         child: Row(
           children: [
             Expanded(flex: 2, child: _img(context, images[0].imageUrl)),
