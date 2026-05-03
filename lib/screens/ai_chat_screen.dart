@@ -312,7 +312,8 @@ class _InputBar extends StatelessWidget {
                 enabled: enabled,
                 style: const TextStyle(color: Color(0xFFc9d1d9)),
                 maxLines: null,
-                textInputAction: TextInputAction.newline,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => onSend(),
                 decoration: InputDecoration(
                   hintText: 'Type your answer…',
                   hintStyle: const TextStyle(color: Color(0xFF6e7681)),

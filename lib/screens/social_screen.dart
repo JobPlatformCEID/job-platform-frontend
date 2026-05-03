@@ -162,20 +162,23 @@ class _SocialScreenState extends State<SocialScreen> {
 
     return Stack(
       children: [
-        if (posts.isEmpty)
-          Center(
-            child: Text(
-              widget.searchQuery.isEmpty ? 'No posts yet.' : 'No results for "${widget.searchQuery}".',
-            ),
-          )
-        else
-          RefreshIndicator(
-            onRefresh: _loadPosts,
-            child: ListView.builder(
-              itemCount: posts.length,
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return _PostCard(
+        RefreshIndicator(
+          onRefresh: _loadPosts,
+          child: ListView.builder(
+            padding: const EdgeInsets.only(top: 8, bottom: 88),
+            itemCount: posts.length + 1,
+            itemBuilder: (context, index) {
+              Widget child;
+              if (index == 0) {
+                child = _PostComposerStub(
+                  user: widget.auth.user!,
+                  onTap: _showCreateSheet,
+                );
+              } else if (posts.isEmpty) {
+                child = _buildEmptyState(context);
+              } else {
+                final post = posts[index - 1];
+                child = _PostCard(
                   post: post,
                   server: widget.server,
                   token: widget.auth.user!.token,
@@ -183,8 +186,20 @@ class _SocialScreenState extends State<SocialScreen> {
                   onLike: () => _toggleLike(post),
                   onComment: () => _showComments(post),
                 );
-              },
-            ),
+              }
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: child,
+                ),
+              );
+            },
+          ),
+        ),
+        if (posts.isEmpty)
+          Positioned.fill(
+            top: 88,
+            child: IgnorePointer(child: _buildEmptyState(context)),
           ),
         Positioned(
           bottom: 16,
@@ -196,6 +211,99 @@ class _SocialScreenState extends State<SocialScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final filtered = widget.searchQuery.isNotEmpty;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              filtered ? Icons.search_off_outlined : Icons.dynamic_feed_outlined,
+              size: 64,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              filtered ? 'No results for "${widget.searchQuery}"' : 'No posts yet',
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              filtered
+                  ? 'Try a different search.'
+                  : 'Be the first to share something with the community.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String? _relativeTime(String iso) {
+  final dt = DateTime.tryParse(iso);
+  if (dt == null) return null;
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 1) return 'now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+  if (diff.inHours < 24) return '${diff.inHours}h';
+  if (diff.inDays < 7) return '${diff.inDays}d';
+  if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w';
+  if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo';
+  return '${(diff.inDays / 365).floor()}y';
+}
+
+class _PostComposerStub extends StatelessWidget {
+  final dynamic user;
+  final VoidCallback onTap;
+  const _PostComposerStub({required this.user, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              UserAvatar(
+                avatarUrl: user.avatarUrl,
+                displayName: user.fullName,
+                radius: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    "What's on your mind?",
+                    style: TextStyle(color: cs.onSurfaceVariant),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.image_outlined, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -217,100 +325,266 @@ class _PostCard extends StatelessWidget {
     required this.onComment,
   });
 
+  void _openProfile(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => UserProfileSheet(
+        userId: post.user,
+        server: server,
+        token: token,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final time = _relativeTime(post.createdAt);
+    final edited = post.updatedAt != post.createdAt;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (_) => UserProfileSheet(
-                        userId: post.user,
-                        server: server,
-                        token: token,
+              InkWell(
+                borderRadius: BorderRadius.circular(8),
+                onTap: () => _openProfile(context),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      UserAvatar(
+                        avatarUrl: post.avatar,
+                        displayName: post.fullName,
+                        radius: 20,
                       ),
-                    ),
-                    child: UserAvatar(
-                      avatarUrl: post.avatar,
-                      displayName: post.fullName,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(post.fullName, style: Theme.of(context).textTheme.titleSmall),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Content
-              Text(post.content, style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 12),
-
-              // Post images small view
-              if (post.images.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 72,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: post.images.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          post.images[index].imageUrl,
-                          width: 72,
-                          height: 72,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 72,
-                            height: 72,
-                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              post.fullName,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (time != null)
+                              Row(
+                                children: [
+                                  Text(
+                                    time,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  if (edited) ...[
+                                    Text(
+                                      ' · edited',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                          ],
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
                 ),
+              ),
+              const SizedBox(height: 10),
+
+              if (post.content.isNotEmpty)
+                Text(
+                  post.content,
+                  style: const TextStyle(fontSize: 15, height: 1.35),
+                  maxLines: 8,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+              if (post.images.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _PostImages(images: post.images),
               ],
 
-              // Actions
+              const SizedBox(height: 4),
               Row(
                 children: [
-                IconButton(
-                  onPressed: onLike,
-                  icon: Icon(
-                    post.isLikedByMe ? Icons.favorite : Icons.favorite_border,
-                    color: post.isLikedByMe ? Colors.red : null,
+                  _PostAction(
+                    icon: post.isLikedByMe
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    iconColor: post.isLikedByMe ? Colors.red : cs.onSurfaceVariant,
+                    label: '${post.likesCount}',
+                    onTap: onLike,
                   ),
-                  iconSize: 20,
-                ),
-                  Text('${post.likesCount}', style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(width: 16),
-                  IconButton(
-                    onPressed: onComment,
-                    icon: const Icon(Icons.comment_outlined),
-                    iconSize: 20,
+                  const SizedBox(width: 4),
+                  _PostAction(
+                    icon: Icons.mode_comment_outlined,
+                    iconColor: cs.onSurfaceVariant,
+                    label: '${post.commentsCount}',
+                    onTap: onComment,
                   ),
-                  Text('${post.commentsCount}', style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _PostAction extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final VoidCallback onTap;
+
+  const _PostAction({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              transitionBuilder: (child, anim) =>
+                  ScaleTransition(scale: anim, child: child),
+              child: Icon(icon, key: ValueKey(icon), size: 20, color: iconColor),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PostImages extends StatelessWidget {
+  final List<PostImage> images;
+  const _PostImages({required this.images});
+
+  @override
+  Widget build(BuildContext context) {
+    if (images.length == 1) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 600),
+          child: Image.network(
+            images[0].imageUrl,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            errorBuilder: (_, _, _) => Container(
+              height: 200,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Icon(Icons.broken_image_outlined),
+            ),
+          ),
+        ),
+      );
+    }
+    if (images.length == 2) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Row(
+            children: [
+              Expanded(child: _img(context, images[0].imageUrl)),
+              const SizedBox(width: 2),
+              Expanded(child: _img(context, images[1].imageUrl)),
+            ],
+          ),
+        ),
+      );
+    }
+    // 3+ images: 1 large left + up to 2 stacked right
+    final extra = images.length - 3;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: Row(
+          children: [
+            Expanded(flex: 2, child: _img(context, images[0].imageUrl)),
+            const SizedBox(width: 2),
+            Expanded(
+              child: Column(
+                children: [
+                  Expanded(child: _img(context, images[1].imageUrl)),
+                  const SizedBox(height: 2),
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _img(context, images[2].imageUrl),
+                        if (extra > 0)
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.55),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '+$extra',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _img(BuildContext context, String url) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => Container(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: const Icon(Icons.broken_image_outlined),
       ),
     );
   }
