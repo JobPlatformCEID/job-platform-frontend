@@ -22,11 +22,11 @@ samples, guidance on mobile development, and a full API reference.
 - improve messages screen design (vortex3964)
 - improve ai_interview screen design (vortex3964)
 - improve ai session managment design screen (vortex3964)
-- optionaly improve how reviews appear (Vortex3964)
-- add the ability to delete a review (Vortex3964)
+- optionaly improve how reviews appears (dont know if its worth it) (Vortex3964)
 - improve socials ui and posts ui (vortex3964)
 - improve profile ui (vortex3964)
 - improve company profile ui (vortex3964)
+- bug : in socials images wont display again probably same issue with profiles (vortex3964)
 
 ### Dimitris34
 - login ui improvement (Dimitris34)

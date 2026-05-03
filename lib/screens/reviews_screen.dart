@@ -18,6 +18,7 @@ class ReviewsScreen extends StatefulWidget {
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
   List<Map<String, dynamic>> _employers = [];
+  Map<int, String?> _employerAvatars = {}; // employer ID -> avatar URL
   bool _isLoading = true;
   String? _error;
 
@@ -32,6 +33,16 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         .toList();
   }
 
+  // Fetch user avatar from /api/users/<id>/
+  Future<String?> _fetchUserAvatar(int userId) async {
+    try {
+      final data = await widget.server.sendGet('/api/users/$userId/', token: widget.auth.user!.token);
+      return data['avatar'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -41,10 +52,22 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   Future<void> _loadEmployers() async {
     try {
       final employers = await fetchEmployersList(widget.server, widget.auth.user!.token);
-      if (mounted) setState(() {
-        _employers = employers;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _employers = employers;
+          _isLoading = false;
+        });
+        // Load owner avatars in parallel
+        for (final employer in employers) {
+          final employerId = employer['id'] as int;
+          final userId = employer['user'] as int?;
+          if (userId != null) {
+            _fetchUserAvatar(userId).then((avatar) {
+              if (mounted) setState(() => _employerAvatars[employerId] = avatar);
+            });
+          }
+        }
+      }
     } catch (e) {
       if (mounted) setState(() {
         _isLoading = false;
@@ -110,18 +133,27 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 separatorBuilder: (_, __) => const Divider(indent: 16, endIndent: 16),
                 itemBuilder: (context, index) {
                   final employer = employers[index];
-                  return ListTile(
-                    // TODO: What should this avatar show? Maybe a photo of the company?
-                    leading: CircleAvatar(
-                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(Icons.business_outlined, color: Theme.of(context).colorScheme.onPrimaryContainer),
+                  final employerId = employer['id'] as int;
+                  final avatarUrl = _employerAvatars[employerId];
+                  final userId = employer['user'] as int?;
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                        backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                        child: avatarUrl == null
+                            ? Icon(Icons.business_outlined, color: Theme.of(context).colorScheme.onPrimaryContainer)
+                            : null,
+                      ),
+                      title: Text(employer['company_name'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: (employer['location'] as String?)?.isNotEmpty == true
+                          ? Text(employer['location'] as String)
+                          : null,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _showReviews(employer),
                     ),
-                    title: Text(employer['company_name'] as String? ?? ''),
-                    subtitle: (employer['location'] as String?)?.isNotEmpty == true
-                        ? Text(employer['location'] as String)
-                        : null,
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _showReviews(employer),
                   );
                 },
               ),
