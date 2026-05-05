@@ -18,7 +18,6 @@ class ReviewsScreen extends StatefulWidget {
 
 class _ReviewsScreenState extends State<ReviewsScreen> {
   List<Map<String, dynamic>> _employers = [];
-  Map<int, String?> _employerAvatars = {}; // employer ID -> avatar URL
   bool _isLoading = true;
   String? _error;
 
@@ -33,16 +32,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         .toList();
   }
 
-  // Fetch user avatar from /api/users/<id>/
-  Future<String?> _fetchUserAvatar(int userId) async {
-    try {
-      final data = await widget.server.sendGet('/api/users/$userId/', token: widget.auth.user!.token);
-      return data['avatar'] as String?;
-    } catch (_) {
-      return null;
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -50,31 +39,21 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   }
 
   Future<void> _loadEmployers() async {
-    try {
-      final employers = await fetchEmployersList(widget.server, widget.auth.user!.token);
-      if (mounted) {
-        setState(() {
-          _employers = employers;
-          _isLoading = false;
-        });
-        // Load owner avatars in parallel
-        for (final employer in employers) {
-          final employerId = employer['id'] as int;
-          final userId = employer['user'] as int?;
-          if (userId != null) {
-            _fetchUserAvatar(userId).then((avatar) {
-              if (mounted) setState(() => _employerAvatars[employerId] = avatar);
-            });
-          }
+      try {
+        final employers = await fetchEmployersList(widget.server, widget.auth.user!.token);
+        if (mounted) {
+          setState(() {
+            _employers = employers;
+            _isLoading = false;
+          });
         }
+      } catch (e) {
+        if (mounted) setState(() {
+          _isLoading = false;
+          _error = 'Could not load employers.';
+        });
       }
-    } catch (e) {
-      if (mounted) setState(() {
-        _isLoading = false;
-        _error = 'Could not load employers.';
-      });
     }
-  }
 
   void _showReviews(Map<String, dynamic> employer) {
     showModalBottomSheet(
@@ -134,7 +113,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 itemBuilder: (context, index) {
                   final employer = employers[index];
                   final employerId = employer['id'] as int;
-                  final avatarUrl = _employerAvatars[employerId];
+                  final avatarUrl = employer['avatar'] as String?;
                   final userId = employer['user'] as int?;
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
