@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../server.dart';
+import '../server_api/server.dart';
 
 class CompanyProfileSheet extends StatefulWidget {
   final int profileId;

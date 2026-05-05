@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../auth.dart';
-import '../server.dart';
+import '../server_api/auth.dart';
+import '../server_api/server.dart';
 import 'server_settings_screen.dart';
 import 'main_screen.dart';
 

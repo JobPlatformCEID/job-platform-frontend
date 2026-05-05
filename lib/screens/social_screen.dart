@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
-import '../auth.dart';
-import '../server.dart';
-import '../post.dart';
+import '../server_api/auth.dart';
+import '../server_api/server.dart';
+import '../server_api/post.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';
 

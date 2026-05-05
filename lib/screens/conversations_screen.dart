@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../auth.dart';
-import '../server.dart';
-import '../user.dart';
-import '../conversation.dart';
+import '../server_api/auth.dart';
+import '../server_api/server.dart';
+import '../server_api/user.dart';
+import '../server_api/conversation.dart';
 import 'messages_screen.dart';
 import '../widgets/user_avatar.dart';
 import 'user_profile_sheet.dart';

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
-import '../server.dart';
-import '../auth.dart';
-import '../user.dart';
+import '../server_api/server.dart';
+import '../server_api/auth.dart';
+import '../server_api/user.dart';
 import 'main_screen.dart';
 
 class BuildProfileScreen extends StatefulWidget {

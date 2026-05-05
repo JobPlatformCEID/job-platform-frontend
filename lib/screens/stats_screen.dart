@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../server.dart';
-import '../auth.dart';
+import '../server_api/server.dart';
+import '../server_api/auth.dart';
 
 class StatsScreen extends StatefulWidget {
   final Server server;

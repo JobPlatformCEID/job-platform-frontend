@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../server.dart';
-import '../auth.dart';
+import '../server_api/server.dart';
+import '../server_api/auth.dart';
 import 'cv_data.dart';
 import 'cv_preview.dart';
 

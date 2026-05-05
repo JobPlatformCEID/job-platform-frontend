@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../job.dart';
+import '../server_api/job.dart';
 
 class JobDetailSheet extends StatelessWidget {
   final JobPosting job;

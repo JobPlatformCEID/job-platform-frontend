@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
-import '../calls.dart';
+import '../server_api/calls.dart';
 
 class CallRoomScreen extends StatefulWidget {
   final String token;

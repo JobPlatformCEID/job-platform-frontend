@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../server.dart';
-import '../auth.dart';
-import '../ai_interview.dart';
-import '../job.dart';
+import '../server_api/server.dart';
+import '../server_api/auth.dart';
+import '../server_api/ai_interview.dart';
+import '../server_api/job.dart';
 import 'ai_chat_screen.dart';
 
 class AiInterviewsScreen extends StatefulWidget {

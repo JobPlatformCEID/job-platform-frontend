@@ -3,9 +3,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:typed_data';
-import '../auth.dart';
-import '../server.dart';
-import '../user.dart';
+import '../server_api/auth.dart';
+import '../server_api/server.dart';
+import '../server_api/user.dart';
 import '../widgets/user_avatar.dart';
 
 class ProfileScreen extends StatefulWidget {

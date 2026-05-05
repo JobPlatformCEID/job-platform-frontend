@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../auth.dart';
-import '../server.dart';
-import '../job.dart';
-import '../filtering.dart';
-import '../ai_interview.dart';
+import '../server_api/auth.dart';
+import '../server_api/server.dart';
+import '../server_api/job.dart';
+import '../server_api/filtering.dart';
+import '../server_api/ai_interview.dart';
 import 'ai_chat_screen.dart';
 import 'job_detail_sheet.dart';
 import 'company_profile_sheet.dart';

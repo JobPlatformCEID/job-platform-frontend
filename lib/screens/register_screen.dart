@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
-import '../server.dart';
-import '../auth.dart';
+import '../server_api/server.dart';
+import '../server_api/auth.dart';
 import 'build_profile_screen.dart';
 
 class RegisterScreen extends StatefulWidget {

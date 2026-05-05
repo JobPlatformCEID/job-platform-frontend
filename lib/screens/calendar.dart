@@ -1,9 +1,9 @@
 import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../auth.dart';
-import '../server.dart';
-import '../calls.dart';
+import '../server_api/auth.dart';
+import '../server_api/server.dart';
+import '../server_api/calls.dart';
 import 'call_room_screen.dart';
 
 const _ghBg = Color(0xFF0D1117);

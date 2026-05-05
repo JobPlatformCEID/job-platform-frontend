@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../auth.dart';
-import '../user.dart';
-import '../job.dart';
-import '../server.dart';
-import '../filtering.dart';
+import '../server_api/auth.dart';
+import '../server_api/user.dart';
+import '../server_api/job.dart';
+import '../server_api/server.dart';
+import '../server_api/filtering.dart';
 import 'job_detail_sheet.dart';
 import 'candidate_applications_screen.dart';
 

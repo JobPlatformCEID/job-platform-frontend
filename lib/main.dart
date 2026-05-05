@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'theme/app_theme.dart';
-import 'server.dart';
-import 'auth.dart';
+import 'server_api/server.dart';
+import 'server_api/auth.dart';
 import 'screens/welcome_screen.dart';
 import 'screens/main_screen.dart';
 
