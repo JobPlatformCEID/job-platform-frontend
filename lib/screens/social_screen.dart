@@ -113,6 +113,20 @@ class _SocialScreenState extends State<SocialScreen> {
             );
           });
         },
+        onCommentDeleted: () {
+          final index = _posts.indexWhere((p) => p.id == post.id);
+          if (index != -1 && mounted) setState(() {
+            final p = _posts[index];
+            _posts[index] = Post(
+              id: p.id, user: p.user, username: p.username,
+              fullName: p.fullName, avatar: p.avatar, content: p.content,
+              likesCount: p.likesCount,
+              commentsCount: (p.commentsCount - 1).clamp(0, double.maxFinite.toInt()),
+              images: p.images, createdAt: p.createdAt, updatedAt: p.updatedAt,
+              isLikedByMe: p.isLikedByMe,
+            );
+          });
+        },
       ),
     );
   }
@@ -1295,6 +1309,7 @@ class _CommentsSheet extends StatefulWidget {
   final String token;
   final int currentUserId;
   final VoidCallback? onCommentAdded;
+  final VoidCallback? onCommentDeleted;
 
   const _CommentsSheet({
     required this.post,
@@ -1302,6 +1317,7 @@ class _CommentsSheet extends StatefulWidget {
     required this.token,
     required this.currentUserId,
     this.onCommentAdded,
+    this.onCommentDeleted
   });
 
   @override
@@ -1419,6 +1435,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     try {
       await comment.deleteComment(widget.server, widget.token);
       if (mounted) setState(() => _comments.removeWhere((c) => c.id == comment.id));
+      widget.onCommentDeleted?.call();
     } catch (e) {
       if (mounted) setState(() => _error = 'Could not delete comment.');
     }
