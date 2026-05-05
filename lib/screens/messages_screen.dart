@@ -145,26 +145,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _showPlusSheet() {
-    final isEmployer = widget.auth.user is Employer;
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if(isEmployer)
-              ListTile(
-                leading: Icon(
-                  Icons.video_call_outlined,
-                  color: isEmployer ? null : Theme.of(context).disabledColor,
-                ),
-                title: const Text('Schedule a meeting'),
-                onTap: () {
-                      Navigator.of(context).pop();
-                      _showCreateCallSheet();
-                    },
+            ListTile(
+              leading: Icon(
+                Icons.video_call_outlined,
               ),
-
+              title: const Text('Schedule a meeting'),
+              onTap: () {
+                    Navigator.of(context).pop();
+                    _showCreateCallSheet();
+                  },
+            ),
           ],
         ),
       ),
@@ -293,10 +289,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: _showPlusSheet,
-                    ),
+                    if (widget.auth.user is Employer)
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: _showPlusSheet,
+                      ),
                     Expanded(
                       child: TextField(
                         controller: _messageController,
