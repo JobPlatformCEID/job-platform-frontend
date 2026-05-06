@@ -183,35 +183,30 @@ class _SocialScreenState extends State<SocialScreen> {
     final index = _posts.indexWhere((p) => p.id == post.id);
     if (index == -1) return;
 
-    final wasLiked = post.isLikedByMe;
-
-    // Optimistic update
-    setState(() {
-      _posts[index] = Post(
-        id: post.id,
-        user: post.user,
-        username: post.username,
-        fullName: post.fullName,
-        avatar: post.avatar,
-        content: post.content,
-        likesCount: wasLiked ? post.likesCount - 1 : post.likesCount + 1,
-        commentsCount: post.commentsCount,
-        createdAt: post.createdAt,
-        updatedAt: post.updatedAt,
-        images: post.images,
-        isLikedByMe: !wasLiked,
-      );
-    });
-
     try {
-      if (wasLiked) {
-        await post.unlikePost(widget.server, widget.auth.user!.token);
-      } else {
-        await post.likePost(widget.server, widget.auth.user!.token);
-      }
+      final result = await post.toggleLike(widget.server, widget.auth.user!.token);
+      if (mounted) setState(() {
+        _posts[index] = Post(
+          id: post.id,
+          user: post.user,
+          username: post.username,
+          fullName: post.fullName,
+          avatar: post.avatar,
+          content: post.content,
+          likesCount: result['likes_count'] as int,
+          commentsCount: post.commentsCount,
+          createdAt: post.createdAt,
+          updatedAt: post.updatedAt,
+          images: post.images,
+          isLikedByMe: result['is_liked'] as bool,
+        );
+      });
     } catch (e) {
-      // Revert on failure
-      if (mounted) setState(() => _posts[index] = post);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update like.')),
+        );
+      }
     }
   }
 
