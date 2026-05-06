@@ -90,6 +90,4 @@ bug:sometime when llm takes too long to respond we timeout and throw an error me
 
 rename:SearchControler to searchBar
 
-impl:graphs export in pdf to match use case diagram
-
 diag:rename reviewScreen to something better

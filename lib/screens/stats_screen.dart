@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../server_api.dart';
 import '../auth.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 class StatsScreen extends StatefulWidget {
   final Server server;
   final Auth auth;
-  const StatsScreen({Key? key, required this.auth ,required this.server}) : super(key: key);
+  const StatsScreen({Key? key, required this.auth, required this.server})
+    : super(key: key);
 
   @override
   State<StatsScreen> createState() => _StatsScreenState();
@@ -72,23 +78,50 @@ class _StatsScreenState extends State<StatsScreen>
       final query = _activeFilter.isNotEmpty
           ? '?title=${Uri.encodeComponent(_activeFilter)}'
           : '';
-      
+
       final token = widget.auth.user!.token;
 
       final futures = <Future<List<dynamic>>>[
-        widget.server.sendGetList('/api/stats/salary-range-distribution/$query',token: token),
-        widget.server.sendGetList('/api/stats/jobs-by-title/',token: token),
-        widget.server.sendGetList('/api/stats/top-skills/$query',token: token),
-        widget.server.sendGetList('/api/stats/top-companies/$query',token: token),
-        widget.server.sendGetList('/api/stats/avg-salary-by-title/',token: token),
+        widget.server.sendGetList(
+          '/api/stats/salary-range-distribution/$query',
+          token: token,
+        ),
+        widget.server.sendGetList('/api/stats/jobs-by-title/', token: token),
+        widget.server.sendGetList('/api/stats/top-skills/$query', token: token),
+        widget.server.sendGetList(
+          '/api/stats/top-companies/$query',
+          token: token,
+        ),
+        widget.server.sendGetList(
+          '/api/stats/avg-salary-by-title/',
+          token: token,
+        ),
         _activeFilter.isNotEmpty
-            ? widget.server.sendGetList('/api/stats/jobs-over-time/$query',token: token)
+            ? widget.server.sendGetList(
+                '/api/stats/jobs-over-time/$query',
+                token: token,
+              )
             : Future.value(<dynamic>[]),
-        widget.server.sendGetList('/api/stats/remote-vs-onsite/$query',token: token),
-        widget.server.sendGetList('/api/stats/jobs-by-contract-type/$query',token: token),
-        widget.server.sendGetList('/api/stats/avg-salary-by-contract-type/$query',token: token),
-        widget.server.sendGetList('/api/stats/candidates-by-education/$query',token: token),
-        widget.server.sendGetList('/api/stats/most-competitive-jobs/',token: token),
+        widget.server.sendGetList(
+          '/api/stats/remote-vs-onsite/$query',
+          token: token,
+        ),
+        widget.server.sendGetList(
+          '/api/stats/jobs-by-contract-type/$query',
+          token: token,
+        ),
+        widget.server.sendGetList(
+          '/api/stats/avg-salary-by-contract-type/$query',
+          token: token,
+        ),
+        widget.server.sendGetList(
+          '/api/stats/candidates-by-education/$query',
+          token: token,
+        ),
+        widget.server.sendGetList(
+          '/api/stats/most-competitive-jobs/',
+          token: token,
+        ),
       ];
 
       final results = await Future.wait(futures);
@@ -113,6 +146,202 @@ class _StatsScreenState extends State<StatsScreen>
         _isLoading = false;
       });
       debugPrint('Stats load error: $e');
+    }
+  }
+
+  String _csvEscape(String value) {
+    if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+      return '"${value.replaceAll('"', '""')}"';
+    }
+    return value;
+  }
+
+  Future<void> _exportToCsv() async {
+    if (_isLoading) return;
+
+    final buffer = StringBuffer();
+
+    buffer.writeln('Market Statistics Export');
+    buffer.writeln(
+      'Generated: ${DateTime.now().toLocal().toString().substring(0, 16)}',
+    );
+    buffer.writeln(
+      _activeFilter.isNotEmpty
+          ? 'Filter Applied: ${_csvEscape(_activeFilter)}'
+          : 'Filter: None (all jobs)',
+    );
+    buffer.writeln();
+
+    void writeSection(
+      String title,
+      List<dynamic> data,
+      List<String> keys,
+      List<String> headers,
+    ) {
+      buffer.writeln('--- $title ---');
+      if (data.isEmpty) {
+        buffer.writeln('No data available');
+        buffer.writeln();
+        return;
+      }
+      buffer.writeln(headers.map(_csvEscape).join(','));
+      for (final item in data) {
+        buffer.writeln(
+          keys.map((k) => _csvEscape(item[k]?.toString() ?? '')).join(','),
+        );
+      }
+      buffer.writeln();
+    }
+
+    writeSection(
+      'Salary Range Distribution',
+      _salaryDistribution,
+      ['range', 'count'],
+      ['Range', 'Count'],
+    );
+    writeSection(
+      'Average Salary by Job Title',
+      _avgSalaryByTitle,
+      ['title', 'avg_min', 'avg_max'],
+      ['Title', 'Avg Min (€)', 'Avg Max (€)'],
+    );
+    writeSection(
+      'Average Salary by Contract Type',
+      _avgSalaryByContract,
+      ['contract_type', 'avg_min', 'avg_max'],
+      ['Contract Type', 'Avg Min (€)', 'Avg Max (€)'],
+    );
+    writeSection(
+      'Most Posted Job Titles',
+      _jobsByTitle,
+      ['title', 'count'],
+      ['Title', 'Postings'],
+    );
+    writeSection(
+      'Top Hiring Companies',
+      _topCompanies,
+      ['company', 'count'],
+      ['Company', 'Postings'],
+    );
+    writeSection(
+      'Most Competitive Positions',
+      _mostCompetitive,
+      ['title', 'count'],
+      ['Title', 'Applications'],
+    );
+    writeSection(
+      'Most In-Demand Skills',
+      _topSkills,
+      ['skill', 'count'],
+      ['Skill', 'Count'],
+    );
+    writeSection(
+      'Candidates by Education Level',
+      _candidatesByEducation,
+      ['level', 'count'],
+      ['Education Level', 'Count'],
+    );
+    writeSection(
+      'Remote vs On-site',
+      _remoteVsOnsite,
+      ['type', 'count'],
+      ['Work Type', 'Count'],
+    );
+    writeSection(
+      'Contract Types',
+      _jobsByContract,
+      ['contract_type', 'count'],
+      ['Contract Type', 'Count'],
+    );
+    writeSection(
+      'Job Postings Over Time',
+      _jobsOverTime,
+      ['date', 'count'],
+      ['Date', 'Postings'],
+    );
+
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .substring(0, 19);
+    final suffix = _activeFilter.isNotEmpty
+        ? '_${_activeFilter.replaceAll(' ', '_')}'
+        : '';
+    final fileName = 'market_stats$suffix\_$timestamp.csv';
+    final csvString = buffer.toString();
+
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        // Mobile: saveFile with bytes uses SAF / document picker
+        final bytes = Uint8List.fromList(utf8.encode(csvString));
+        final path = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save Statistics as CSV',
+          fileName: fileName,
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+          bytes: bytes,
+        );
+        if (path == null) return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Saved $fileName'),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green.shade700,
+            ),
+          );
+        }
+      } else {
+        // Desktop: saveFile opens native dialog, returns chosen path,
+        // then we write the file ourselves with dart:io
+        final path = await FilePicker.platform.saveFile(
+          dialogTitle: 'Save Statistics as CSV',
+          fileName: fileName,
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+        );
+        if (path == null) return;
+        final file = File(path);
+        await file.writeAsString(csvString);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Saved to $path'),
+              duration: const Duration(seconds: 5),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green.shade700,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Fallback: if saveFile fails (e.g. iOS), write to app directory
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsString(csvString);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Saved to ${file.path}'),
+              duration: const Duration(seconds: 6),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green.shade700,
+            ),
+          );
+        }
+      } catch (e2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed: ${e2.toString()}'),
+              backgroundColor: Colors.red.shade700,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -148,6 +377,11 @@ class _StatsScreenState extends State<StatsScreen>
             onPressed: _isLoading ? null : _loadStats,
             tooltip: 'Refresh data',
           ),
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: _isLoading ? null : _exportToCsv,
+            tooltip: 'Export all data to CSV',
+          ),
         ],
       ),
       body: Column(
@@ -168,7 +402,9 @@ class _StatsScreenState extends State<StatsScreen>
                         borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       isDense: true,
                     ),
                     onSubmitted: (_) => _loadStats(),
@@ -181,7 +417,9 @@ class _StatsScreenState extends State<StatsScreen>
                   label: const Text('Apply'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                 ),
                 if (_activeFilter.isNotEmpty) ...[
@@ -202,17 +440,17 @@ class _StatsScreenState extends State<StatsScreen>
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? _buildErrorState()
-                    : TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildCompensationTab(),
-                          _buildJobMarketTab(),
-                          _buildSkillsCandidatesTab(),
-                          _buildWorkArrangementsTab(),
-                          _buildTrendsTab(),
-                        ],
-                      ),
+                ? _buildErrorState()
+                : TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildCompensationTab(),
+                      _buildJobMarketTab(),
+                      _buildSkillsCandidatesTab(),
+                      _buildWorkArrangementsTab(),
+                      _buildTrendsTab(),
+                    ],
+                  ),
           ),
         ],
       ),
@@ -372,11 +610,10 @@ class _StatsScreenState extends State<StatsScreen>
             _buildChartCard(
               title: 'Remote vs On-site',
               subtitle: 'Work location distribution',
-              chart: () => _buildDonutChartWithLegend(
-                _remoteVsOnsite,
-                'type',
-                [Colors.green, Colors.orange],
-              ),
+              chart: () => _buildDonutChartWithLegend(_remoteVsOnsite, 'type', [
+                Colors.green,
+                Colors.orange,
+              ]),
               data: _remoteVsOnsite,
               height: 280,
             ),
@@ -412,8 +649,11 @@ class _StatsScreenState extends State<StatsScreen>
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    Icon(Icons.info_outline,
-                        color: Colors.blue.shade400, size: 40),
+                    Icon(
+                      Icons.info_outline,
+                      color: Colors.blue.shade400,
+                      size: 40,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       'Enter a job title filter to view posting trends over time',
@@ -516,18 +756,15 @@ class _StatsScreenState extends State<StatsScreen>
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
             ],
             const SizedBox(height: 12),
@@ -592,18 +829,15 @@ class _StatsScreenState extends State<StatsScreen>
           children: [
             Text(
               title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
             ],
             const SizedBox(height: 12),
@@ -668,9 +902,10 @@ class _StatsScreenState extends State<StatsScreen>
   ) {
     if (data.isEmpty) return _emptyState();
     final items = data.take(8).toList();
-    final values =
-        items.map((e) => (e[valueKey] as num).toDouble()).toList();
-    final maxValue = values.isEmpty ? 1 : values.reduce((a, b) => a > b ? a : b);
+    final values = items.map((e) => (e[valueKey] as num).toDouble()).toList();
+    final maxValue = values.isEmpty
+        ? 1
+        : values.reduce((a, b) => a > b ? a : b);
     final safeMax = (maxValue > 0 ? maxValue * 1.25 : 10.0).toDouble();
 
     return BarChart(
@@ -680,10 +915,8 @@ class _StatsScreenState extends State<StatsScreen>
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: Colors.grey.shade200,
-            strokeWidth: 1,
-          ),
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: Colors.grey.shade200, strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
@@ -721,7 +954,10 @@ class _StatsScreenState extends State<StatsScreen>
                   axisSide: meta.axisSide,
                   child: Text(
                     displayLabel,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                    ),
                     textAlign: TextAlign.center,
                     // Allow natural multi-line wrapping
                     softWrap: true,
@@ -730,10 +966,12 @@ class _StatsScreenState extends State<StatsScreen>
               },
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         barGroups: items.asMap().entries.map((entry) {
           final index = entry.key;
@@ -745,8 +983,9 @@ class _StatsScreenState extends State<StatsScreen>
                 toY: value,
                 color: color,
                 width: 24,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(4),
+                ),
               ),
             ],
           );
@@ -762,9 +1001,10 @@ class _StatsScreenState extends State<StatsScreen>
     Color baseColor,
   ) {
     if (data.isEmpty) return _emptyState();
-    final counts =
-        data.map((e) => (e[valueKey] as num).toDouble()).toList();
-    final maxValue = counts.isEmpty ? 1 : counts.reduce((a, b) => a > b ? a : b);
+    final counts = data.map((e) => (e[valueKey] as num).toDouble()).toList();
+    final maxValue = counts.isEmpty
+        ? 1
+        : counts.reduce((a, b) => a > b ? a : b);
     final safeMax = (maxValue > 0 ? maxValue * 1.25 : 10.0).toDouble();
 
     return BarChart(
@@ -774,10 +1014,8 @@ class _StatsScreenState extends State<StatsScreen>
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: Colors.grey.shade200,
-            strokeWidth: 1,
-          ),
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: Colors.grey.shade200, strokeWidth: 1),
         ),
         borderData: FlBorderData(
           show: true,
@@ -837,10 +1075,12 @@ class _StatsScreenState extends State<StatsScreen>
               },
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         barGroups: data.asMap().entries.map((entry) {
           final index = entry.key;
@@ -853,8 +1093,9 @@ class _StatsScreenState extends State<StatsScreen>
                 toY: count,
                 color: baseColor.withOpacity(colorOpacity.clamp(0.0, 1.0)),
                 width: 22,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(6)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(6),
+                ),
                 backDrawRodData: BackgroundBarChartRodData(
                   show: true,
                   toY: safeMax,
@@ -922,7 +1163,7 @@ class _StatsScreenState extends State<StatsScreen>
       final label = item[labelKey]?.toString() ?? 'Unknown';
       final value = (item['count'] as num?)?.toDouble() ?? 0.0;
       final percentage = total > 0 ? ((value / total) * 100).toInt() : 0;
-      
+
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -987,10 +1228,8 @@ class _StatsScreenState extends State<StatsScreen>
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(
-            color: Colors.grey.shade200,
-            strokeWidth: 1,
-          ),
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: Colors.grey.shade200, strokeWidth: 1),
         ),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
@@ -1029,10 +1268,12 @@ class _StatsScreenState extends State<StatsScreen>
               },
             ),
           ),
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
         ),
         borderData: FlBorderData(show: false),
         lineTouchData: LineTouchData(
@@ -1102,7 +1343,9 @@ class _StatsScreenState extends State<StatsScreen>
                     child: Text(
                       label,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w500, fontSize: 13),
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
                       // FIX: Allow multi-line wrap instead of ellipsis
                       softWrap: true,
                       overflow: TextOverflow.visible,
@@ -1150,8 +1393,9 @@ class _StatsScreenState extends State<StatsScreen>
                 child: LinearProgressIndicator(
                   value: progress,
                   backgroundColor: Colors.grey.shade200,
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.blue.shade300),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Colors.blue.shade300,
+                  ),
                   minHeight: 6,
                 ),
               ),
