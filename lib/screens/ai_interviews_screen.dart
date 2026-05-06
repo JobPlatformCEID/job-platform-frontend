@@ -60,7 +60,19 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
         title: result['title'] as String? ?? '',
       );
       setState(() => _sessions.insert(0, session));
-      _openChat(session);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => AiChatScreen(
+            server: widget.server,
+            auth: widget.auth,
+            sessionId: session.id,
+            sessionTitle: session.displayTitle,
+            initialMessages: [],
+          ),
+        ),
+      );
     } catch (e) {
       _showError('Failed to create: $e');
     }
