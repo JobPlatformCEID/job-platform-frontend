@@ -38,7 +38,7 @@ No error message like alt flow 4 appears when missing permissions
 
 For use case "Use case «Προβολή στατιστικών μισθών»"
 Market stats active tab is black (not shown) at least in dark moed
-Market stats seem to be broken (some stats also dont make sense to be graphs eg. top hiring companies)
+
 Εναλλακτική Ροή 4 (Εξαγωγή σε αρχείο) is unimplemented (maybe ignore/drop)
 
 
@@ -67,8 +67,6 @@ imp:remove ai session completely from our app and instead integrate it with cale
 cvs letter arent visible 
 
 impl:cv should get data from profile and you should be able to create a cv when in edit mode in profile for better integration
-
-bug:scroll from graphs should be removed fvo already takes care of the case where they take up the hole screen anyway
 
 bug:mock ai interview doesnt have starting prompt and instead has a hello
 

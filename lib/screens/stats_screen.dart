@@ -203,13 +203,13 @@ class _StatsScreenState extends State<StatsScreen>
       'Average Salary by Job Title',
       _avgSalaryByTitle,
       ['title', 'avg_min', 'avg_max'],
-      ['Title', 'Avg Min (€)', 'Avg Max (€)'],
+      ['Title', 'Avg Min', 'Avg Max'],
     );
     writeSection(
       'Average Salary by Contract Type',
       _avgSalaryByContract,
       ['contract_type', 'avg_min', 'avg_max'],
-      ['Contract Type', 'Avg Min (€)', 'Avg Max (€)'],
+      ['Contract Type', 'Avg Min', 'Avg Max'],
     );
     writeSection(
       'Most Posted Job Titles',
@@ -478,7 +478,6 @@ class _StatsScreenState extends State<StatsScreen>
                 Colors.blue.shade700,
               ),
               data: _salaryDistribution,
-              height: 320,
               minChartWidth: _salaryDistribution.length * 70.0,
             ),
           if (_shouldShowChart('avgSalaryByTitle'))
@@ -492,7 +491,7 @@ class _StatsScreenState extends State<StatsScreen>
                 'avg_max',
               ),
               data: _avgSalaryByTitle,
-              height: 280,
+              isList: true,
             ),
           if (_shouldShowChart('avgSalaryByContract'))
             _buildChartCard(
@@ -505,7 +504,7 @@ class _StatsScreenState extends State<StatsScreen>
                 'avg_max',
               ),
               data: _avgSalaryByContract,
-              height: 220,
+              isList: true,
             ),
           const SizedBox(height: 16),
         ],
@@ -531,7 +530,6 @@ class _StatsScreenState extends State<StatsScreen>
                 Colors.blue,
               ),
               data: _jobsByTitle,
-              height: 340,
               minChartWidth: _jobsByTitle.take(8).length * 80.0,
             ),
           if (_shouldShowChart('topCompanies'))
@@ -545,7 +543,6 @@ class _StatsScreenState extends State<StatsScreen>
                 Colors.teal,
               ),
               data: _topCompanies,
-              height: 340,
               minChartWidth: _topCompanies.take(8).length * 80.0,
             ),
           if (_shouldShowChart('mostCompetitive'))
@@ -578,7 +575,6 @@ class _StatsScreenState extends State<StatsScreen>
                 Colors.purple,
               ),
               data: _topSkills,
-              height: 340,
               minChartWidth: _topSkills.take(8).length * 80.0,
             ),
           if (_shouldShowChart('candidatesByEducation'))
@@ -591,7 +587,6 @@ class _StatsScreenState extends State<StatsScreen>
                 [Colors.cyan, Colors.deepPurple, Colors.pink, Colors.brown],
               ),
               data: _candidatesByEducation,
-              height: 300,
             ),
           const SizedBox(height: 16),
         ],
@@ -615,7 +610,6 @@ class _StatsScreenState extends State<StatsScreen>
                 Colors.orange,
               ]),
               data: _remoteVsOnsite,
-              height: 280,
             ),
           if (_shouldShowChart('jobsByContract'))
             _buildChartCard(
@@ -627,7 +621,6 @@ class _StatsScreenState extends State<StatsScreen>
                 [Colors.indigo, Colors.amber, Colors.red, Colors.teal],
               ),
               data: _jobsByContract,
-              height: 280,
             ),
           const SizedBox(height: 16),
         ],
@@ -670,7 +663,6 @@ class _StatsScreenState extends State<StatsScreen>
               subtitle: 'Daily posting volume for "${_activeFilter}"',
               chart: _buildLineChart,
               data: _jobsOverTime,
-              height: 300,
               minChartWidth: _jobsOverTime.length * 50.0,
             ),
           const SizedBox(height: 16),
@@ -715,8 +707,9 @@ class _StatsScreenState extends State<StatsScreen>
     String? subtitle,
     required Widget Function() chart,
     required List<dynamic> data,
-    required double height,
+    double? height,
     double? minChartWidth,
+    bool isList = false,
   }) {
     if (data.isEmpty) {
       return Card(
@@ -753,6 +746,7 @@ class _StatsScreenState extends State<StatsScreen>
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               title,
@@ -768,26 +762,30 @@ class _StatsScreenState extends State<StatsScreen>
               ),
             ],
             const SizedBox(height: 12),
-            SizedBox(
-              height: height,
-              child: minChartWidth != null
-                  ? LayoutBuilder(
-                      builder: (context, constraints) {
-                        final available = constraints.maxWidth;
-                        if (available < minChartWidth) {
-                          return SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: minChartWidth,
-                              child: chart(),
-                            ),
-                          );
-                        }
-                        return chart();
-                      },
-                    )
-                  : chart(),
-            ),
+            if (isList)
+              chart()
+            else
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final w = constraints.maxWidth;
+                  final adaptiveH = height ?? (w * 0.75).clamp(200.0, 400.0);
+                  Widget chartWidget = SizedBox(
+                    height: adaptiveH,
+                    child: chart(),
+                  );
+                  if (minChartWidth != null && w < minChartWidth!) {
+                    chartWidget = SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SizedBox(
+                        width: minChartWidth,
+                        height: adaptiveH,
+                        child: chart(),
+                      ),
+                    );
+                  }
+                  return chartWidget;
+                },
+              ),
           ],
         ),
       ),
@@ -826,6 +824,7 @@ class _StatsScreenState extends State<StatsScreen>
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               title,
@@ -1320,11 +1319,9 @@ class _StatsScreenState extends State<StatsScreen>
     String maxKey,
   ) {
     if (data.isEmpty) return _emptyState();
-    return ListView.builder(
-      padding: EdgeInsets.zero,
-      itemCount: data.take(7).length,
-      itemBuilder: (context, index) {
-        final item = data[index];
+    final items = data.take(10).toList();
+    return Column(
+      children: items.map((item) {
         final label = item[labelKey]?.toString() ?? 'Unknown';
         final avgMin = (item[minKey] as num?)?.toDouble() ?? 0.0;
         final avgMax = (item[maxKey] as num?)?.toDouble() ?? 0.0;
@@ -1346,37 +1343,16 @@ class _StatsScreenState extends State<StatsScreen>
                         fontWeight: FontWeight.w500,
                         fontSize: 13,
                       ),
-                      // FIX: Allow multi-line wrap instead of ellipsis
                       softWrap: true,
                       overflow: TextOverflow.visible,
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // FIX: Display salary range as stacked lines to prevent
-                  // long numbers overflowing on narrow screens:
-                  //   €1000
-                  //   to
-                  //   €2000
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '€${avgMin.toInt()}',
-                        style: TextStyle(
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      Text(
-                        'to',
-                        style: TextStyle(
-                          color: Colors.grey.shade500,
-                          fontSize: 11,
-                        ),
-                      ),
-                      Text(
-                        '€${avgMax.toInt()}',
+                        '${avgMin.toInt()}€ ~ ${avgMax.toInt()}€',
                         style: TextStyle(
                           color: Colors.blue.shade700,
                           fontWeight: FontWeight.w600,
@@ -1402,7 +1378,7 @@ class _StatsScreenState extends State<StatsScreen>
             ],
           ),
         );
-      },
+      }).toList(),
     );
   }
 
