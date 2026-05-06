@@ -1413,6 +1413,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   bool _isLoading = true;
   String? _error;
   final _commentController = TextEditingController();
+  final _scrollController = ScrollController();
   bool _isSubmitting = false;
 
   @override
@@ -1457,6 +1458,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       if (mounted) {
         _commentController.clear();
         await _loadComments();
+        _scrollToBottom();
       }
       widget.onCommentAdded?.call(); 
     } catch (e) {
@@ -1521,7 +1523,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     : _comments.isEmpty
                         ? const Center(child: Text('No comments yet.'))
                         : ListView.separated(
-                            controller: scrollController,
+                            controller: _scrollController,
                             padding: const EdgeInsets.all(16),
                             itemCount: _comments.length,
                             separatorBuilder: (_, __) => const Divider(),
@@ -1628,9 +1630,22 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     );
   }
 
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }
