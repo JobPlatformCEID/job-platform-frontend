@@ -19,8 +19,6 @@ samples, guidance on mobile development, and a full API reference.
 ## TODO
 Job listings location filtering keyboard hides text box
 
-Adding a call message in chat preview displays the raw json
-
 For use case "Διαχείριση αιτήσεων υποψήφιων εργαζομένων"
 
 Job applications filtering doesnt appear on UI
@@ -32,7 +30,6 @@ Profile sheet (tapping profile image) -> View candidate profile doesnt show skil
 
 For use case "Use case «Συστήμα Μηνυμάτων»"
 Tapping + doesnt show a list of all platform users: Only searching is existent Maybe a feature?
-Tapping and holding a message insta deletes it (there should be a manu based on use cases and common sense)
 
 
 For use case "Use case «Συνεντεύξεις μέσα από την πλατφόρμα»"
@@ -80,7 +77,7 @@ rework:like system in socials is too complicated when it doesnt need to.on post 
 
 rename:ShowcreateSheet -> displayCreatePostSheet
 
-bug:sometime when llm takes too long to respond we timeout and throw an error message when we shoulnt and then the llm responds anyway
+bug:sometimes when the llm takes too long to respond we timeout and throw an error message when we shoulnt and then the llm responds anyway
 
 rename:SearchControler to searchBar
 

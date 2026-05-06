@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import '../auth.dart';
 import '../server_api.dart';
-import '../user.dart';
 import '../conversation.dart';
+import '../user.dart';
 import 'messages_screen.dart';
 import '../widgets/user_avatar.dart';
 import 'user_profile_sheet.dart';
@@ -66,6 +67,18 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
         onSelected: (userId) => _startConversation(userId),
       ),
     );
+  }
+
+  String _formatConversationPreview(Message message, int currentUserId) {
+    try {
+      final decoded = jsonDecode(message.content) as Map<String, dynamic>;
+      if (decoded['type'] == 'call') {
+        return message.sender == currentUserId
+            ? 'You invited someone to a video meeting'
+            : 'You were invited to a video meeting';
+      }
+    } catch (_) {}
+    return message.content;
   }
 
   Future<void> _startConversation(int userId) async {
@@ -176,7 +189,10 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                   title: Text(conversation.otherFullName ?? conversation.otherUsername ?? 'User #${conversation.otherUserId}'),
                   subtitle: conversation.lastMessage != null
                       ? Text(
-                          conversation.lastMessage!.content,
+                          _formatConversationPreview(
+                            conversation.lastMessage!,
+                            widget.auth.user!.userId
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         )
