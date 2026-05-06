@@ -84,6 +84,54 @@ class _SocialScreenState extends State<SocialScreen> {
     );
   }
 
+  void _showEditForPost(Post post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _EditPostSheet(
+        post: post,
+        server: widget.server,
+        token: widget.auth.user!.token,
+        onUpdated: (updated) => setState(() {
+          final index = _posts.indexWhere((p) => p.id == post.id);
+          if (index != -1) _posts[index] = updated;
+        }),
+      ),
+    );
+  }
+
+  Future<void> _handleDeletePost(Post post) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Post'),
+        content: const Text('Do you want to delete this post?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      await post.deletePost(widget.server, widget.auth.user!.token);
+      if (mounted) setState(() => _posts.removeWhere((p) => p.id == post.id));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not delete post.')),
+        );
+      }
+    }
+  }
+
   void _showComments(Post post) {
     showModalBottomSheet(
       context: context,
@@ -196,9 +244,12 @@ class _SocialScreenState extends State<SocialScreen> {
                   post: post,
                   server: widget.server,
                   token: widget.auth.user!.token,
+                  currentUserId: widget.auth.user!.userId,
                   onTap: () => _showPostDetail(post),
                   onLike: () => _toggleLike(post),
                   onComment: () => _showComments(post),
+                  onEdit: () => _showEditForPost(post),
+                  onDelete: () => _handleDeletePost(post),
                 );
               }
               return Center(
@@ -326,17 +377,23 @@ class _PostCard extends StatelessWidget {
   final Post post;
   final Server server;
   final String token;
+  final int currentUserId;
   final VoidCallback onTap;
   final VoidCallback onLike;
   final VoidCallback onComment;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _PostCard({
     required this.post,
     required this.server,
     required this.token,
+    required this.currentUserId,
     required this.onTap,
     required this.onLike,
     required this.onComment,
+    this.onEdit,
+    this.onDelete,
   });
 
   void _openProfile(BuildContext context) {
@@ -415,6 +472,35 @@ class _PostCard extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (post.user == currentUserId)
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') onEdit?.call();
+                            if (value == 'delete') onDelete?.call();
+                          },
+                          itemBuilder: (ctx) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('Edit'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, size: 18, color: cs.error),
+                                  SizedBox(width: 8),
+                                  Text('Delete', style: TextStyle(color: cs.error)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ),
@@ -1346,12 +1432,8 @@ class _CommentsSheetState extends State<_CommentsSheet> {
       );
       if (mounted) {
         setState(() {
-          // Sort comments to show the current user's ones first
-          comments.sort((a, b) {
-            if (a.user == widget.currentUserId) return -1;
-            if (b.user == widget.currentUserId) return 1;
-            return 0;
-          });
+          // Sort in order with createdAt field
+          comments.sort((a, b) => a.createdAt.compareTo(b.createdAt));
           _comments = comments;
           _isLoading = false;
       });
@@ -1384,35 +1466,6 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
-  }
-
-  void _showCommentMenu(Comment comment) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _showEditCommentSheet(comment);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outlined, color: Theme.of(context).colorScheme.error),
-              title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              onTap: () {
-                Navigator.of(context).pop();
-                _handleDeleteComment(comment);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showEditCommentSheet(Comment comment) {
@@ -1506,8 +1559,35 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                                   ],
                                 ),
                                 subtitle: Text(comment.content),
-                                onLongPress: comment.user == widget.currentUserId
-                                    ? () => _showCommentMenu(comment)
+                                trailing: comment.user == widget.currentUserId
+                                    ? PopupMenuButton<String>(
+                                        onSelected: (value) {
+                                          if (value == 'edit') _showEditCommentSheet(comment);
+                                          if (value == 'delete') _handleDeleteComment(comment);
+                                        },
+                                        itemBuilder: (ctx) => [
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit, size: 18),
+                                                SizedBox(width: 8),
+                                                Text('Edit'),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'delete',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.delete, size: 18, color: Theme.of(context).colorScheme.error),
+                                                SizedBox(width: 8),
+                                                Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      )
                                     : null,
                               );
                             },

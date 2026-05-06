@@ -22,8 +22,11 @@ Job listings location filtering keyboard hides text box
 Adding a call message in chat preview displays the raw json
 
 For use case "Διαχείριση αιτήσεων υποψήφιων εργαζομένων"
+
 Job applications filtering doesnt appear on UI
+
 Job applications searching isnt implemented
+
 Profile sheet (tapping profile image) -> View candidate profile doesnt show skills, education, work experience. Also skill?
 
 
@@ -35,11 +38,6 @@ Tapping and holding a message insta deletes it (there should be a manu based on 
 For use case "Use case «Συνεντεύξεις μέσα από την πλατφόρμα»"
 Error messages in UI are not clear: Meeting date is in the future, date pick is in the past in picker
 No error message like alt flow 4 appears when missing permissions
-
-For use case "Use case «Προβολή στατιστικών μισθών»"
-Market stats active tab is black (not shown) at least in dark moed
-
-Εναλλακτική Ροή 4 (Εξαγωγή σε αρχείο) is unimplemented (maybe ignore/drop)
 
 
 For use case "10. Use case «Σύστημα αξιολογήσεων εταιριών»"
@@ -66,7 +64,7 @@ imp:remove ai session completely from our app and instead integrate it with cale
 
 cvs letter arent visible 
 
-impl:cv should get data from profile and you should be able to create a cv when in edit mode in profile for better integration
+cv builder should get data from profile and you should be able to create a cv when in edit mode in profile for better integration
 
 bug:mock ai interview doesnt have starting prompt and instead has a hello
 
@@ -74,9 +72,7 @@ bug:redirect from mock ai interviews sometimes doesnt work
 
 bug:you wait 30 seconds to logout and for the app to start when the server is down or unresponsive
 
-suggestion:maybe fix live searching for messages 
-
-impl:on desktop or even in both mobile and desktop in reviews instead of long press have a menu
+suggestion:maybe fix live searching in searching for user to message screen
 
 bug:scroll to bottom when leaving a comment on post on socials
 

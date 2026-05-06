@@ -103,6 +103,25 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   }
 
   Future<void> _handleDelete(Conversation conversation) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Conversation'),
+        content: Text('Do you want to delete your conversation with ${conversation.otherFullName ?? conversation.otherUsername ?? 'this user'}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     try {
       await conversation.deleteConversation(widget.server, widget.auth.user!.token);
       if (mounted) setState(() => _conversations.removeWhere((c) => c.id == conversation.id));

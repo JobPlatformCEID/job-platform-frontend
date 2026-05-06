@@ -132,6 +132,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _handleDeleteMessage(Message message) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Message'),
+        content: const Text('Do you want to delete this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     try {
       await message.deleteMessage(widget.server, _token);
       if (mounted) setState(() => _messages.removeWhere((m) => m.id == message.id));
