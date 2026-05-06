@@ -477,6 +477,11 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
               content: _contentController.text.trim(),
             );
       if (mounted) {
+        //make the user go back a screen so that they actually see it
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('review submitted successfully')),
+        );
         Navigator.of(context).pop();
         widget.onCreated(review);
       }

@@ -755,6 +755,9 @@ class _CreatePostSheetState extends State<_CreatePostSheet> {
 
       final fresh = await Post.fetchPost(widget.server, widget.token, post.id);
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('your post was created successfully')),
+        );
         Navigator.of(context).pop();
         widget.onCreated(fresh);
       }
