@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../auth.dart';
 import '../user.dart';
 import '../job.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../filtering.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';

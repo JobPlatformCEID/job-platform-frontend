@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../auth.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../user.dart';
 import '../conversation.dart';
 import 'messages_screen.dart';

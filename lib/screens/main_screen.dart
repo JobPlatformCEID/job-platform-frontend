@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:job_platform_frontend/screens/cv_builder_screen.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../auth.dart';
 import '../user.dart';
 import '../widgets/responsive.dart';

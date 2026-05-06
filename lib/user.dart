@@ -1,5 +1,5 @@
 import 'package:logging/logging.dart';
-import 'server.dart';
+import 'server_api.dart';
 
 abstract class User {
   final Server server;

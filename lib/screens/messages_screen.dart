@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:convert';
 import '../auth.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../conversation.dart';
 import '../calls.dart';
 import '../user.dart';

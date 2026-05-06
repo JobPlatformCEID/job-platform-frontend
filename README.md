@@ -78,8 +78,6 @@ bug:you wait 30 seconds to logout and for the app to start when the server is do
 
 suggestion:maybe fix live searching for messages 
 
-suggest:rename server.dart to server_api everywhere it just makes it more clear the purpose it has
-
 impl:on desktop or even in both mobile and desktop in reviews instead of long press have a menu
 
 bug:scroll to bottom when leaving a comment on post on socials

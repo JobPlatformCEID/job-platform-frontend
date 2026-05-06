@@ -1,6 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logging/logging.dart';
-import 'server.dart';
+import 'server_api.dart';
 import 'user.dart';
 
 // User roles that someone in the platform can have: Matches django User model

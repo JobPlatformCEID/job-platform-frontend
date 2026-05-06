@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../server.dart';
+import '../server_api.dart';
 
 class CandidateProfileSheet extends StatefulWidget {
   final int profileId;

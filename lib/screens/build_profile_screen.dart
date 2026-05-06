@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:typed_data';
-import '../server.dart';
+import '../server_api.dart';
 import '../auth.dart';
 import '../user.dart';
 import 'main_screen.dart';
