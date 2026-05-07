@@ -144,29 +144,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
-  void _showPlusSheet() {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(
-                Icons.video_call_outlined,
-              ),
-              title: const Text('Schedule a meeting'),
-              onTap: () {
-                    Navigator.of(context).pop();
-                    _showCreateCallSheet();
-                  },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showCreateCallSheet() {
     showModalBottomSheet(
       context: context,
@@ -292,7 +269,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     if (widget.auth.user is Employer)
                       IconButton(
                         icon: const Icon(Icons.add_circle_outline),
-                        onPressed: _showPlusSheet,
+                        onPressed: _showCreateCallSheet,
                       ),
                     Expanded(
                       child: TextField(
