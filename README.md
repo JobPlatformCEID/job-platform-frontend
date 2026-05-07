@@ -42,10 +42,6 @@ Missing alternative flow 2 (probably drop)
 Missing alternative flow 3 (we can add it)
 Message "Η κριτική σας υποβλήθηκε επιτυχώς" doesnt exist
 
-For use case "11. Use case «Social networking»"
-"Η δημοσίευσή σας ανέβηκε" message doesnt exist
-Εναλλακτική ροή 2 (Υπέρβαση ορίου χαρακτήρων ή μεγέθους αρχείου) there is no text limit and file limit is 20MB iirc (verify this but i think it's only for public nginx server)
-
 For use case "3. Use case «Home menu υποψηφίου: Προβολή αγγελιών εργασίας »"
 Nothing, just hook up cv builder maybe in the report when we write it
 
@@ -53,31 +49,15 @@ For use case "4. Use case «Home menu εργοδότη: Διαχείριση α�
 Error messages show below the screen "Create job posting"
 Success message doesnt exist
 
-someone with no experience can leave a review
-
-skills and experiences are just text 
-
 imp:remove ai session completely from our app and instead integrate it with calendar
 
 cvs letter arent visible 
 
 cv builder should get data from profile and you should be able to create a cv when in edit mode in profile for better integration
 
-bug:mock ai interview doesnt have starting prompt and instead has a hello
-
-bug:redirect from mock ai interviews sometimes doesnt work
-
 bug:you wait 30 seconds to logout and for the app to start when the server is down or unresponsive
 
-suggestion:maybe fix live searching in searching for user to message screen
-
-bug:scroll to bottom when leaving a comment on post on socials
-
-rework:like system in socials is too complicated when it doesnt need to.on post just togle a boolean in the server and frontend
-
 rename:ShowcreateSheet -> displayCreatePostSheet
-
-bug:sometimes when the llm takes too long to respond we timeout and throw an error message when we shoulnt and then the llm responds anyway
 
 rename:SearchControler to searchBar
 
