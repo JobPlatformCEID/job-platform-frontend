@@ -104,6 +104,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
   void _showLocationSheet() async {
     final entered = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       builder: (_) => _LocationSheet(current: _filter.location),
     );
     if (entered != null) {
