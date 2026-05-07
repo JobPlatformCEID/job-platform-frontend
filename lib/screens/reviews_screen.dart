@@ -211,6 +211,8 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
         server: widget.server,
         token: widget.token,
         onCreated: (review) => setState(() => _reviews.insert(0, review)),
+        onSuccess: () => ReviewFeedbackMessage.showSuccess(context),
+        onAlreadyReviewed: () => ReviewFeedbackMessage.showAlreadyReviewed(context),
       ),
     );
   }
@@ -235,7 +237,26 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
               title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onTap: () {
                 Navigator.of(context).pop();
-                _handleDelete(review);
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('Delete Review?'),
+                    content: const Text('Are you sure you want to delete this review?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _handleDelete(review);
+                        },
+                        child: const Text('Delete'),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ],
@@ -430,6 +451,8 @@ class _CreateReviewSheet extends StatefulWidget {
   final String token;
   final void Function(Review review) onCreated;
   final Review? existing;
+  final VoidCallback? onSuccess;
+  final VoidCallback? onAlreadyReviewed;
 
   const _CreateReviewSheet({
     required this.employer,
@@ -437,6 +460,8 @@ class _CreateReviewSheet extends StatefulWidget {
     required this.token,
     required this.onCreated,
     this.existing,
+    this.onSuccess,
+    this.onAlreadyReviewed,
   });
 
   @override
@@ -479,12 +504,19 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
       if (mounted) {
         Navigator.of(context).pop();
         widget.onCreated(review);
+        widget.onSuccess?.call();
+      }
+    } on ServerException catch (e) {
+      if (mounted) {
+        if (e.statusCode == 403) {
+          widget.onAlreadyReviewed?.call();
+        } else {
+          ReviewFeedbackMessage.showError(context);
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not submit review.')),
-        );
+        ReviewFeedbackMessage.showError(context);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -544,5 +576,43 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
   void dispose() {
     _contentController.dispose();
     super.dispose();
+  }
+}
+
+class ReviewFeedbackMessage {
+  static void showSuccess(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        content: const Text('Review submitted successfully.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
+  static void showError(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        content: const Text('Could not submit review.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
+  }
+
+  static void showAlreadyReviewed(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        content: const Text('You have already reviewed this employer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+        ],
+      ),
+    );
   }
 }
