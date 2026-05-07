@@ -941,6 +941,7 @@ String _formatLevel(String level) {
   Widget _experienceCard(CvExperience exp, Function(CvExperience) onUpdate, VoidCallback onDelete) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: const Color.fromARGB(166, 0, 212, 184),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -970,6 +971,7 @@ String _formatLevel(String level) {
   Widget _educationCard(CvEducation edu, Function(CvEducation) onUpdate, VoidCallback onDelete) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: const Color.fromARGB(166, 0, 212, 184),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1003,6 +1005,7 @@ String _formatLevel(String level) {
   Widget _certCard(CvCertification cert, Function(CvCertification) onUpdate, VoidCallback onDelete) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      color: const Color.fromARGB(166, 0, 212, 184),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
