@@ -27,20 +27,9 @@ Job applications searching isnt implemented
 
 Profile sheet (tapping profile image) -> View candidate profile doesnt show skills, education, work experience. Also skill?
 
-
-For use case "Use case «Συστήμα Μηνυμάτων»"
-Tapping + doesnt show a list of all platform users: Only searching is existent Maybe a feature?
-
-
-For use case "Use case «Συνεντεύξεις μέσα από την πλατφόρμα»"
-Error messages in UI are not clear: Meeting date is in the future, date pick is in the past in picker
-No error message like alt flow 4 appears when missing permissions
-
-
 For use case "10. Use case «Σύστημα αξιολογήσεων εταιριών»"
 Missing alternative flow 2 (probably drop)
 Missing alternative flow 3 (we can add it)
-Message "Η κριτική σας υποβλήθηκε επιτυχώς" doesnt exist
 
 For use case "3. Use case «Home menu υποψηφίου: Προβολή αγγελιών εργασίας »"
 Nothing, just hook up cv builder maybe in the report when we write it
