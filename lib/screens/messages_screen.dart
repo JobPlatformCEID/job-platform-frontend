@@ -231,8 +231,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e is ServerException ? e.detail : 'Could not join call.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not join call.')),
+          SnackBar(content: Text(msg)),
         );
       }
     }
@@ -567,7 +568,8 @@ Future<void> _handleCreate() async {
       widget.onCallCreated(room);
     }
   } catch (e) {
-    if (mounted) setState(() => _error = 'Could not create call.');
+    final msg = e is ServerException ? e.detail : 'Could not create call.';
+    if (mounted) setState(() => _error = msg);
   } finally {
     if (mounted) setState(() => _isLoading = false);
   }

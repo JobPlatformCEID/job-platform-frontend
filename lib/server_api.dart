@@ -202,6 +202,38 @@ class ServerException implements Exception {
 
   const ServerException(this.statusCode, this.body);
 
+  String get detail {
+    try {
+      final decoded = jsonDecode(body);
+
+      // Top-level list: ["error msg"]
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).join(', ');
+      }
+
+      if (decoded is Map<String, dynamic>) {
+        // {"detail": "..."} or {"detail": ["..."]}
+        if (decoded.containsKey('detail')) {
+          final d = decoded['detail'];
+          if (d is String) return d;
+          if (d is List) return d.map((e) => e.toString()).join(', ');
+        }
+        // {"field": ["error1", "error2"]}
+        final parts = <String>[];
+        for (final entry in decoded.entries) {
+          final v = entry.value;
+          if (v is List) {
+            parts.addAll(v.map((e) => e.toString()));
+          } else if (v is String) {
+            parts.add(v);
+          }
+        }
+        if (parts.isNotEmpty) return parts.join(', ');
+      }
+    } catch (_) {}
+    return body;
+  }
+
   @override
   String toString() => 'ServerException($statusCode): $body';
 }

@@ -121,11 +121,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
           ),
         ));
       }
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
+        final msg = e is ServerException ? e.detail : 'Could not join call.';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Could not join call.', style: TextStyle(color: _ghTextPrimary)),
+            content: Text(msg, style: const TextStyle(color: _ghTextPrimary)),
             backgroundColor: _ghSurfaceAlt,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: _ghBorder)),

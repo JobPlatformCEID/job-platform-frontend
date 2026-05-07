@@ -15,10 +15,10 @@ class StatsScreen extends StatefulWidget {
     : super(key: key);
 
   @override
-  State<StatsScreen> createState() => _StatsScreenState();
+  State<StatsScreen> createState() => _StatsManager();
 }
 
-class _StatsScreenState extends State<StatsScreen>
+class _StatsManager extends State<StatsScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _filterController = TextEditingController();
   late final TabController _tabController;
@@ -351,7 +351,9 @@ class _StatsScreenState extends State<StatsScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => render();
+
+  Widget render() {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Market Statistics'),
