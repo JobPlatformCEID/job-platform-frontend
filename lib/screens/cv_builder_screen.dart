@@ -7,6 +7,7 @@ import '../server_api.dart';
 import '../auth.dart';
 import 'cv_data.dart';
 import 'cv_preview.dart';
+import '../user.dart';
 
 // Breakpoint below which the live preview panel is hidden
 const double _kPreviewBreakpoint = 700.0;
@@ -43,17 +44,53 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
     _loadFromUser();
   }
 
-  void _loadFromUser() {
-    final user = widget.auth.user;
-    if (user != null) {
-      setState(() {
-        _cv = _cv.copyWith(
-          fullName: user.fullName,
-          email: user.email,
-        );
-      });
-    }
+Future<void> _loadFromUser() async {
+  final user = widget.auth.user;
+  if (user == null || user is! Candidate) return;
+
+  await Future.wait([
+    user.fetchProfile(),
+    user.fetchSkills(),
+    user.fetchEducations(),
+    user.fetchExperiences(),
+  ]);
+
+  setState(() {
+    _cv = _cv.copyWith(
+      fullName: user.fullName,
+      email: user.email,
+      phone: user.phone,
+      location: user.location,
+      summary: user.bio,
+      skills: user.skills.map((s) => s.name).toList(),
+      education: user.educations.map((e) => CvEducation(
+        institution: e.institution,
+        degree: _formatLevel(e.level),
+        field: e.degree,
+        startDate: '',
+        endDate: e.graduationDate ?? '',
+      )).toList(),
+      experience: user.experiences.map((e) => CvExperience(
+        company: e.company,
+        position: e.title,
+        startDate: e.startDate,
+        endDate: e.endDate ?? '',
+        description: e.description,
+      )).toList(),
+    );
+  });
+}
+
+// Converts the stored level key into a readable degree label
+String _formatLevel(String level) {
+  switch (level) {
+    case 'high_school':   return 'High School Diploma';
+    case 'bachelor':      return "Bachelor's";
+    case 'master':        return "Master's";
+    case 'phd':           return 'PhD';
+    default:              return level;
   }
+}
 
   // PDF generation & direct download (no share sheet)
   Future<void> _generateAndDownloadPdf() async {

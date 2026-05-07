@@ -40,9 +40,7 @@ Success message doesnt exist
 
 imp:remove ai session completely from our app and instead integrate it with calendar
 
-cvs letter arent visible 
-
-cv builder should get data from profile and you should be able to create a cv when in edit mode in profile for better integration
+cv builder should be able to create a cv when in edit mode in profile for better integration
 
 bug:you wait 30 seconds to logout and for the app to start when the server is down or unresponsive
 
