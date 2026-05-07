@@ -657,7 +657,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(t.$2, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text(t.$2, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF212121))),
                     const SizedBox(height: 2),
                     Text(t.$3, style: const TextStyle(fontSize: 12, color: Color(0xFF777777))),
                   ]),
@@ -850,13 +850,13 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold, fontSize: 18)),
+                ?.copyWith(fontWeight: FontWeight.bold, fontSize: 18, color: const Color(0xFF212121))),
       );
 
   Widget _subTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF212121))),
       );
 
   Widget _field(String label, String value, Function(String) onChanged,
@@ -865,6 +865,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         initialValue: value,
+        style: const TextStyle(color: Color(0xFF212121)),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -872,6 +873,8 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
           isDense: true,
           filled: true,
           fillColor: Colors.white,
+          labelStyle: const TextStyle(color: Color(0xFF555555)),
+          hintStyle: const TextStyle(color: Color(0xFFAAAAAA)),
         ),
         onChanged: (v) => setState(() => onChanged(v)),
         validator: validator,
@@ -882,6 +885,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
   Widget _textArea(String label, String value, Function(String) onChanged, {int maxLines = 4}) {
     return TextFormField(
       initialValue: value,
+      style: const TextStyle(color: Color(0xFF212121)),
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
@@ -889,6 +893,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
         alignLabelWithHint: true,
         filled: true,
         fillColor: Colors.white,
+        labelStyle: const TextStyle(color: Color(0xFF555555)),
       ),
       onChanged: (v) => setState(() => onChanged(v)),
       maxLines: maxLines,
@@ -903,7 +908,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('Position', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Position', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF212121))),
             IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
                 onPressed: onDelete,
@@ -932,7 +937,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('Qualification', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Qualification', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF212121))),
             IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
                 onPressed: onDelete,
@@ -965,7 +970,7 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            const Text('Certification', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Certification', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF212121))),
             IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
                 onPressed: onDelete,

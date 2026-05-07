@@ -25,7 +25,9 @@ class _ClassicTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return DefaultTextStyle.merge(
+      style: const TextStyle(color: Color(0xFF212121)),
+      child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,7 +113,8 @@ class _ClassicTemplate extends StatelessWidget {
           ],
         ],
       ),
-    );
+    ),  // SingleChildScrollView
+    );  // DefaultTextStyle.merge
   }
 
   Widget _contactChip(String text) =>
@@ -181,7 +184,9 @@ class _ModernTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return DefaultTextStyle.merge(
+      style: const TextStyle(color: Color(0xFF212121)),
+      child: SingleChildScrollView(
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -269,7 +274,8 @@ class _ModernTemplate extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),   // SingleChildScrollView
+    );   // DefaultTextStyle.merge
   }
 
   Widget _sideSection(String title) => Padding(
@@ -340,7 +346,9 @@ class _MinimalTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return DefaultTextStyle.merge(
+      style: const TextStyle(color: Color(0xFF212121)),
+      child: SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,7 +421,8 @@ class _MinimalTemplate extends StatelessWidget {
           ],
         ],
       ),
-    );
+    ),   // SingleChildScrollView
+    );   // DefaultTextStyle.merge
   }
 
   Widget _contactItem(String text) =>
