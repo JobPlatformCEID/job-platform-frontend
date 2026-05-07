@@ -10,12 +10,12 @@ import '../widgets/user_avatar.dart';
 const _kContractTypes = ['full_time', 'part_time', 'freelance', 'internship'];
 
 String _contractTypeLabel(String type) => switch (type) {
-      'full_time' => 'Full-time',
-      'part_time' => 'Part-time',
-      'freelance' => 'Freelance',
-      'internship' => 'Internship',
-      _ => type,
-    };
+  'full_time' => 'Full-time',
+  'part_time' => 'Part-time',
+  'freelance' => 'Freelance',
+  'internship' => 'Internship',
+  _ => type,
+};
 
 class EmployerHomeScreen extends StatefulWidget {
   final Auth auth;
@@ -62,7 +62,10 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     setState(() => _isLoading = true);
     try {
       final jobs = await JobPosting.fetchFiltered(
-          widget.server, _employer.token, _filter);
+        widget.server,
+        _employer.token,
+        _filter,
+      );
       if (mounted) {
         setState(() {
           _jobs = jobs;
@@ -79,7 +82,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     }
   }
 
-
   void _applyFilter(JobPostingFilter updated) {
     setState(() => _filter = updated);
     _loadJobs();
@@ -91,20 +93,24 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       builder: (_) => _ContractTypeSheet(current: _filter.contractType),
     );
     if (selected != null) {
-      _applyFilter(_filter.copyWith(
-        contractType: selected == '__clear__' ? null : selected,
-      ));
+      _applyFilter(
+        _filter.copyWith(
+          contractType: selected == '__clear__' ? null : selected,
+        ),
+      );
     }
   }
 
   void _showLocationSheet() async {
     final entered = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       builder: (_) => _LocationSheet(current: _filter.location),
     );
     if (entered != null) {
       _applyFilter(
-          _filter.copyWith(location: entered.isEmpty ? null : entered));
+        _filter.copyWith(location: entered.isEmpty ? null : entered),
+      );
     }
   }
 
@@ -113,14 +119,16 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       context: context,
       isScrollControlled: true,
       builder: (_) => _SalarySheet(
-          currentMin: _filter.salaryMin, currentMax: _filter.salaryMax),
+        currentMin: _filter.salaryMin,
+        currentMax: _filter.salaryMax,
+      ),
     );
     if (result != null) {
       _applyFilter(
-          _filter.copyWith(salaryMin: result.min, salaryMax: result.max));
+        _filter.copyWith(salaryMin: result.min, salaryMax: result.max),
+      );
     }
   }
-
 
   Widget _remoteChip() {
     final active = _filter.isRemote == true;
@@ -137,7 +145,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     final active = _filter.contractType != null;
     return FilterChip(
       label: Text(
-          active ? _contractTypeLabel(_filter.contractType!) : 'Job type'),
+        active ? _contractTypeLabel(_filter.contractType!) : 'Job type',
+      ),
       selected: active,
       avatar: active ? null : const Icon(Icons.work_outline, size: 16),
       onSelected: (_) => _showContractTypeSheet(),
@@ -148,16 +157,15 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
   }
 
   Widget _locationChip() {
-    final active =
-        _filter.location != null && _filter.location!.isNotEmpty;
+    final active = _filter.location != null && _filter.location!.isNotEmpty;
     return FilterChip(
       label: Text(active ? _filter.location! : 'Location'),
       selected: active,
-      avatar:
-          active ? null : const Icon(Icons.location_on_outlined, size: 16),
+      avatar: active ? null : const Icon(Icons.location_on_outlined, size: 16),
       onSelected: (_) => _showLocationSheet(),
-      onDeleted:
-          active ? () => _applyFilter(_filter.copyWith(location: null)) : null,
+      onDeleted: active
+          ? () => _applyFilter(_filter.copyWith(location: null))
+          : null,
     );
   }
 
@@ -179,8 +187,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       avatar: active ? null : const Icon(Icons.euro_outlined, size: 16),
       onSelected: (_) => _showSalarySheet(),
       onDeleted: active
-          ? () => _applyFilter(
-              _filter.copyWith(salaryMin: null, salaryMax: null))
+          ? () =>
+                _applyFilter(_filter.copyWith(salaryMin: null, salaryMax: null))
           : null,
     );
   }
@@ -207,22 +215,20 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       builder: (_) => _ActiveSheet(current: _filter.isActive),
     );
     if (selected != null) {
-      _applyFilter(_filter.copyWith(
-        isActive: selected == '__clear__'
-            ? null
-            : selected == 'true',
-      ));
+      _applyFilter(
+        _filter.copyWith(
+          isActive: selected == '__clear__' ? null : selected == 'true',
+        ),
+      );
     }
   }
-
 
   void _showCreateSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (_) => _JobFormSheet(
-        onSubmit: (fields) => _handleCreate(fields),
-      ),
+      builder: (_) =>
+          _JobFormSheet(onSubmit: (fields) => _handleCreate(fields)),
     );
   }
 
@@ -251,10 +257,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
 
   static String? _formatSalary(int? min, int? max) {
     if (min == null && max == null) return null;
-    String fmt(int n) => '€${n.toString().replaceAllMapped(
-          RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-          (m) => '${m[1]},',
-        )}';
+    String fmt(int n) =>
+        '€${n.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
     if (min != null && max != null) return '${fmt(min)} – ${fmt(max)}';
     if (min != null) return '≥ ${fmt(min)}';
     return '≤ ${fmt(max!)}';
@@ -339,7 +343,9 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                           height: 8,
                           margin: const EdgeInsets.only(right: 6, top: 2),
                           decoration: BoxDecoration(
-                            color: job.isActive ? Colors.green : cs.onSurfaceVariant.withValues(alpha: 0.5),
+                            color: job.isActive
+                                ? Colors.green
+                                : cs.onSurfaceVariant.withValues(alpha: 0.5),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -366,7 +372,10 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     DefaultTextStyle(
-                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
                       child: Wrap(
                         spacing: 10,
                         runSpacing: 4,
@@ -392,7 +401,9 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: cs.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
@@ -445,7 +456,9 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
   }
 
   Future<void> _handleUpdate(
-      JobPosting job, Map<String, dynamic> fields) async {
+    JobPosting job,
+    Map<String, dynamic> fields,
+  ) async {
     try {
       final updated = await job.update(
         widget.server,
@@ -514,9 +527,11 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(job.isActive
-                  ? Icons.toggle_off_outlined
-                  : Icons.toggle_on_outlined),
+              leading: Icon(
+                job.isActive
+                    ? Icons.toggle_off_outlined
+                    : Icons.toggle_on_outlined,
+              ),
               title: Text(job.isActive ? 'Deactivate' : 'Reactivate'),
               onTap: () {
                 Navigator.of(context).pop();
@@ -532,11 +547,14 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.delete_outlined,
-                  color: Theme.of(context).colorScheme.error),
-              title: Text('Delete',
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.error)),
+              leading: Icon(
+                Icons.delete_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Delete',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
               onTap: () {
                 Navigator.of(context).pop();
                 _handleDelete(job);
@@ -558,9 +576,11 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(updated.isActive
-                ? '"${updated.title}" reactivated'
-                : '"${updated.title}" deactivated'),
+            content: Text(
+              updated.isActive
+                  ? '"${updated.title}" reactivated'
+                  : '"${updated.title}" deactivated',
+            ),
           ),
         );
       }
@@ -572,7 +592,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -598,8 +617,8 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
                     ActionChip(
                       avatar: const Icon(Icons.close, size: 16),
                       label: Text('Clear ($activeFilterCount)'),
-                      onPressed: () => _applyFilter(
-                          JobPostingFilter(title: _filter.title)),
+                      onPressed: () =>
+                          _applyFilter(JobPostingFilter(title: _filter.title)),
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -622,24 +641,25 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? Center(
-                          child: Text(_error!,
-                              style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .error)))
-                      : _jobs.isEmpty
-                          ? _buildEmptyState(context)
-                          : RefreshIndicator(
-                              onRefresh: _loadJobs,
-                              child: ListView.builder(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                itemCount: _jobs.length,
-                                itemBuilder: (context, index) =>
-                                    _buildJobCard(context, _jobs[index]),
-                              ),
-                            ),
+                  ? Center(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    )
+                  : _jobs.isEmpty
+                  ? _buildEmptyState(context)
+                  : RefreshIndicator(
+                      onRefresh: _loadJobs,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: _jobs.length,
+                        itemBuilder: (context, index) =>
+                            _buildJobCard(context, _jobs[index]),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -655,7 +675,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
     );
   }
 }
-
 
 class _InlineMeta extends StatelessWidget {
   final IconData icon;
@@ -689,15 +708,19 @@ class _ContractTypeSheet extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-            child: Text('Job type',
-                style: Theme.of(context).textTheme.titleLarge),
+            child: Text(
+              'Job type',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
-          ..._kContractTypes.map((type) => RadioListTile<String>(
-                title: Text(_contractTypeLabel(type)),
-                value: type,
-                groupValue: current,
-                onChanged: (v) => Navigator.of(context).pop(v),
-              )),
+          ..._kContractTypes.map(
+            (type) => RadioListTile<String>(
+              title: Text(_contractTypeLabel(type)),
+              value: type,
+              groupValue: current,
+              onChanged: (v) => Navigator.of(context).pop(v),
+            ),
+          ),
           if (current != null)
             ListTile(
               leading: const Icon(Icons.clear),
@@ -738,7 +761,11 @@ class _LocationSheetState extends State<_LocationSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        24,
+        20,
+        24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -788,10 +815,8 @@ class _SalarySheetState extends State<_SalarySheet> {
   @override
   void initState() {
     super.initState();
-    _minCtrl =
-        TextEditingController(text: widget.currentMin?.toString() ?? '');
-    _maxCtrl =
-        TextEditingController(text: widget.currentMax?.toString() ?? '');
+    _minCtrl = TextEditingController(text: widget.currentMin?.toString() ?? '');
+    _maxCtrl = TextEditingController(text: widget.currentMax?.toString() ?? '');
   }
 
   @override
@@ -805,13 +830,19 @@ class _SalarySheetState extends State<_SalarySheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        24,
+        20,
+        24,
+        MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Salary range (€)',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Salary range (€)',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -878,8 +909,10 @@ class _ActiveSheet extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-            child: Text('Posting status',
-                style: Theme.of(context).textTheme.titleLarge),
+            child: Text(
+              'Posting status',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
           ),
           RadioListTile<String>(
             title: const Text('Active'),
@@ -931,12 +964,12 @@ class _JobFormSheetState extends State<_JobFormSheet> {
   bool _isLoading = false;
 
   String _contractTypeLabel(String type) => switch (type) {
-        'full_time' => 'Full Time',
-        'part_time' => 'Part Time',
-        'freelance' => 'Freelance',
-        'internship' => 'Internship',
-        _ => type,
-      };
+    'full_time' => 'Full Time',
+    'part_time' => 'Part Time',
+    'freelance' => 'Freelance',
+    'internship' => 'Internship',
+    _ => type,
+  };
 
   @override
   void initState() {
@@ -958,8 +991,7 @@ class _JobFormSheetState extends State<_JobFormSheet> {
     if (_titleController.text.trim().isEmpty ||
         _descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Title and description are required.')),
+        const SnackBar(content: Text('Title and description are required.')),
       );
       return;
     }
@@ -1071,19 +1103,32 @@ class _JobFormSheetState extends State<_JobFormSheet> {
                   prefixIcon: Icon(Icons.description_outlined),
                 ),
                 items: _kContractTypes
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(_contractTypeLabel(type)),
-                        ))
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(_contractTypeLabel(type)),
+                      ),
+                    )
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => _contractType = value!),
+                onChanged: (value) => setState(() => _contractType = value!),
               ),
               const SizedBox(height: 8),
               SwitchListTile(
                 value: _isRemote,
                 onChanged: (value) => setState(() => _isRemote = value),
-                title: const Text('Remote position'),
+                title: const Text('Remote Position'),
+                thumbColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return Theme.of(context).colorScheme.onPrimary;
+                  }
+                  return Theme.of(context).colorScheme.outline;
+                }),
+                trackColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return Theme.of(context).colorScheme.primary;
+                  }
+                  return Theme.of(context).colorScheme.surfaceContainerHighest;
+                }),
               ),
               const SizedBox(height: 24),
               FilledButton(
@@ -1092,10 +1137,9 @@ class _JobFormSheetState extends State<_JobFormSheet> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child:
-                            CircularProgressIndicator(strokeWidth: 2))
-                    : Text(
-                        widget.existing == null ? 'Post' : 'Save'),
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(widget.existing == null ? 'Post' : 'Save'),
               ),
               const SizedBox(height: 16),
             ],
@@ -1149,7 +1193,10 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
     try {
       final filter = JobApplicationFilter(job: widget.job.id);
       final applications = await JobApplication.fetchFiltered(
-          widget.server, widget.token, filter);
+        widget.server,
+        widget.token,
+        filter,
+      );
       if (mounted) {
         setState(() {
           _applications = applications;
@@ -1167,15 +1214,16 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
   }
 
   Future<void> _handleUpdateStatus(
-      JobApplication application, String status) async {
+    JobApplication application,
+    String status,
+  ) async {
     try {
       await application.updateStatus(widget.server, widget.token, status);
       if (mounted) setState(() {});
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Could not update application status.')),
+          const SnackBar(content: Text('Could not update application status.')),
         );
       }
     }
@@ -1216,86 +1264,86 @@ class _ApplicationsSheetState extends State<_ApplicationsSheet> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? Center(
-                          child: Text(_error!,
-                              style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .error)))
-                      : _applications.isEmpty
-                          ? const Center(
-                              child: Text('No applications yet.'))
-                          : ListView.builder(
-                              controller: scrollController,
-                              itemCount: _applications.length,
-                              itemBuilder: (context, index) {
-                                final application =
-                                    _applications[index];
-                                return ListTile(
-                                  leading: GestureDetector(
-                                    onTap: () => showModalBottomSheet(
-                                      context: context,
-                                      isScrollControlled: true,
-                                      builder: (_) => UserProfileSheet(
-                                        userId: application
-                                            .candidateUserId!,
-                                        server: widget.server,
-                                        token: widget.token,
+                  ? Center(
+                      child: Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    )
+                  : _applications.isEmpty
+                  ? const Center(child: Text('No applications yet.'))
+                  : ListView.builder(
+                      controller: scrollController,
+                      itemCount: _applications.length,
+                      itemBuilder: (context, index) {
+                        final application = _applications[index];
+                        return ListTile(
+                          leading: GestureDetector(
+                            onTap: () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              builder: (_) => UserProfileSheet(
+                                userId: application.candidateUserId!,
+                                server: widget.server,
+                                token: widget.token,
+                              ),
+                            ),
+                            child: UserAvatar(
+                              avatarUrl: application.candidateAvatar,
+                              displayName:
+                                  application.candidateFullName ??
+                                  application.candidateUsername ??
+                                  '',
+                            ),
+                          ),
+                          title: Text(
+                            application.candidateFullName ??
+                                application.candidateUsername ??
+                                'Candidate #${application.candidate}',
+                          ),
+                          subtitle: Text(
+                            application.status[0].toUpperCase() +
+                                application.status.substring(1),
+                            style: TextStyle(
+                              color: _statusColor(context, application.status),
+                            ),
+                          ),
+                          trailing: application.status == 'pending'
+                              ? Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.check,
+                                        color: Colors.green,
+                                      ),
+                                      tooltip: 'Accept',
+                                      onPressed: () => _handleUpdateStatus(
+                                        application,
+                                        'accepted',
                                       ),
                                     ),
-                                    child: UserAvatar(
-                                      avatarUrl:
-                                          application.candidateAvatar,
-                                      displayName: application
-                                              .candidateFullName ??
-                                          application
-                                              .candidateUsername ??
-                                          '',
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.close,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
+                                      ),
+                                      tooltip: 'Reject',
+                                      onPressed: () => _handleUpdateStatus(
+                                        application,
+                                        'rejected',
+                                      ),
                                     ),
-                                  ),
-                                  title: Text(application
-                                          .candidateFullName ??
-                                      application.candidateUsername ??
-                                      'Candidate #${application.candidate}'),
-                                  subtitle: Text(
-                                    application.status[0].toUpperCase() +
-                                        application.status.substring(1),
-                                    style: TextStyle(
-                                        color: _statusColor(context,
-                                            application.status)),
-                                  ),
-                                  trailing: application.status ==
-                                          'pending'
-                                      ? Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            IconButton(
-                                              icon: const Icon(
-                                                  Icons.check,
-                                                  color: Colors.green),
-                                              tooltip: 'Accept',
-                                              onPressed: () =>
-                                                  _handleUpdateStatus(
-                                                      application,
-                                                      'accepted'),
-                                            ),
-                                            IconButton(
-                                              icon: Icon(Icons.close,
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .error),
-                                              tooltip: 'Reject',
-                                              onPressed: () =>
-                                                  _handleUpdateStatus(
-                                                      application,
-                                                      'rejected'),
-                                            ),
-                                          ],
-                                        )
-                                      : null,
-                                );
-                              },
-                            ),
+                                  ],
+                                )
+                              : null,
+                        );
+                      },
+                    ),
             ),
           ],
         );
