@@ -72,10 +72,6 @@ class _CandidateProfileSheetState extends State<CandidateProfileSheet> {
               _buildInfoRow(context, Icons.phone_outlined, 'Phone', profile['phone'] as String),
               const SizedBox(height: 12),
             ],
-            if (profile['score'] != null) ...[
-              _buildInfoRow(context, Icons.star_outline, 'Score', '${profile['score']}'),
-              const SizedBox(height: 12),
-            ],
             if ((profile['bio'] as String?)?.isNotEmpty == true) ...[
               Text('Bio', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 8),
