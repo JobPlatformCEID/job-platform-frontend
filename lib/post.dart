@@ -1,4 +1,4 @@
-import 'server.dart';
+import 'server_api.dart';
 
 class Post {
   final int id;
@@ -79,12 +79,8 @@ class Post {
     await server.sendDelete('/api/posts/$id/', token: token);
   }
 
-  Future<void> likePost(Server server, String token) async {
-    await server.sendPost('/api/posts/$id/like/', {}, token: token);
-  }
-
-  Future<void> unlikePost(Server server, String token) async {
-    await server.sendDelete('/api/posts/$id/like/', token: token);
+  Future<Map<String, dynamic>> toggleLike(Server server, String token) async {
+    return await server.sendPost('/api/posts/$id/like/', {}, token: token);
   }
 }
 

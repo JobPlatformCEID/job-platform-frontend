@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:convert';
 import '../auth.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../conversation.dart';
 import '../calls.dart';
 import '../user.dart';
@@ -132,6 +132,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Future<void> _handleDeleteMessage(Message message) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Message'),
+        content: const Text('Do you want to delete this message?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
     try {
       await message.deleteMessage(widget.server, _token);
       if (mounted) setState(() => _messages.removeWhere((m) => m.id == message.id));
@@ -189,8 +208,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e is ServerException ? e.detail : 'Could not join call.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not join call.')),
+          SnackBar(content: Text(msg)),
         );
       }
     }
@@ -525,7 +545,8 @@ Future<void> _handleCreate() async {
       widget.onCallCreated(room);
     }
   } catch (e) {
-    if (mounted) setState(() => _error = 'Could not create call.');
+    final msg = e is ServerException ? e.detail : 'Could not create call.';
+    if (mounted) setState(() => _error = msg);
   } finally {
     if (mounted) setState(() => _isLoading = false);
   }

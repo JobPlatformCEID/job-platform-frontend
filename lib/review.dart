@@ -1,4 +1,4 @@
-import '../server.dart';
+import '../server_api.dart';
 
 class Review {
   final int id;

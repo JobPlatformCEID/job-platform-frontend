@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../auth.dart';
 import '../ai_interview.dart';
 import '../job.dart';
@@ -59,8 +59,20 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
         jobPostingId: result['jobPostingId']! as int,
         title: result['title'] as String? ?? '',
       );
-      setState(() => _sessions.insert(0, session));
-      _openChat(session);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => AiChatScreen(
+            server: widget.server,
+            auth: widget.auth,
+            sessionId: session.id,
+            sessionTitle: session.displayTitle,
+            initialMessages: [],
+          ),
+        ),
+      );
+      if (mounted) _loadSessions();
     } catch (e) {
       _showError('Failed to create: $e');
     }
@@ -137,10 +149,9 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
 
   Future<void> _openChat(InterviewSession session) async {
     try {
-      // fetch the full session so we have all messages before entering chat
       final fullSession = await _service.fetchSession(session.id);
       if (!mounted) return;
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (ctx) => AiChatScreen(
@@ -152,6 +163,7 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
           ),
         ),
       );
+      if (mounted) _loadSessions();
     } catch (e) {
       _showError('Failed to load session: $e');
     }

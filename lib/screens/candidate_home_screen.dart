@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../auth.dart';
 import '../user.dart';
 import '../job.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../filtering.dart';
 import 'job_detail_sheet.dart';
 import 'candidate_applications_screen.dart';
@@ -104,6 +104,7 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
   void _showLocationSheet() async {
     final entered = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       builder: (_) => _LocationSheet(current: _filter.location),
     );
     if (entered != null) {

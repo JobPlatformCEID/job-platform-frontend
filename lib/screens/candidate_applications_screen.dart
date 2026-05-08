@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../auth.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../job.dart';
 import '../filtering.dart';
 import '../ai_interview.dart';
@@ -643,7 +643,6 @@ class _ApplicationDetailScreenState
         jobPostingId: widget.application.job,
         title: widget.application.jobTitle ?? _job?.title ?? '',
       );
-      final fullSession = await service.fetchSession(session.id);
 
       if (!mounted) return;
       await Navigator.of(context).push(
@@ -651,9 +650,9 @@ class _ApplicationDetailScreenState
           builder: (_) => AiChatScreen(
             server: widget.server,
             auth: widget.auth,
-            sessionId: fullSession.id,
-            sessionTitle: fullSession.displayTitle,
-            initialMessages: fullSession.messages,
+            sessionId: session.id,
+            sessionTitle: session.displayTitle,
+            initialMessages: [],
           ),
         ),
       );

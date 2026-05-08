@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../auth.dart';
 import '../ai_interview.dart';
 
@@ -38,6 +38,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
   void initState() {
     super.initState();
     _messages = List.from(widget.initialMessages);
+    _isAiTyping = _messages.isEmpty;
     final service = InterviewService(server: widget.server, auth: widget.auth);
     try {
       _chat = service.openChat(widget.sessionId);
@@ -82,10 +83,14 @@ class _AiChatScreenState extends State<AiChatScreen> {
           _isAiTyping = false;
           _isSending = false;
         });
-        _showError('Connection error. Please restart the session.');
+        _showError('Connection lost. Please reopen the session.');
 
       case ChatConnectionClosed():
-        _showError('Connection closed.');
+        setState(() {
+          _isAiTyping = false;
+          _isSending = false;
+        });
+        _showError('Connection closed unexpectedly.');
     }
   }
 

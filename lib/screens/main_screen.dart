@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:job_platform_frontend/screens/cv_builder_screen.dart';
-import '../server.dart';
+import '../server_api.dart';
 import '../auth.dart';
 import '../user.dart';
 import '../widgets/responsive.dart';
@@ -176,13 +176,14 @@ class _MainScreenState extends State<MainScreen> {
                         selected: _selectedIndex == 2,
                         onTap: () => _selectTab(2),
                       ),
-                      _SidebarNavItem(
-                        icon: Icons.smart_toy_outlined,
-                        selectedIcon: Icons.smart_toy,
-                        label: 'AI Interviews',
-                        selected: _selectedIndex == 3,
-                        onTap: () => _selectTab(3),
-                      ),
+                      if(widget.auth.user is Candidate)
+                        _SidebarNavItem(
+                          icon: Icons.smart_toy_outlined,
+                          selectedIcon: Icons.smart_toy,
+                          label: 'AI Interviews',
+                          selected: _selectedIndex == 3,
+                          onTap: () => _selectTab(3),
+                        ),
 
                       const Divider(indent: 16, endIndent: 16),
 
@@ -209,11 +210,6 @@ class _MainScreenState extends State<MainScreen> {
                           icon: Icons.assignment_outlined,
                           label: 'My Applications',
                           onTap: () => _pushScreen(CandidateApplicationsScreen(auth: widget.auth, server: widget.server)),
-                        ),
-                        _SidebarNavItem(
-                          icon: Icons.description_outlined,
-                          label: 'CV Builder',
-                          onTap: () => _pushScreen(CvBuilderScreen(server: widget.server, auth: widget.auth)),
                         ),
                       ],
                     ],
@@ -347,11 +343,11 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) => _selectTab(index),
-        destinations: const [
+        destinations: [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
           NavigationDestination(icon: Icon(Icons.people_outlined), selectedIcon: Icon(Icons.people), label: 'Social'),
-          NavigationDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: 'AI'),
+          if(widget.auth.user is Candidate) NavigationDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: 'AI'),
         ],
       ),
     );
@@ -439,14 +435,6 @@ class _MainScreenState extends State<MainScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   _pushScreen(CandidateApplicationsScreen(auth: widget.auth, server: widget.server));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.description_outlined),
-                title: const Text('CV Builder'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pushScreen(CvBuilderScreen(server: widget.server, auth: widget.auth));
                 },
               ),
             ],
