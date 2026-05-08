@@ -6,6 +6,8 @@ import '../server_api.dart';
 import '../filtering.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';
+import '../conversation.dart';
+import 'messages_screen.dart';
 
 const _kContractTypes = ['full_time', 'part_time', 'freelance', 'internship'];
 
@@ -308,6 +310,7 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
           job: job,
           server: widget.server,
           token: _employer.token,
+          auth: widget.auth,
         ),
       ),
     );
@@ -595,12 +598,14 @@ class JobDetailScreen extends StatefulWidget {
   final JobPosting job;
   final Server server;
   final String token;
+  final Auth auth;
 
   const JobDetailScreen({
     super.key,
     required this.job,
     required this.server,
     required this.token,
+    required this.auth,
   });
 
   @override
@@ -689,6 +694,33 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not update application status.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _openConversationWithCandidate(int candidateUserId) async {
+    try {
+      final conversation = await Conversation.createConversation(
+        widget.server,
+        widget.token,
+        candidateUserId,
+      );
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => MessagesScreen(
+              conversation: conversation,
+              server: widget.server,
+              auth: widget.auth,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open conversation.')),
         );
       }
     }
@@ -851,6 +883,12 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     onPressed: () => _handleUpdateStatus(app, 'rejected'),
                   ),
                 ],
+              ),
+            if (app.status == 'accepted' && app.candidateUserId != null)
+              IconButton(
+                icon: Icon(Icons.chat_bubble_outline, color: cs.primary),
+                tooltip: 'Message',
+                onPressed: () => _openConversationWithCandidate(app.candidateUserId!),
               ),
           ],
         ),

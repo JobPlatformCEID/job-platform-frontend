@@ -17,8 +17,5 @@ For help getting started with Flutter development, view the
 samples, guidance on mobile development, and a full API reference.
 
 ## TODO
-Job applications searching isnt implemented
-
-
 bug:you wait 30 seconds to logout and for the app to start when the server is down or unresponsive
 
