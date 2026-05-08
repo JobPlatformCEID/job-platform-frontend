@@ -47,47 +47,39 @@ class _CvBuilderScreenState extends State<CvBuilderScreen> {
 
   Future<void> _loadFromUser() async {
     final user = widget.auth.user;
-    if (user == null || user is! Candidate) return;
-
-    await Future.wait([
-      user.fetchProfile(),
-      user.fetchSkills(),
-      user.fetchEducations(),
-      user.fetchExperiences(),
-    ]);
-
-    setState(() {
-      _cv = _cv.copyWith(
-        fullName: user.fullName,
-        email: user.email,
-        phone: user.phone,
-        location: user.location,
-        summary: user.bio,
-        skills: user.skills.map((s) => s.name).toList(),
-        education: user.educations
-            .map(
-              (e) => CvEducation(
-                institution: e.institution,
-                degree: _formatLevel(e.level),
-                field: e.degree,
-                startDate: '',
-                endDate: e.graduationDate ?? '',
-              ),
-            )
-            .toList(),
-        experience: user.experiences
-            .map(
-              (e) => CvExperience(
-                company: e.company,
-                position: e.title,
-                startDate: e.startDate,
-                endDate: e.endDate ?? '',
-                description: e.description,
-              ),
-            )
-            .toList(),
-      );
-    });
+    if (user != null) {
+      setState(() {
+        _cv = _cv.copyWith(
+          fullName: user.fullName,
+          email: user.email,
+        );
+        
+        // If user is a candidate, populate with profile data
+        if (user is Candidate) {
+          _cv = _cv.copyWith(
+            phone: user.phone,
+            location: user.location,
+            summary: user.bio,
+            skills: user.skills.map((s) => s.name).toList(),
+            education: user.educations.map((e) => CvEducation(
+              institution: e.institution,
+              degree: e.degree,
+              field: e.degree, // Use degree as field since backend doesn't separate them
+              startDate: e.graduationDate?.substring(0, 4) ?? '',
+              endDate: '',
+              description: '',
+            )).toList(),
+            experience: user.experiences.map((e) => CvExperience(
+              company: e.company,
+              position: e.title,
+              startDate: e.startDate.substring(0, 7),
+              endDate: e.endDate?.substring(0, 7) ?? '',
+              description: e.description,
+            )).toList(),
+          );
+        }
+      });
+    }
   }
 
   // Converts the stored level key into a readable degree label

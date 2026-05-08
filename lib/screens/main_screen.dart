@@ -210,11 +210,6 @@ class _MainScreenState extends State<MainScreen> {
                           label: 'My Applications',
                           onTap: () => _pushScreen(CandidateApplicationsScreen(auth: widget.auth, server: widget.server)),
                         ),
-                        _SidebarNavItem(
-                          icon: Icons.description_outlined,
-                          label: 'CV Builder',
-                          onTap: () => _pushScreen(CvBuilderScreen(server: widget.server, auth: widget.auth)),
-                        ),
                       ],
                     ],
                   ),
@@ -439,14 +434,6 @@ class _MainScreenState extends State<MainScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   _pushScreen(CandidateApplicationsScreen(auth: widget.auth, server: widget.server));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.description_outlined),
-                title: const Text('CV Builder'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  _pushScreen(CvBuilderScreen(server: widget.server, auth: widget.auth));
                 },
               ),
             ],

@@ -7,6 +7,7 @@ import '../auth.dart';
 import '../server_api.dart';
 import '../user.dart';
 import '../widgets/user_avatar.dart';
+import 'cv_builder_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Auth auth;
@@ -248,6 +249,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _openCvBuilder() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CvBuilderScreen(server: widget.auth.user!.server, auth: widget.auth),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -388,6 +397,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 8),
         _buildCvWidget(candidate),
         const SizedBox(height: 16),
+
+        // CV Builder section (only in edit mode for candidates)
+        if (_isEditing) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceVariant,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.description_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'CV Builder',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => _openCvBuilder(),
+                      icon: const Icon(Icons.arrow_forward, size: 16),
+                      label: const Text('Open'),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create a professional CV using your profile data. Choose from multiple templates and export as PDF.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
 
         const SizedBox(height: 16),
 
