@@ -211,56 +211,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
         server: widget.server,
         token: widget.token,
         onCreated: (review) => setState(() => _reviews.insert(0, review)),
-        onSuccess: () => ReviewFeedbackMessage.showSuccess(context),
         onAlreadyReviewed: () => ReviewFeedbackMessage.showAlreadyReviewed(context),
-      ),
-    );
-  }
-
-  void _showReviewMenu(Review review) {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _showEditReviewSheet(review);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outlined, color: Theme.of(context).colorScheme.error),
-              title: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              onTap: () {
-                Navigator.of(context).pop();
-                showDialog(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    title: const Text('Delete Review?'),
-                    content: const Text('Are you sure you want to delete this review?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _handleDelete(review);
-                        },
-                        child: const Text('Delete'),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -419,8 +370,59 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                           ],
                                         ],
                                       ),
-                                      onLongPress: review.owner == widget.auth.user!.userId
-                                          ? () => _showReviewMenu(review)
+                                      trailing: review.owner == widget.auth.user!.userId
+                                          ? PopupMenuButton<String>(
+                                              onSelected: (value) {
+                                                if (value == 'edit') _showEditReviewSheet(review);
+                                                if (value == 'delete') {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (_) => AlertDialog(
+                                                      title: const Text('Delete Review?'),
+                                                      content: const Text('Are you sure you want to delete this review?'),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () => Navigator.pop(context),
+                                                          child: const Text('Cancel'),
+                                                        ),
+                                                        FilledButton(
+                                                          onPressed: () {
+                                                            Navigator.pop(context);
+                                                            _handleDelete(review);
+                                                          },
+                                                          child: const Text('Delete'),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              itemBuilder: (ctx) => [
+                                                const PopupMenuItem(
+                                                  value: 'edit',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.edit, size: 18),
+                                                      SizedBox(width: 8),
+                                                      Text('Edit'),
+                                                    ],
+                                                  ),
+                                                ),
+                                                PopupMenuItem(
+                                                  value: 'delete',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.delete, size: 18, color: Colors.red),
+                                                      SizedBox(width: 8),
+                                                      Text(
+                                                        'Delete',
+                                                        style: TextStyle(color: Colors.red),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            )
                                           : null,
                                     );
                                   },
@@ -451,7 +453,6 @@ class _CreateReviewSheet extends StatefulWidget {
   final String token;
   final void Function(Review review) onCreated;
   final Review? existing;
-  final VoidCallback? onSuccess;
   final VoidCallback? onAlreadyReviewed;
 
   const _CreateReviewSheet({
@@ -460,7 +461,6 @@ class _CreateReviewSheet extends StatefulWidget {
     required this.token,
     required this.onCreated,
     this.existing,
-    this.onSuccess,
     this.onAlreadyReviewed,
   });
 
@@ -509,7 +509,6 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
         );
         Navigator.of(context).pop();
         widget.onCreated(review);
-        widget.onSuccess?.call();
       }
     } on ServerException catch (e) {
       if (mounted) {
@@ -585,18 +584,6 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
 }
 
 class ReviewFeedbackMessage {
-  static void showSuccess(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        content: const Text('Review submitted successfully.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-        ],
-      ),
-    );
-  }
-
   static void showError(BuildContext context) {
     showDialog(
       context: context,
