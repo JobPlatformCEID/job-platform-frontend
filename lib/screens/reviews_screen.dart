@@ -251,10 +251,10 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     }
   }
 
-  // Builds a row of stars for a given score out of 10
+  // Builds a row of stars for a given score out of 5
   Widget _buildStars(BuildContext context, int score) {
     const totalStars = 5;
-    final filled = (score / 2).round();
+    final filled = score;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(totalStars, (i) => Icon(
@@ -301,7 +301,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                   _buildStars(context, _averageScore.round()),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '${_averageScore.toStringAsFixed(1)} / 10 · ${_reviews.length} review${_reviews.length == 1 ? '' : 's'}',
+                                    '${_averageScore.toStringAsFixed(1)} / 5 · ${_reviews.length} review${_reviews.length == 1 ? '' : 's'}',
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
                                 ],
@@ -347,7 +347,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                       title: Row(
                                         children: [
                                           Text(
-                                            '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/10${review.edited ? ' (edited)' : ''}',
+                                            '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/5${review.edited ? ' (edited)' : ''}',
                                             style: Theme.of(context).textTheme.bodyMedium,
                                           ),
                                           if (review.owner == widget.auth.user!.userId) ...[
@@ -470,7 +470,7 @@ class _CreateReviewSheet extends StatefulWidget {
 
 class _CreateReviewSheetState extends State<_CreateReviewSheet> {
   final _contentController = TextEditingController();
-  int _score = 5;
+  int _score = 3;
   bool _isLoading = false;
 
   @override
@@ -542,12 +542,12 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
           const SizedBox(height: 24),
 
           // Score slider
-          Text('Score: $_score / 10', style: Theme.of(context).textTheme.titleSmall),
+          Text('Score: $_score / 5', style: Theme.of(context).textTheme.titleSmall),
           Slider(
             value: _score.toDouble(),
             min: 0,
-            max: 10,
-            divisions: 10,
+            max: 5,
+            divisions: 5,
             label: '$_score',
             onChanged: (value) => setState(() => _score = value.round()),
           ),
