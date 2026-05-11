@@ -36,9 +36,9 @@ class _CandidateProfileSheetState extends State<CandidateProfileSheet> {
       final id = widget.profileId;
       final results = await Future.wait([
         widget.server.sendGet('/api/candidates/$id/', token: widget.token),
-        widget.server.sendGetList('/api/candidates/$id/skills/', token: widget.token).catchError((_) => <Map<String, dynamic>>[]),
-        widget.server.sendGetList('/api/candidates/$id/experience/', token: widget.token).catchError((_) => <Map<String, dynamic>>[]),
-        widget.server.sendGetList('/api/candidates/$id/education/', token: widget.token).catchError((_) => <Map<String, dynamic>>[]),
+        widget.server.sendGetList('/api/candidates/background/skills/?candidate_id=$id', token: widget.token).catchError((_) => <Map<String, dynamic>>[]),
+        widget.server.sendGetList('/api/candidates/background/experience/?candidate_id=$id', token: widget.token).catchError((_) => <Map<String, dynamic>>[]),
+        widget.server.sendGetList('/api/candidates/background/education/?candidate_id=$id', token: widget.token).catchError((_) => <Map<String, dynamic>>[]),
       ]);
       if (mounted) {
         setState(() {
