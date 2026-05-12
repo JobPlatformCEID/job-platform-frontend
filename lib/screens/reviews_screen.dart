@@ -233,6 +233,19 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     );
   }
 
+  void _showReviewDetail(Review review) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ReviewDetailSheet(
+        review: review,
+        server: widget.server,
+        token: widget.token,
+        auth: widget.auth,
+      ),
+    );
+  }
+
   Future<void> _handleDelete(Review review) async {
     try {
       await Review.delete(
@@ -329,6 +342,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                   itemBuilder: (context, index) {
                                     final review = _reviews[index];
                                     return ListTile(
+                                      onTap: () => _showReviewDetail(review),
                                       leading: GestureDetector(
                                         onTap: review.owner != null ? () => showModalBottomSheet(
                                           context: context,
@@ -616,6 +630,106 @@ class ReviewFeedbackMessage {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
       ),
+    );
+  }
+}
+
+class _ReviewDetailSheet extends StatelessWidget {
+  final Review review;
+  final Server server;
+  final String token;
+  final Auth auth;
+
+  const _ReviewDetailSheet({
+    required this.review,
+    required this.server,
+    required this.token,
+    required this.auth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundImage: review.ownerAvatar != null ? NetworkImage(review.ownerAvatar!) : null,
+                    child: review.ownerAvatar == null
+                        ? Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimaryContainer)
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            ...List.generate(5, (i) => Icon(
+                              i < review.score ? Icons.star : Icons.star_border,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary,
+                            )),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${review.score}/5',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            if (review.edited) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '(edited)',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24),
+                child: review.content.isNotEmpty
+                    ? Text(
+                        review.content,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      )
+                    : Center(
+                        child: Text(
+                          'No review text provided.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
