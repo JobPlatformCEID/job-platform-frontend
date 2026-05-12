@@ -8,6 +8,7 @@ import '../server_api.dart';
 import '../user.dart';
 import '../widgets/user_avatar.dart';
 import 'cv_builder_screen.dart';
+import 'package:http/http.dart' as http;
 
 class ProfileScreen extends StatefulWidget {
   final Auth auth;
@@ -236,25 +237,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _pendingCvFileName = null;
   });
 
-  Future<void> _downloadCV(String cvUrl) async {
-    final uri = Uri.parse(cvUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open CV.')),
-        );
-      }
-    }
-  }
-
   void _openCvBuilder() {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CvBuilderScreen(server: widget.auth.user!.server, auth: widget.auth),
       ),
     );
+  }
+
+  Future<void> _downloadCV(String cvUrl) async {
+    try {
+      final original = Uri.parse(cvUrl);
+      final serverUri = Uri.parse(widget.auth.user!.server.getServerUrl()!);
+      final downloadUri = original.replace(host: serverUri.host);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                SizedBox(width: 12),
+                Text('Downloading CV…'),
+              ],
+            ),
+            duration: Duration(seconds: 30),
+          ),
+        );
+      }
+
+      final response = await http.get(downloadUri);
+      if (response.statusCode != 200) throw Exception('HTTP ${response.statusCode}');
+
+      if (mounted) ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      final fileName = original.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => 'curriculum_vitae.pdf');
+
+      final savedPath = await FilePicker.platform.saveFile(
+        dialogTitle: 'Save CV',
+        fileName: fileName,
+        bytes: response.bodyBytes,
+        type: FileType.custom,
+       allowedExtensions: ['pdf'],
+      );
+
+      if (!mounted) return;
+      if (savedPath != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Saved to $savedPath')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not download CV: $e')),
+        );
+      }
+    }
   }
 
   @override
