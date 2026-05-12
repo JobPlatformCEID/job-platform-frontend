@@ -178,7 +178,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       selected: active,
       avatar: active ? null : const Icon(Icons.work_outline, size: 16),
       onSelected: (_) => _showContractTypeSheet(),
-      onDeleted: active ? () => _applyFilter(_filter.copyWith(contractType: null)) : null,
     );
   }
 
@@ -189,7 +188,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       selected: active,
       avatar: active ? null : const Icon(Icons.location_on_outlined, size: 16),
       onSelected: (_) => _showLocationSheet(),
-      onDeleted: active ? () => _applyFilter(_filter.copyWith(location: null)) : null,
     );
   }
 
@@ -206,7 +204,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       selected: active,
       avatar: active ? null : const Icon(Icons.euro_outlined, size: 16),
       onSelected: (_) => _showSalarySheet(),
-      onDeleted: active ? () => _applyFilter(_filter.copyWith(salaryMin: null, salaryMax: null)) : null,
     );
   }
 
@@ -218,7 +215,6 @@ class _EmployerHomeScreenState extends State<EmployerHomeScreen> {
       selected: active,
       avatar: active ? null : const Icon(Icons.toggle_on_outlined, size: 16),
       onSelected: (_) => _showActiveSheet(),
-      onDeleted: active ? () => _applyFilter(_filter.copyWith(isActive: null)) : null,
     );
   }
 

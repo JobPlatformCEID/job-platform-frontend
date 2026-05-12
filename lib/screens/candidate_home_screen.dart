@@ -350,10 +350,6 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
           ? null
           : const Icon(Icons.work_outline, size: 16),
       onSelected: (_) => _showContractTypeSheet(),
-      onDeleted: active
-          ? () => _clearFilter(
-              _filter.copyWith(contractType: null))
-          : null,
     );
   }
 
@@ -367,9 +363,6 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
           ? null
           : const Icon(Icons.location_on_outlined, size: 16),
       onSelected: (_) => _showLocationSheet(),
-      onDeleted: active
-          ? () => _clearFilter(_filter.copyWith(location: null))
-          : null,
     );
   }
 
@@ -390,10 +383,6 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
       selected: active,
       avatar: active ? null : const Icon(Icons.euro_outlined, size: 16),
       onSelected: (_) => _showSalarySheet(),
-      onDeleted: active
-          ? () => _clearFilter(
-              _filter.copyWith(salaryMin: null, salaryMax: null))
-          : null,
     );
   }
 
