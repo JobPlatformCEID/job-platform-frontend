@@ -346,16 +346,27 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                       ),
                                       title: Row(
                                         children: [
-                                          Text(
-                                            '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/5${review.edited ? ' (edited)' : ''}',
-                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          Flexible(
+                                            child: Text(
+                                              '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/5${review.edited ? ' (edited)' : ''}',
+                                              style: Theme.of(context).textTheme.bodyMedium,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                           if (review.owner == widget.auth.user!.userId) ...[
-                                            const SizedBox(width: 8),
-                                            Chip(
-                                              label: const Text('Me'),
-                                              padding: EdgeInsets.zero,
-                                              visualDensity: VisualDensity.compact,
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).colorScheme.primaryContainer,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                'Me',
+                                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ],
