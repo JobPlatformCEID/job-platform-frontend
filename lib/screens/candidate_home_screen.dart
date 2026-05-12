@@ -141,10 +141,17 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content:
-                  Text('Could not apply. You may have already applied.')),
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            content: const Text('Could not apply. You may have already applied.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     }
