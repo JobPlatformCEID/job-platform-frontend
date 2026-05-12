@@ -505,7 +505,7 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
         //make the user go back a screen so that they actually see it
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('review submitted successfully')),
+          const SnackBar(content: Text('Review submitted successfully')),
         );
         Navigator.of(context).pop();
         widget.onCreated(review);
