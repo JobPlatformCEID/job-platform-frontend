@@ -337,30 +337,6 @@ class _CandidateApplicationsScreenState
                       ),
                     ),
 
-                    if (_extraFilterCount > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 4),
-                        child: Row(
-                          children: [
-                            if (_filter.jobIsRemote == true)
-                              _summaryChip('Remote', () => _applyFilter(
-                                  _filter.copyWith(jobIsRemote: null))),
-                            if (_filter.jobContractType?.isNotEmpty ==
-                                true)
-                              _summaryChip(
-                                  _contractTypeLabel(
-                                      _filter.jobContractType!),
-                                  () => _applyFilter(_filter.copyWith(
-                                      jobContractType: null))),
-                            if (_filter.jobLocation?.isNotEmpty == true)
-                              _summaryChip(_filter.jobLocation!,
-                                  () => _applyFilter(_filter.copyWith(
-                                      jobLocation: null))),
-                          ],
-                        ),
-                      ),
-
                     const Divider(height: 1),
 
                     Expanded(
@@ -379,20 +355,6 @@ class _CandidateApplicationsScreenState
                     ),
                   ],
                 ),
-    );
-  }
-
-  Widget _summaryChip(String label, VoidCallback onDelete) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 6),
-      child: Chip(
-        label: Text(label,
-            style: const TextStyle(fontSize: 12)),
-        deleteIcon: const Icon(Icons.close, size: 14),
-        onDeleted: onDelete,
-        visualDensity: VisualDensity.compact,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
     );
   }
 }

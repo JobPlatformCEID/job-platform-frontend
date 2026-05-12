@@ -233,6 +233,19 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     );
   }
 
+  void _showReviewDetail(Review review) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ReviewDetailSheet(
+        review: review,
+        server: widget.server,
+        token: widget.token,
+        auth: widget.auth,
+      ),
+    );
+  }
+
   Future<void> _handleDelete(Review review) async {
     try {
       await Review.delete(
@@ -251,10 +264,10 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
     }
   }
 
-  // Builds a row of stars for a given score out of 10
+  // Builds a row of stars for a given score out of 5
   Widget _buildStars(BuildContext context, int score) {
     const totalStars = 5;
-    final filled = (score / 2).round();
+    final filled = score;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(totalStars, (i) => Icon(
@@ -301,7 +314,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                   _buildStars(context, _averageScore.round()),
                                   const SizedBox(width: 8),
                                   Text(
-                                    '${_averageScore.toStringAsFixed(1)} / 10 · ${_reviews.length} review${_reviews.length == 1 ? '' : 's'}',
+                                    '${_averageScore.toStringAsFixed(1)} / 5 · ${_reviews.length} review${_reviews.length == 1 ? '' : 's'}',
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
                                 ],
@@ -329,6 +342,7 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                   itemBuilder: (context, index) {
                                     final review = _reviews[index];
                                     return ListTile(
+                                      onTap: () => _showReviewDetail(review),
                                       leading: GestureDetector(
                                         onTap: review.owner != null ? () => showModalBottomSheet(
                                           context: context,
@@ -346,16 +360,27 @@ class _ReviewsSheetState extends State<_ReviewsSheet> {
                                       ),
                                       title: Row(
                                         children: [
-                                          Text(
-                                            '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/10${review.edited ? ' (edited)' : ''}',
-                                            style: Theme.of(context).textTheme.bodyMedium,
+                                          Flexible(
+                                            child: Text(
+                                              '${review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}'} · ${review.score}/5${review.edited ? ' (edited)' : ''}',
+                                              style: Theme.of(context).textTheme.bodyMedium,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                           if (review.owner == widget.auth.user!.userId) ...[
-                                            const SizedBox(width: 8),
-                                            Chip(
-                                              label: const Text('Me'),
-                                              padding: EdgeInsets.zero,
-                                              visualDensity: VisualDensity.compact,
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).colorScheme.primaryContainer,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                'Me',
+                                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ],
@@ -470,7 +495,7 @@ class _CreateReviewSheet extends StatefulWidget {
 
 class _CreateReviewSheetState extends State<_CreateReviewSheet> {
   final _contentController = TextEditingController();
-  int _score = 5;
+  int _score = 3;
   bool _isLoading = false;
 
   @override
@@ -505,7 +530,7 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
         //make the user go back a screen so that they actually see it
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('review submitted successfully')),
+          const SnackBar(content: Text('Review submitted successfully')),
         );
         Navigator.of(context).pop();
         widget.onCreated(review);
@@ -529,7 +554,7 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 24, right: 24, top: 24,
         bottom: MediaQuery.of(context).viewInsets.bottom + 24,
@@ -542,12 +567,12 @@ class _CreateReviewSheetState extends State<_CreateReviewSheet> {
           const SizedBox(height: 24),
 
           // Score slider
-          Text('Score: $_score / 10', style: Theme.of(context).textTheme.titleSmall),
+          Text('Score: $_score / 5', style: Theme.of(context).textTheme.titleSmall),
           Slider(
             value: _score.toDouble(),
             min: 0,
-            max: 10,
-            divisions: 10,
+            max: 5,
+            divisions: 5,
             label: '$_score',
             onChanged: (value) => setState(() => _score = value.round()),
           ),
@@ -605,6 +630,106 @@ class ReviewFeedbackMessage {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
         ],
       ),
+    );
+  }
+}
+
+class _ReviewDetailSheet extends StatelessWidget {
+  final Review review;
+  final Server server;
+  final String token;
+  final Auth auth;
+
+  const _ReviewDetailSheet({
+    required this.review,
+    required this.server,
+    required this.token,
+    required this.auth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 32,
+                    backgroundImage: review.ownerAvatar != null ? NetworkImage(review.ownerAvatar!) : null,
+                    child: review.ownerAvatar == null
+                        ? Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimaryContainer)
+                        : null,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          review.ownerFullName ?? review.ownerUsername ?? 'User #${review.owner}',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            ...List.generate(5, (i) => Icon(
+                              i < review.score ? Icons.star : Icons.star_border,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.primary,
+                            )),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${review.score}/5',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            if (review.edited) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '(edited)',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(24),
+                child: review.content.isNotEmpty
+                    ? Text(
+                        review.content,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      )
+                    : Center(
+                        child: Text(
+                          'No review text provided.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
