@@ -361,10 +361,6 @@ class _StatsManager extends State<StatsScreen>
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          // Use green so icons/labels are visible in both light and dark mode
-          labelColor: Colors.green,
-          unselectedLabelColor: Colors.green.shade300,
-          indicatorColor: Colors.green,
           tabs: const [
             Tab(icon: Icon(Icons.attach_money), text: 'Compensation'),
             Tab(icon: Icon(Icons.work), text: 'Job Market'),
