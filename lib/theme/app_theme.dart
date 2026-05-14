@@ -75,6 +75,10 @@ class AppTheme {
     final cs = ColorScheme.fromSeed(
       seedColor: _seedLight,
       brightness: Brightness.light,
+      tertiary: const Color(0xFFF9A825),
+      onTertiary: Colors.white,
+      tertiaryContainer: const Color(0xFFFFF8E1),
+      onTertiaryContainer: const Color(0xFF3E2800),
     );
     return _buildBase(cs, Brightness.light);
   }
