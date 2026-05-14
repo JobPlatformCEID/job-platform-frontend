@@ -593,18 +593,16 @@ class _ApplicationDetailScreenState
   }
 
   Future<void> _startMockInterview() async {
-    if (_isStartingInterview) return;
+      if (_isStartingInterview) return;
 
-    setState(() => _isStartingInterview = true);
-    try {
-      final service = InterviewService(
-        server: widget.server,
-        auth: widget.auth,
-      );
-      final session = await service.createSession(
-        jobPostingId: widget.application.job,
-        title: widget.application.jobTitle ?? _job?.title ?? '',
-      );
+      setState(() => _isStartingInterview = true);
+      try {
+        final session = await InterviewSession.create(
+          widget.server,
+          widget.token,
+          jobPostingId: widget.application.job,
+          title: widget.application.jobTitle ?? _job?.title ?? '',
+        );
 
       if (!mounted) return;
       await Navigator.of(context).push(

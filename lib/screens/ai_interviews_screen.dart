@@ -20,20 +20,20 @@ class AiInterviewsScreen extends StatefulWidget {
 }
 
 class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
-  late final InterviewService _service;
   List<InterviewSession> _sessions = [];
   bool _loading = true;
+
+  String get _token => widget.auth.user!.token;
 
   @override
   void initState() {
     super.initState();
-    _service = InterviewService(server: widget.server, auth: widget.auth);
     _loadSessions();
   }
 
   Future<void> _loadSessions() async {
     try {
-      final sessions = await _service.fetchSessions();
+      final sessions = await InterviewSession.fetchAll(widget.server, _token);
       setState(() {
         _sessions = sessions;
         _loading = false;
@@ -55,7 +55,9 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     if (result == null) return;
 
     try {
-      final session = await _service.createSession(
+      final session = await InterviewSession.create(
+        widget.server,
+        _token,
         jobPostingId: result['jobPostingId']! as int,
         title: result['title'] as String? ?? '',
       );
@@ -104,7 +106,7 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     if (result == null || result == session.title) return;
 
     try {
-      await _service.updateSessionTitle(session.id, result);
+      await session.updateTitle(widget.server, _token, result);
       setState(() {
         final idx = _sessions.indexWhere((s) => s.id == session.id);
         if (idx != -1) {
@@ -140,7 +142,7 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
     if (confirm != true) return;
 
     try {
-      await _service.deleteSession(session.id);
+      await session.delete(widget.server, _token);
       setState(() => _sessions.removeWhere((s) => s.id == session.id));
     } catch (e) {
       _showError('Failed to delete: $e');
@@ -149,7 +151,7 @@ class _AiInterviewsScreenState extends State<AiInterviewsScreen> {
 
   Future<void> _openChat(InterviewSession session) async {
     try {
-      final fullSession = await _service.fetchSession(session.id);
+      final fullSession = await InterviewSession.fetchById(widget.server, _token, session.id);
       if (!mounted) return;
       await Navigator.push(
         context,

@@ -2,23 +2,22 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'server_api.dart';
-import 'auth.dart';
 
-class Message {
+class AiMessage {
   final int id;
   final String role;
   final String content;
   final DateTime createdAt;
 
-  const Message({
+  const AiMessage({
     required this.id,
     required this.role,
     required this.content,
     required this.createdAt,
   });
 
-  factory Message.fromJson(Map<String, dynamic> json) {
-    return Message(
+  factory AiMessage.fromJson(Map<String, dynamic> json) {
+    return AiMessage(
       id: json['id'] as int,
       role: json['role'] as String,
       content: json['content'] as String,
@@ -36,7 +35,7 @@ class InterviewSession {
   final String title;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final List<Message> messages;
+  final List<AiMessage> messages;
 
   const InterviewSession({
     required this.id,
@@ -48,7 +47,6 @@ class InterviewSession {
     this.messages = const [],
   });
 
-  // falls back to the posting title when no custom title has been set
   String get displayTitle => title.isNotEmpty ? title : jobTitle;
 
   factory InterviewSession.fromJson(Map<String, dynamic> json) {
@@ -61,7 +59,7 @@ class InterviewSession {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       messages: msgs
-          .map((m) => Message.fromJson(m as Map<String, dynamic>))
+          .map((m) => AiMessage.fromJson(m as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -77,62 +75,25 @@ class InterviewSession {
       messages: messages,
     );
   }
-}
 
-sealed class ChatEvent {}
-
-class ChatUserMessageConfirmed extends ChatEvent {
-  final Message message;
-  ChatUserMessageConfirmed(this.message);
-}
-
-class ChatAiMessageReceived extends ChatEvent {
-  final Message message;
-  ChatAiMessageReceived(this.message);
-}
-
-class ChatErrorReceived extends ChatEvent {
-  final String message;
-  ChatErrorReceived(this.message);
-}
-
-class ChatConnectionError extends ChatEvent {
-  final Object error;
-  ChatConnectionError(this.error);
-}
-
-class ChatConnectionClosed extends ChatEvent {}
-
-class InterviewService {
-  final Server server;
-  final Auth auth;
-
-  InterviewService({required this.server, required this.auth});
-
-  String? get _token => auth.user?.token;
-
-  Future<List<InterviewSession>> fetchSessions() async {
-    final token = _token;
-    if (token == null) throw Exception('Not authenticated.');
+  static Future<List<InterviewSession>> fetchAll(Server server, String token) async {
     final data = await server.sendGetList('/api/sessions/', token: token);
     return data
         .map((j) => InterviewSession.fromJson(j as Map<String, dynamic>))
         .toList();
   }
 
-  Future<InterviewSession> fetchSession(int id) async {
-    final token = _token;
-    if (token == null) throw Exception('Not authenticated.');
+  static Future<InterviewSession> fetchById(Server server, String token, int id) async {
     final data = await server.sendGet('/api/sessions/$id/', token: token);
     return InterviewSession.fromJson(data);
   }
 
-  Future<InterviewSession> createSession({
+  static Future<InterviewSession> create(
+    Server server,
+    String token, {
     required int jobPostingId,
     String title = '',
   }) async {
-    final token = _token;
-    if (token == null) throw Exception('Not authenticated.');
     final data = await server.sendPost(
       '/api/sessions/',
       {'job_posting_id': jobPostingId, 'title': title},
@@ -141,24 +102,17 @@ class InterviewService {
     return InterviewSession.fromJson(data);
   }
 
-  Future<void> updateSessionTitle(int id, String title) async {
-    final token = _token;
-    if (token == null) throw Exception('Not authenticated.');
-    await server.sendPut('/api/sessions/$id/', {'title': title}, token: token);
+  Future<void> updateTitle(Server server, String token, String newTitle) async {
+    await server.sendPut('/api/sessions/$id/', {'title': newTitle}, token: token);
   }
 
-  Future<void> deleteSession(int id) async {
-    final token = _token;
-    if (token == null) throw Exception('Not authenticated.');
+  Future<void> delete(Server server, String token) async {
     await server.sendDelete('/api/sessions/$id/', token: token);
   }
 
-  ChatConnection openChat(int sessionId) {
+  static WebSocketChannel connect(Server server, String token, int sessionId) {
     final httpUrl = server.getServerUrl();
-    final token = _token;
-
     if (httpUrl == null) throw Exception('Server not configured.');
-    if (token == null) throw Exception('Not authenticated.');
 
     final base = Uri.parse(httpUrl);
     final wsUrl = Uri(
@@ -169,37 +123,6 @@ class InterviewService {
       queryParameters: {'token': token},
     );
 
-    return ChatConnection._(WebSocketChannel.connect(wsUrl));
+    return WebSocketChannel.connect(wsUrl);
   }
-}
-
-class ChatConnection {
-  final WebSocketChannel _channel;
-  late final Stream<ChatEvent> events;
-
-  ChatConnection._(this._channel) {
-    events = _channel.stream.map<ChatEvent>((raw) {
-      final data = jsonDecode(raw as String) as Map<String, dynamic>;
-      switch (data['type'] as String) {
-        case 'user_message':
-          return ChatUserMessageConfirmed(
-            Message.fromJson(data['message'] as Map<String, dynamic>),
-          );
-        case 'ai_message':
-          return ChatAiMessageReceived(
-            Message.fromJson(data['message'] as Map<String, dynamic>),
-          );
-        default:
-          return ChatErrorReceived(
-            data['message'] as String? ?? 'An error occurred.',
-          );
-      }
-    }).handleError((Object e) => ChatConnectionError(e)).asBroadcastStream();
-  }
-
-  void sendMessage(String content) {
-    _channel.sink.add(jsonEncode({'content': content}));
-  }
-
-  Future<void> dispose() => _channel.sink.close();
 }

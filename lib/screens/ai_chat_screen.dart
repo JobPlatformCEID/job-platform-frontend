@@ -1,5 +1,6 @@
-import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../server_api.dart';
 import '../auth.dart';
 import '../ai_interview.dart';
@@ -9,7 +10,7 @@ class AiChatScreen extends StatefulWidget {
   final Auth auth;
   final int sessionId;
   final String sessionTitle;
-  final List<Message> initialMessages;
+  final List<AiMessage> initialMessages;
 
   const AiChatScreen({
     super.key,
@@ -25,9 +26,8 @@ class AiChatScreen extends StatefulWidget {
 }
 
 class _AiChatScreenState extends State<AiChatScreen> {
-  late final List<Message> _messages;
-  late final ChatConnection _chat;
-  late final StreamSubscription<ChatEvent> _subscription;
+  late final List<AiMessage> _messages;
+  late final WebSocketChannel _channel;
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -39,13 +39,22 @@ class _AiChatScreenState extends State<AiChatScreen> {
     super.initState();
     _messages = List.from(widget.initialMessages);
     _isAiTyping = _messages.isEmpty;
-    final service = InterviewService(server: widget.server, auth: widget.auth);
     try {
-      _chat = service.openChat(widget.sessionId);
-      _subscription = _chat.events.listen(
-        _onEvent,
-        onError: (Object e) => _onEvent(ChatConnectionError(e)),
-        onDone: () => _onEvent(ChatConnectionClosed()),
+      _channel = InterviewSession.connect(
+        widget.server,
+        widget.auth.user!.token,
+        widget.sessionId,
+      );
+      _channel.stream.listen(
+        _onData,
+        onError: (Object e) {
+          setState(() { _isAiTyping = false; _isSending = false; });
+          _showError('Connection lost. Please reopen the session.');
+        },
+        onDone: () {
+          setState(() { _isAiTyping = false; _isSending = false; });
+          _showError('Connection closed unexpectedly.');
+        },
       );
     } catch (e) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -54,52 +63,38 @@ class _AiChatScreenState extends State<AiChatScreen> {
     }
   }
 
-  void _onEvent(ChatEvent event) {
-    switch (event) {
-      case ChatUserMessageConfirmed(:final message):
-        // swap the optimistic placeholder with the real one from the server
-        setState(() {
-          final idx = _messages.lastIndexWhere((m) => m.isUser);
-          if (idx != -1) _messages[idx] = message;
-          _isSending = false;
-        });
+  void _onData(dynamic raw) {
+    final data = jsonDecode(raw as String) as Map<String, dynamic>;
+    final type = data['type'] as String?;
 
-      case ChatAiMessageReceived(:final message):
-        setState(() {
-          _messages.add(message);
-          _isAiTyping = false;
-        });
-        _scrollToBottom();
-
-      case ChatErrorReceived(:final message):
-        setState(() {
-          _isAiTyping = false;
-          _isSending = false;
-        });
-        _showError(message);
-
-      case ChatConnectionError():
-        setState(() {
-          _isAiTyping = false;
-          _isSending = false;
-        });
-        _showError('Connection lost. Please reopen the session.');
-
-      case ChatConnectionClosed():
-        setState(() {
-          _isAiTyping = false;
-          _isSending = false;
-        });
-        _showError('Connection closed unexpectedly.');
+    if (type == 'user_message') {
+      final message = AiMessage.fromJson(data['message'] as Map<String, dynamic>);
+      setState(() {
+        final idx = _messages.lastIndexWhere((m) => m.isUser);
+        if (idx != -1) _messages[idx] = message;
+        _isSending = false;
+      });
+    } else if (type == 'ai_message') {
+      final message = AiMessage.fromJson(data['message'] as Map<String, dynamic>);
+      setState(() {
+        _messages.add(message);
+        _isAiTyping = false;
+      });
+      _scrollToBottom();
+    } else {
+      setState(() {
+        _isAiTyping = false;
+        _isSending = false;
+      });
+      _showError(data['message'] as String? ?? 'An error occurred.');
     }
   }
 
-  Future<void> _sendMessage() async {
+  void _sendMessage() {
     final content = _controller.text.trim();
     if (content.isEmpty || _isSending || _isAiTyping) return;
 
-    // add it immediately so the UI feels instant
-    final optimistic = Message(
+    final optimistic = AiMessage(
       id: -1,
       role: 'user',
       content: content,
@@ -113,8 +108,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
     });
     _controller.clear();
     _scrollToBottom();
-
-    _chat.sendMessage(content);
+    _channel.sink.add(jsonEncode({'content': content}));
   }
 
   void _scrollToBottom() {
@@ -141,8 +135,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 
   @override
   void dispose() {
-    _subscription.cancel();
-    _chat.dispose();
+    _channel.sink.close();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -185,7 +178,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  final Message message;
+  final AiMessage message;
   const _MessageBubble({required this.message});
 
   @override
