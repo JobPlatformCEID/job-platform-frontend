@@ -176,14 +176,6 @@ class _MainScreenState extends State<MainScreen> {
                         selected: _selectedIndex == 2,
                         onTap: () => _selectTab(2),
                       ),
-                      if(widget.auth.user is Candidate)
-                        _SidebarNavItem(
-                          icon: Icons.smart_toy_outlined,
-                          selectedIcon: Icons.smart_toy,
-                          label: 'AI Interviews',
-                          selected: _selectedIndex == 3,
-                          onTap: () => _selectTab(3),
-                        ),
 
                       const Divider(indent: 16, endIndent: 16),
 
@@ -210,6 +202,11 @@ class _MainScreenState extends State<MainScreen> {
                           icon: Icons.assignment_outlined,
                           label: 'My Applications',
                           onTap: () => _pushScreen(CandidateApplicationsScreen(auth: widget.auth, server: widget.server)),
+                        ),
+                        _SidebarNavItem(
+                          icon: Icons.smart_toy_outlined,
+                          label: 'Mock AI Interviews',
+                          onTap: () => _pushScreen(AiInterviewsScreen(server: widget.server, auth: widget.auth)),
                         ),
                       ],
                     ],
@@ -343,11 +340,10 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) => _selectTab(index),
-        destinations: [
+        destinations: const [
           NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
           NavigationDestination(icon: Icon(Icons.message_outlined), selectedIcon: Icon(Icons.message), label: 'Messages'),
           NavigationDestination(icon: Icon(Icons.people_outlined), selectedIcon: Icon(Icons.people), label: 'Social'),
-          if(widget.auth.user is Candidate) NavigationDestination(icon: Icon(Icons.smart_toy_outlined), selectedIcon: Icon(Icons.smart_toy), label: 'AI'),
         ],
       ),
     );
@@ -358,7 +354,6 @@ class _MainScreenState extends State<MainScreen> {
     return switch (_selectedIndex) {
       1 => ConversationsScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
       2 => SocialScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
-      3 => AiInterviewsScreen(server: widget.server, auth: widget.auth),
       _ => isCandidate
           ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
           : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
@@ -370,9 +365,8 @@ class _MainScreenState extends State<MainScreen> {
       isCandidate ? 'Search job postings' : 'Search your job postings',
       'Search conversations',
       'Search posts',
-      'AI Interviews',
     ];
-    return hints[_selectedIndex];
+    return hints[_selectedIndex.clamp(0, 2)];
   }
 
   void _selectTab(int index) {
@@ -435,6 +429,14 @@ class _MainScreenState extends State<MainScreen> {
                 onTap: () {
                   Navigator.of(context).pop();
                   _pushScreen(CandidateApplicationsScreen(auth: widget.auth, server: widget.server));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.smart_toy_outlined),
+                title: const Text('Mock AI Interviews'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pushScreen(AiInterviewsScreen(server: widget.server, auth: widget.auth));
                 },
               ),
             ],
