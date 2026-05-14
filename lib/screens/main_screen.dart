@@ -16,7 +16,7 @@ import 'conversations_screen.dart';
 import 'candidate_applications_screen.dart';
 import 'ai_interviews_screen.dart';
 import 'stats_screen.dart';
-import 'calendar.dart';
+import 'calendar_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final Server server;
