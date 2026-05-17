@@ -309,7 +309,8 @@ class _InputBar extends StatelessWidget {
                 controller: controller,
                 enabled: enabled,
                 style: const TextStyle(color: Color(0xFFc9d1d9)),
-                maxLines: null,
+                minLines: 1,
+                maxLines: 7,
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => onSend(),
                 decoration: InputDecoration(
