@@ -109,7 +109,7 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'JobPlatform',
+                        'JobBless',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),

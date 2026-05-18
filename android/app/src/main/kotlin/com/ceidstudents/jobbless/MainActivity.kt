@@ -1,4 +1,4 @@
-package com.ceidstudents.job_platform
+package com.ceidstudents.jobbless
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -10,11 +10,14 @@ class Server {
   static const _connectionTimeout = Duration(seconds: 3);
   static const _requestTimeout = Duration(seconds: 30);
 
-  String? _serverUrl;
+  String? _serverUrl = 'https://softeng.linkdevel.com';
 
   // Loads the saved server URL from device storage on app startup
   Future<void> loadServerUrl() async {
-    _serverUrl = await _storage.read(key: _urlKey);
+    final saved = await _storage.read(key: _urlKey);
+    if (saved != null && saved.isNotEmpty) {
+      _serverUrl = saved;
+    }
   }
 
   // Getter for server URL

@@ -58,10 +58,13 @@ class Auth {
 
   // Log out: Sends the logout request and deletes the local user reference
   Future<void> logout() async {
-    try {
-      await _server.sendPost('/api/auth/logout/', {}, token: user?.token);
-    } catch (e) {
-      _log.warning('Could not invalidate user login token on server: $e');
+    final reachable = await _server.testServerConnection();
+    if (reachable) {
+      try {
+        await _server.sendPost('/api/auth/logout/', {}, token: user?.token);
+      } catch (e) {
+        _log.warning('Could not invalidate user login token on server: $e');
+      }
     }
     _log.info('Logging out ${user?.username}');
     user = null;
@@ -87,10 +90,13 @@ class Auth {
 
     if (savedToken != null && savedUsername != null && savedRole != null && savedUserId != null) {
       user = _createUser(savedUsername, savedToken, _stringToRole(savedRole), int.parse(savedUserId));
-      try {
-        await user!.fetchMe();
-      } catch (e) {
-        _log.warning('Could not fetch user data on session restore: $e');
+      final reachable = await _server.testServerConnection();
+      if (reachable) {
+        try {
+          await user!.fetchMe();
+        } catch (e) {
+          _log.warning('Could not fetch user data on session restore: $e');
+        }
       }
       _log.info('Session restored for $savedUsername (${_stringToRole(savedRole)})');
       return true;

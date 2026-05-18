@@ -29,27 +29,20 @@ class Post {
     required this.isLikedByMe,
   });
 
-  factory Post.fromJson(Map<String, dynamic> json, Server server) {
-    final serverHost = Uri.parse(server.getServerUrl()!).host;
-
-    final rawAvatar = json['avatar'] as String?;
-    final avatar = rawAvatar != null
-        ? rawAvatar.replaceFirst('localhost', serverHost)
-        : null;
-
+  factory Post.fromJson(Map<String, dynamic> json) {
     return Post(
       id: json['id'] as int,
       user: json['user'] as int,
       username: json['username'] as String,
       fullName: json['full_name'] as String? ?? json['username'] as String,
-      avatar: avatar,
+      avatar: json['avatar'] as String?,
       content: json['content'] as String,
       likesCount: json['likes_count'] as int? ?? 0,
       commentsCount: json['comments_count'] as int? ?? 0,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
       images: (json['images'] as List? ?? [])
-        .map((i) => PostImage.fromJson(i, server))
+        .map((i) => PostImage.fromJson(i))
         .toList(),
       isLikedByMe: json['is_liked_by_me'] as bool? ?? false,
     );
@@ -57,22 +50,22 @@ class Post {
 
   static Future<List<Post>> fetchAllPosts(Server server, String token) async {
     final list = await server.sendGetList('/api/posts/', token: token);
-    return list.map((p) => Post.fromJson(p, server)).toList();
+    return list.map((p) => Post.fromJson(p)).toList();
   }
 
   static Future<Post> fetchPost(Server server, String token, int postId) async {
     final data = await server.sendGet('/api/posts/$postId/', token: token);
-    return Post.fromJson(data, server);
+    return Post.fromJson(data);
   }
 
   static Future<Post> createPost(Server server, String token, {required String content}) async {
     final data = await server.sendPost('/api/posts/', {'content': content}, token: token);
-    return Post.fromJson(data, server);
+    return Post.fromJson(data);
   }
 
   Future<Post> updatePost(Server server, String token, {required String content}) async {
     final data = await server.sendPatch('/api/posts/$id/', {'content': content}, token: token);
-    return Post.fromJson(data, server);
+    return Post.fromJson(data);
   }
 
   Future<void> deletePost(Server server, String token) async {
@@ -97,13 +90,10 @@ class PostImage {
     required this.post,
   });
 
-  factory PostImage.fromJson(Map<String, dynamic> json, Server server) {
-    final serverHost = Uri.parse(server.getServerUrl()!).host;
-    final rawUrl = json['image'] as String;
-
+  factory PostImage.fromJson(Map<String, dynamic> json) {
     return PostImage(
       id: json['id'] as int,
-      imageUrl: rawUrl.replaceFirst('localhost', serverHost),
+      imageUrl: json['image'] as String,
       createdAt: json['created_at'] as String,
       post: json['post'] as int,
     );
@@ -123,7 +113,7 @@ class PostImage {
       filename,
       token: token,
     );
-    return PostImage.fromJson(data, server);
+    return PostImage.fromJson(data);
   }
 
   Future<void> deleteImage(Server server, String token) async {
@@ -154,20 +144,13 @@ class Comment {
     required this.updatedAt,
   });
 
-  factory Comment.fromJson(Map<String, dynamic> json, Server server) {
-    final serverHost = Uri.parse(server.getServerUrl()!).host;
-
-    final rawAvatar = json['avatar'] as String?;
-    final avatar = rawAvatar != null
-        ? rawAvatar.replaceFirst('localhost', serverHost)
-        : null;
-
+  factory Comment.fromJson(Map<String, dynamic> json) {
     return Comment(
       id: json['id'] as int,
       user: json['user'] as int,
       username: json['username'] as String?,
       fullName: json['full_name'] as String?,
-      avatar: avatar,
+      avatar: json['avatar'] as String?,
       post: json['post'] as int,
       content: json['content'] as String,
       createdAt: json['created_at'] as String,
@@ -177,17 +160,17 @@ class Comment {
 
   static Future<List<Comment>> fetchCommentsForPost(Server server, String token, int postId) async {
     final list = await server.sendGetList('/api/posts/$postId/comments/', token: token);
-    return list.map((c) => Comment.fromJson(c, server)).toList();
+    return list.map((c) => Comment.fromJson(c)).toList();
   }
 
   static Future<Comment> createComment(Server server, String token, int postId, {required String content}) async {
     final data = await server.sendPost('/api/posts/$postId/comments/', {'content': content}, token: token);
-    return Comment.fromJson(data, server);
+    return Comment.fromJson(data);
   }
 
   Future<Comment> updateComment(Server server, String token, {required String content}) async {
     final data = await server.sendPatch('/api/posts/$post/comments/$id/', {'content': content}, token: token);
-    return Comment.fromJson(data, server);
+    return Comment.fromJson(data);
   }
 
   Future<void> deleteComment(Server server, String token) async {
