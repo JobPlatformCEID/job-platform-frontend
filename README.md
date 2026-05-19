@@ -2,44 +2,52 @@
 
 ![Job Bless Logo](images/logo.png)
 
-A modern job platform application built with Flutter and agile methods that connects job seekers with employers . Made for the software engineering course for CEID.
+The Flutter frontend app for JobBless, a job seeking platform built in 2026 for the Software Engineering course at CEID, University of Patras.
 
 ## Team Members
+
 - **ΑΔΑΜΟΠΟΥΛΟΣ ΘΕΟΔΩΡΟΣ / vortex3964** - ΑΜ:1108389 - 6ο εξαμηνο
 - **ΑΛΕΞΑΝΔΡΟΠΟΥΛΟΣ ΘΕΟΔΩΡΟΣ / teettt1** - ΑΜ: 1108347 - 6ο εξαμηνο
 - **ΔΗΜΟΠΟΥΛΟΣ ΗΛΙΑΣ / LinkBoi00** - ΑΜ:1108376 - 6ο εξαμηνο
 - **ΧΑΪΔΟΓΙΑΝΝΟΣ ΜΑΡΙΟΣ-ΔΗΜΗΤΡΙΟΣ / Dimitris34** - ΑΜ:1112101 - 6ο εξαμηνο
 - **ΧΑΤΖΗΔΗΜΗΤΡΙΟΥ ΣΤΥΛΙΑΝΟΣ / Stelios-Chatzid** - ΑΜ:1112144 - 6ο εξαμηνο
 
+## Technologies
+
+- Flutter 3.11+, Dart
+- LiveKit (video calls)
+- WebSockets (real-time messaging and AI interviews)
+
 ## Features
 
-- **Job Search & Application**: Browse and apply to job postings with ease
-- **AI-Powered Interviews**: Conduct automated interviews with AI-generated questions
-- **Candidate Profiles**: Create detailed profiles with skills, experience, and education
-- **CV Management**: Upload and manage curriculum vitae documents
-- **Real-time Communication**: WebSocket-based chat for instant messaging during interviews
-- **Review System**: Candidates can review and rate Companies
-- **Calendar Integration**: Schedule and manage interview appointments
-- **Application Management Features**: Employers can manage applications for their postings and accept or reject a Candidate
-- **Call rooms**: Employers can create rooms and then join them for live calling from our app
-- **Stats**: support for exporting and collecting statistics from our app
-- **Multi-platform Support**: Available on Android, Linux, and Windows
+- **Job Search & Applications**: Browse active postings, apply, and track application status
+- **Employer Tools**: Create and manage job postings, review applicants, accept or reject applications
+- **Candidate Profiles**: Skills, work experience, education, CV upload and download
+- **CV Builder**: Build a professional CV from your profile with multiple templates, export as PDF
+- **Mock AI Interviews**: AI-powered interview sessions tied to specific job postings
+- **Real-time Messaging**: WebSocket-based chat between candidates and employers
+- **Video Calls**: LiveKit-powered call rooms, schedulable via the in-app calendar
+- **Social Feed**: Posts, comments, likes, and image uploads
+- **Company Reviews**: Candidates can rate and review employers
+- **Market Statistics**: Charts and CSV export of job market data
+- **Responsive UI**: Sidebar layout on desktop, bottom navigation on mobile
 
-(Theoretically it can also run on Ios and MackOs but we haven't tested it there )
+## Supported Platforms
 
-## Getting Started
+Android, Windows, and Linux. iOS and macOS are untested.
+
+## Running the app
 
 ### Prerequisites
 
-- Flutter SDK (3.11.4 or higher)
-- Dart SDK
-- A backend server running the Job Bless API
+- Flutter SDK 3.11.4 or higher
+- A running instance of the backend for JobBless
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone <repo-url>
 cd job-platform-frontend
 ```
 
@@ -48,12 +56,13 @@ cd job-platform-frontend
 flutter pub get
 ```
 
-3. Configure the backend server URL in your environment variables or configuration files
-
-4. Run the app:
+3. Run the app:
 ```bash
 flutter run
 ```
+
+4. On first launch, tap the settings icon and enter your backend server URL (e.g. `http://192.168.1.10:8000`). Use the Test Connection button to verify before saving.
+
 
 ### Building for Production
 
@@ -71,4 +80,3 @@ flutter build windows --release
 ```bash
 flutter build linux --release
 ```
-
