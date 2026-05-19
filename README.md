@@ -1,6 +1,6 @@
-# Job Bless
+# job-platform-frontend
 
-![Job Bless Logo](images/logo.png)
+![Job Bless Logo](images/logo-with-background-and-text.png)
 
 The Flutter frontend app for JobBless, a job seeking platform built in 2026 for the Software Engineering course at CEID, University of Patras.
 

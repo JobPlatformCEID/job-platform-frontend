@@ -113,6 +113,8 @@ flutter_launcher_icons:
   android: true
   ios: false
   image_path: "images/logo.png"
+  adaptive_icon_background: "#F15A24"
+  adaptive_icon_foreground: "images/logo-foreground-only.png" 
   windows:
     generate: true
     image_path: "images/logo.png"
