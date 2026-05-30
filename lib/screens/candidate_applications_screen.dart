@@ -72,10 +72,10 @@ class _CandidateApplicationsScreenState
   }
 
   void _onStatusSelected(String status) {
+    final tappedValue = status == 'All' ? null : status.toLowerCase();
+    final newStatus = tappedValue == _filter.status ? null : tappedValue;
     setState(() {
-      _filter = _filter.copyWith(
-        status: status == 'All' ? null : status.toLowerCase(),
-      );
+      _filter = JobApplicationFilter(status: newStatus);
     });
     _loadApplications();
   }
@@ -269,7 +269,6 @@ class _CandidateApplicationsScreenState
       appBar: AppBar(
         title: const Text('My Applications'),
         actions: [
-          // "All Filters" button – shows a badge when extra filters are active
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -316,29 +315,23 @@ class _CandidateApplicationsScreenState
                   children: [
                     Container(
                       height: 56,
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: _statusOptions.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(width: 8),
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
                         itemBuilder: (context, index) {
                           final status = _statusOptions[index];
-                          final isSelected =
-                              _selectedStatus() == status;
-                          return ChoiceChip(
+                          final isSelected = _selectedStatus() == status;
+                          return FilterChip(
                             label: Text(status),
                             selected: isSelected,
-                            onSelected: (_) =>
-                                _onStatusSelected(status),
+                            onSelected: (_) => _onStatusSelected(status),
                           );
                         },
                       ),
                     ),
-
                     const Divider(height: 1),
-
                     Expanded(
                       child: _applications.isEmpty
                           ? _buildEmptyState(context)
@@ -359,7 +352,7 @@ class _CandidateApplicationsScreenState
   }
 }
 
-// All-filters bottom sheet 
+// All-filters bottom sheet
 
 class _ApplicationFiltersSheet extends StatefulWidget {
   final JobApplicationFilter current;
@@ -370,8 +363,7 @@ class _ApplicationFiltersSheet extends StatefulWidget {
       _ApplicationFiltersSheetState();
 }
 
-class _ApplicationFiltersSheetState
-    extends State<_ApplicationFiltersSheet> {
+class _ApplicationFiltersSheetState extends State<_ApplicationFiltersSheet> {
   late bool? _isRemote;
   late String? _contractType;
   late TextEditingController _locationCtrl;
@@ -400,15 +392,13 @@ class _ApplicationFiltersSheetState
       builder: (context, scrollController) {
         return Column(
           children: [
-            // header
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 20, 16, 0),
               child: Row(
                 children: [
                   Expanded(
                     child: Text('All filters',
-                        style:
-                            Theme.of(context).textTheme.headlineSmall),
+                        style: Theme.of(context).textTheme.headlineSmall),
                   ),
                   TextButton(
                     onPressed: () {
@@ -439,7 +429,6 @@ class _ApplicationFiltersSheetState
                         setState(() => _isRemote = v ? true : null),
                   ),
                   const Divider(),
-
                   // Contract type
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -460,7 +449,6 @@ class _ApplicationFiltersSheetState
                     }).toList(),
                   ),
                   const Divider(height: 32),
-
                   // Location
                   Text('Location',
                       style: Theme.of(context).textTheme.titleMedium),
@@ -523,7 +511,7 @@ class _InlineMeta extends StatelessWidget {
   }
 }
 
-//Application detail screen
+// Application detail screen
 
 class _ApplicationDetailScreen extends StatefulWidget {
   final JobApplication application;
@@ -543,8 +531,7 @@ class _ApplicationDetailScreen extends StatefulWidget {
       _ApplicationDetailScreenState();
 }
 
-class _ApplicationDetailScreenState
-    extends State<_ApplicationDetailScreen> {
+class _ApplicationDetailScreenState extends State<_ApplicationDetailScreen> {
   JobPosting? _job;
   bool _isLoading = true;
   bool _isStartingInterview = false;
@@ -593,17 +580,15 @@ class _ApplicationDetailScreenState
   }
 
   Future<void> _startMockInterview() async {
-      if (_isStartingInterview) return;
-
-      setState(() => _isStartingInterview = true);
-      try {
-        final session = await InterviewSession.create(
-          widget.server,
-          widget.token,
-          jobPostingId: widget.application.job,
-          title: widget.application.jobTitle ?? _job?.title ?? '',
-        );
-
+    if (_isStartingInterview) return;
+    setState(() => _isStartingInterview = true);
+    try {
+      final session = await InterviewSession.create(
+        widget.server,
+        widget.token,
+        jobPostingId: widget.application.job,
+        title: widget.application.jobTitle ?? _job?.title ?? '',
+      );
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -642,8 +627,7 @@ class _ApplicationDetailScreenState
     final status = widget.application.status;
     return Scaffold(
       appBar: AppBar(
-        title:
-            Text(widget.application.jobTitle ?? 'Application Details'),
+        title: Text(widget.application.jobTitle ?? 'Application Details'),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -651,14 +635,12 @@ class _ApplicationDetailScreenState
               padding: const EdgeInsets.all(24),
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color:
-                        _statusColor(context, status).withValues(alpha: 0.1),
+                    color: _statusColor(context, status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: _statusColor(context, status)),
+                    border: Border.all(color: _statusColor(context, status)),
                   ),
                   child: Row(
                     children: [
@@ -711,7 +693,8 @@ class _ApplicationDetailScreenState
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      onTap: _isStartingInterview ? null : _startMockInterview,
+                      onTap:
+                          _isStartingInterview ? null : _startMockInterview,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 14),
