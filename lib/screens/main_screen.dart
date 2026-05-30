@@ -58,6 +58,15 @@ class _MainScreenState extends State<MainScreen> {
     _loadUserData();
   }
 
+  void _onSearchChanged(String value) {
+    setState(() => _searchQuery = value);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _searchQuery = '');
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = widget.auth.user;
@@ -250,7 +259,7 @@ class _MainScreenState extends State<MainScreen> {
                         child: TextField(
                           controller: _searchController,
                           focusNode: _searchFocusNode,
-                          onChanged: (value) => setState(() => _searchQuery = value.trim()),
+                          onChanged: _onSearchChanged,
                           decoration: InputDecoration(
                             hintText: _searchHint(isCandidate),
                             border: InputBorder.none,
@@ -261,10 +270,7 @@ class _MainScreenState extends State<MainScreen> {
                             suffixIcon: _searchQuery.isNotEmpty
                                 ? IconButton(
                                     icon: const Icon(Icons.clear),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
+                                    onPressed: _clearSearch,
                                   )
                                 : null,
                           ),
@@ -296,7 +302,7 @@ class _MainScreenState extends State<MainScreen> {
         title: TextField(
           controller: _searchController,
           focusNode: _searchFocusNode,
-          onChanged: (value) => setState(() => _searchQuery = value.trim()),
+          onChanged: _onSearchChanged,
           decoration: InputDecoration(
             hintText: _searchHint(isCandidate),
             border: InputBorder.none,
@@ -307,10 +313,7 @@ class _MainScreenState extends State<MainScreen> {
             suffixIcon: _searchQuery.isNotEmpty
                 ? IconButton(
                     icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                    },
+                    onPressed: _clearSearch,
                   )
                 : null,
           ),
@@ -352,11 +355,11 @@ class _MainScreenState extends State<MainScreen> {
   
   Widget _buildContent(bool isCandidate) {
     return switch (_selectedIndex) {
-      1 => ConversationsScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
-      2 => SocialScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
+      1 => ConversationsScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery.trim()),
+      2 => SocialScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery.trim()),
       _ => isCandidate
-          ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery)
-          : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery),
+          ? CandidateHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery.trim())
+          : EmployerHomeScreen(auth: widget.auth, server: widget.server, searchQuery: _searchQuery.trim()),
     };
   }
 

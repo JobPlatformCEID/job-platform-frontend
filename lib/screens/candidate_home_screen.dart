@@ -73,9 +73,17 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
   void didUpdateWidget(covariant CandidateHomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.searchQuery != oldWidget.searchQuery) {
-      _filter = _filter.copyWith(
-        title: widget.searchQuery.isEmpty ? null : widget.searchQuery,
-      );
+      if (widget.searchQuery.isEmpty) {
+        _filter = JobPostingFilter(
+          isRemote: _filter.isRemote,
+          contractType: _filter.contractType,
+          location: _filter.location,
+          salaryMin: _filter.salaryMin,
+          salaryMax: _filter.salaryMax,
+        );
+      } else {
+        _filter = _filter.copyWith(title: widget.searchQuery);
+      }
       _loadJobs();
     }
   }
@@ -170,7 +178,15 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
 
   Widget _buildEmptyState(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final filtered = !(widget.searchQuery.isEmpty && _filter.isEmpty);
+    final hasSearchQuery = widget.searchQuery.isNotEmpty;
+    final hasActiveFilters = [
+      _filter.isRemote != null,
+      _filter.contractType != null,
+      _filter.location?.isNotEmpty == true,
+      _filter.salaryMin != null || _filter.salaryMax != null,
+    ].any((b) => b);
+    final filtered = hasSearchQuery || hasActiveFilters;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -195,10 +211,14 @@ class _CandidateHomeScreenState extends State<CandidateHomeScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
             ),
-            if (filtered) ...[
+            if (hasActiveFilters) ...[
               const SizedBox(height: 12),
               TextButton.icon(
-                onPressed: () => _applyFilter(JobPostingFilter(title: _filter.title)),
+                onPressed: () => _applyFilter(
+                  JobPostingFilter(
+                    title: widget.searchQuery.isEmpty ? null : widget.searchQuery,
+                  ),
+                ),
                 icon: const Icon(Icons.clear),
                 label: const Text('Clear filters'),
               ),
