@@ -341,11 +341,15 @@ class AppTheme {
       // ── Switches ────────────────────────────────────────────────
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? cs.primary : cs.outline),
+            s.contains(WidgetState.selected) ? cs.onPrimary : cs.onSurfaceVariant),
         trackColor: WidgetStateProperty.resolveWith((s) =>
             s.contains(WidgetState.selected)
-                ? _accentDim
-                : (isDark ? _surfaceHigh : cs.surfaceContainerHighest)),
+                ? cs.primary
+                : (isDark ? _surfaceHigher : cs.surfaceContainerHighest)),
+        trackOutlineColor: WidgetStateProperty.resolveWith((s) =>
+            s.contains(WidgetState.selected)
+                ? Colors.transparent
+                : (isDark ? _outlineVar : cs.outline)),
         overlayColor: WidgetStatePropertyAll(_accent.withValues(alpha: 0.1)),
       ),
 
