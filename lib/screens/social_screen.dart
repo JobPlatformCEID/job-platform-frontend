@@ -661,8 +661,6 @@ class _PostImages extends StatelessWidget {
           child: CachedNetworkImage(
             imageUrl: images[0].imageUrl,
             fit: BoxFit.cover,
-            memCacheWidth: 600,
-            memCacheHeight: 450,
             placeholder: (context, url) => Container(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
