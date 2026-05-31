@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:logging/logging.dart';
 import 'dart:typed_data';
 import '../auth.dart';
 import '../server_api.dart';
 import '../post.dart';
 import 'user_profile_sheet.dart';
 import '../widgets/user_avatar.dart';
+
 
 class SocialScreen extends StatefulWidget {
   final Auth auth;
@@ -28,6 +31,11 @@ class _SocialScreenState extends State<SocialScreen> {
   List<Post> _posts = [];
   bool _isLoading = true;
   String? _error;
+  final Set<int> _builtPostIds = {};
+  final Set<String> _prefetchedUrls = {};
+  bool _prefetchScheduled = false;
+  bool _prefetchInProgress = false;
+  final _log = Logger('SocialScreen');
 
   List<Post> get _filteredPosts {
     if (widget.searchQuery.isEmpty) return _posts;
@@ -42,6 +50,8 @@ class _SocialScreenState extends State<SocialScreen> {
   }
 
   Future<void> _loadPosts() async {
+    _builtPostIds.clear();
+    _prefetchedUrls.clear();
     try {
       final posts = await Post.fetchAllPosts(widget.server, widget.auth.user!.token);
       if (mounted) setState(() {
@@ -54,6 +64,44 @@ class _SocialScreenState extends State<SocialScreen> {
         _error = 'Could not load posts.';
       });
     }
+  }
+
+  void _prefetchBuiltPosts() async {
+    if (_prefetchInProgress) return;
+    _prefetchInProgress = true;
+    try {
+      final builtIds = _builtPostIds.toList()..sort();
+      _log.fine('built post IDs: $builtIds');
+
+      final urls = <String>{};
+      for (final post in _filteredPosts) {
+        if (_builtPostIds.contains(post.id)) {
+          if (post.avatar != null) urls.add(post.avatar!);
+          for (final img in post.images) {
+            urls.add(img.imageUrl);
+          }
+        }
+      }
+
+      final newUrls = urls.difference(_prefetchedUrls);
+      _log.fine('URLs collected: ${urls.length}, new to prefetch: ${newUrls.length}');
+
+      if (newUrls.isEmpty) return;
+
+      for (final url in newUrls) {
+        try {
+          if (!mounted) return;
+          _log.fine('prefetching avatar: $url');
+          await precacheImage(CachedNetworkImageProvider(url), context);
+          _prefetchedUrls.add(url);
+          _log.fine('prefetched: $url');
+        } catch (e) {
+          _log.warning('prefetch failed: $url', e);
+        }
+      }
+  } finally {
+    _prefetchInProgress = false;
+  }
   }
 
   void _showCreateSheet() {
@@ -223,7 +271,7 @@ class _SocialScreenState extends State<SocialScreen> {
         RefreshIndicator(
           onRefresh: _loadPosts,
           child: ListView.builder(
-            cacheExtent: MediaQuery.of(context).size.height * 7,
+            cacheExtent: MediaQuery.of(context).size.height * 3,
             padding: const EdgeInsets.only(top: 8, bottom: 88),
             itemCount: posts.length + 1,
             itemBuilder: (context, index) {
@@ -233,10 +281,16 @@ class _SocialScreenState extends State<SocialScreen> {
                   user: widget.auth.user!,
                   onTap: _showCreateSheet,
                 );
-              } else if (posts.isEmpty) {
-                child = _buildEmptyState(context);
               } else {
                 final post = posts[index - 1];
+                _builtPostIds.add(post.id);
+                if (!_prefetchScheduled) {
+                  _prefetchScheduled = true;
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _prefetchScheduled = false;
+                    _prefetchBuiltPosts();
+                  });
+                }
                 child = _PostCard(
                   key: ValueKey(post.id),
                   post: post,
@@ -607,6 +661,8 @@ class _PostImages extends StatelessWidget {
           child: CachedNetworkImage(
             imageUrl: images[0].imageUrl,
             fit: BoxFit.cover,
+            memCacheWidth: 600,
+            memCacheHeight: 450,
             placeholder: (context, url) => Container(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -683,6 +739,8 @@ class _PostImages extends StatelessWidget {
     return CachedNetworkImage(
       imageUrl: url,
       fit: BoxFit.cover,
+      memCacheWidth: 300,
+      memCacheHeight: 300,
       placeholder: (context, url) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
