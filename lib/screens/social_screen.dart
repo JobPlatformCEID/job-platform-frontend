@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:typed_data';
 import '../auth.dart';
 import '../server_api.dart';
@@ -222,6 +223,7 @@ class _SocialScreenState extends State<SocialScreen> {
         RefreshIndicator(
           onRefresh: _loadPosts,
           child: ListView.builder(
+            cacheExtent: MediaQuery.of(context).size.height * 7,
             padding: const EdgeInsets.only(top: 8, bottom: 88),
             itemCount: posts.length + 1,
             itemBuilder: (context, index) {
@@ -236,6 +238,7 @@ class _SocialScreenState extends State<SocialScreen> {
               } else {
                 final post = posts[index - 1];
                 child = _PostCard(
+                  key: ValueKey(post.id),
                   post: post,
                   server: widget.server,
                   token: widget.auth.user!.token,
@@ -380,6 +383,7 @@ class _PostCard extends StatelessWidget {
   final VoidCallback? onDelete;
 
   const _PostCard({
+    super.key,
     required this.post,
     required this.server,
     required this.token,
@@ -598,14 +602,16 @@ class _PostImages extends StatelessWidget {
     if (images.length == 1) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 600),
-          child: Image.network(
-            images[0].imageUrl,
-            width: double.infinity,
-            fit: BoxFit.contain,
-            errorBuilder: (_, _, _) => Container(
-              height: 200,
+        child: AspectRatio(
+          aspectRatio: 4 / 3,
+          child: CachedNetworkImage(
+            imageUrl: images[0].imageUrl,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+            errorWidget: (context, url, error) => Container(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: const Icon(Icons.broken_image_outlined),
             ),
@@ -674,10 +680,14 @@ class _PostImages extends StatelessWidget {
   }
 
   Widget _img(BuildContext context, String url) {
-    return Image.network(
-      url,
+    return CachedNetworkImage(
+      imageUrl: url,
       fit: BoxFit.cover,
-      errorBuilder: (_, _, _) => Container(
+      placeholder: (context, url) => Container(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      errorWidget: (context, url, error) => Container(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: const Icon(Icons.broken_image_outlined),
       ),

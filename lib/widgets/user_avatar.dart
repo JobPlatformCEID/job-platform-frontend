@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class UserAvatar extends StatelessWidget {
   final String? avatarUrl;
@@ -14,11 +15,10 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('UserAvatar: avatarUrl=$avatarUrl, displayName=$displayName');
     if (avatarUrl != null) {
       return CircleAvatar(
         radius: radius,
-        backgroundImage: NetworkImage(avatarUrl!),
+        backgroundImage: CachedNetworkImageProvider(avatarUrl!),
         onBackgroundImageError: (e, stack) {
           debugPrint('UserAvatar image error: $e');
         },
