@@ -52,6 +52,7 @@ class _SocialScreenState extends State<SocialScreen> {
   Future<void> _loadPosts() async {
     _builtPostIds.clear();
     _prefetchedUrls.clear();
+    _prefetchInProgress = false;
     try {
       final posts = await Post.fetchAllPosts(widget.server, widget.auth.user!.token);
       if (mounted) setState(() {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../server_api.dart';
 
 enum StatusType { success, error, info }
@@ -82,6 +83,7 @@ class _ServerSettingsScreenState extends State<ServerSettingsScreen> {
     setState(() => _isSavingUrl = true);
 
     await widget.server.saveServerUrl(_serverUrlController.text.trim());
+    await DefaultCacheManager().emptyCache();
 
     setState(() => _isSavingUrl = false);
 
