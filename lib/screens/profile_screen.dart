@@ -55,6 +55,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Education> _educations = [];
   List<WorkExperience> _experiences = [];
 
+  // Delete operations for candidate background data
+  final Set<int> _deletedSkillIds = {};
+  final Set<int> _deletedEducationIds = {};
+  final Set<int> _deletedExperienceIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -160,6 +165,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final savedEducations = List<Education>.from(candidate.educations);
         final savedExperiences = List<WorkExperience>.from(candidate.experiences);
 
+        for (final id in _deletedSkillIds) await candidate.deleteSkill(id);
+        for (final id in _deletedEducationIds) await candidate.deleteEducation(id);
+        for (final id in _deletedExperienceIds) await candidate.deleteExperience(id);
+
         for (final s in _skills) {
           if (!savedSkills.any((e) => e.name == s.name)) {
             await candidate.addSkill(s.name);
@@ -198,6 +207,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _pendingAvatarBytes = null;
         _pendingCvBytes = null;
         _pendingCvFileName = null;
+        _deletedSkillIds.clear();
+        _deletedEducationIds.clear();
+        _deletedExperienceIds.clear();
       });
     } catch (e) {
       if (mounted) setState(() {
@@ -816,7 +828,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _skills.add(Skill(name: trimmed)));
   }
 
-  void _deleteSkill(Skill skill) => setState(() => _skills.remove(skill));
+  void _deleteSkill(Skill skill) {
+    if (skill.id != null) _deletedSkillIds.add(skill.id!);
+    setState(() => _skills.removeAt(_skills.indexOf(skill)));
+  }
 
   // --- Education ---
 
@@ -917,7 +932,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _deleteEducation(Education edu) => setState(() => _educations.remove(edu));
+  void _deleteEducation(Education edu) {
+    if (edu.id != null) _deletedEducationIds.add(edu.id!);
+    setState(() => _educations.removeAt(_educations.indexOf(edu)));
+  }
 
   // --- Work Experience ---
 
@@ -1067,7 +1085,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _deleteExperience(WorkExperience exp) => setState(() => _experiences.remove(exp));
+  void _deleteExperience(WorkExperience exp) {
+    if (exp.id != null) _deletedExperienceIds.add(exp.id!);
+    setState(() => _experiences.removeAt(_experiences.indexOf(exp)));
+  }
 
   // --- Label helpers ---
 

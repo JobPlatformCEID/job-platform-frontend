@@ -473,7 +473,8 @@ class _ApplicationFiltersSheetState extends State<_ApplicationFiltersSheet> {
                 onPressed: () {
                   final loc = _locationCtrl.text.trim();
                   Navigator.of(context).pop(
-                    widget.current.copyWith(
+                    JobApplicationFilter(
+                      status: widget.current.status,
                       jobIsRemote: _isRemote,
                       jobContractType: _contractType,
                       jobLocation: loc.isEmpty ? null : loc,
