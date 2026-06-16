@@ -4,6 +4,8 @@
 
 The Flutter frontend app for JobBless, a job seeking platform built in 2026 for the Software Engineering course at CEID, University of Patras.
 
+Το διάγραμμα κλάσεων (class diagram) του έργου βρίσκεται σε πλήρη ανάλυση στο αποθετήριο για το [ClassDiagramMaker](https://raw.githubusercontent.com/JobPlatformCEID/Job-platform-ClassDiagramMaker/refs/heads/main/diagram_edited.svg)
+
 ## Team Members
 
 - **ΑΔΑΜΟΠΟΥΛΟΣ ΘΕΟΔΩΡΟΣ / vortex3964** - ΑΜ:1108389 - 6ο εξαμηνο
